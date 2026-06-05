@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spawn Internet — Staff Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  body{display:flex;align-items:center;justify-content:center;padding:18px}
+  .login{width:100%;max-width:400px}
+  .globe-lg{width:72px;height:72px;border-radius:50%;margin:0 auto 14px;
+    background:conic-gradient(from 220deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8),var(--r1));
+    box-shadow:0 0 50px rgba(94,92,230,.4)}
+  .wordmark{font-size:24px;font-weight:700;text-align:center;letter-spacing:.04em}
+  .wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6)}
+</style>
+</head>
+<body>
+<div class="login">
+  <div class="card">
+    <div class="globe-lg"></div>
+    <div class="wordmark grad-text" style="margin-bottom:6px">SPAWN<small>INTERNET</small></div>
+    <p style="text-align:center;color:var(--muted);margin-top:0">Staff & Operator Console</p>
+    <div class="grad-bar" style="margin-bottom:22px"></div>
+    <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username" placeholder="you@spawn.net"></div>
+    <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn btn-primary" style="width:100%" id="loginBtn">Sign in</button>
+    <p style="text-align:center;margin-top:18px"><a href="/">← Back to portal</a></p>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+const dest = { admin:'/admin', technician:'/technician', operator:'/operator' };
+async function doLogin(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if(!email||!password) return toast('Enter email and password','err');
+  try{
+    const d = await API.post('/auth/login',{ email, password });
+    API.setToken(d.token); API.setProfile(d.profile);
+    location.href = dest[d.profile.role] || '/admin';
+  }catch(e){ toast(e.message,'err'); }
+}
+document.getElementById('loginBtn').onclick = doLogin;
+document.getElementById('password').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+if(API.token()){ API.get('/auth/me').then(d=>{ if(d?.profile) location.href=dest[d.profile.role]||'/admin'; }).catch(()=>API.clear()); }
+</script>
+</body>
+</html>

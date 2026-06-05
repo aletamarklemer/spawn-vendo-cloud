@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Spawn Internet — Connect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  body{display:flex;align-items:center;justify-content:center;padding:18px}
+  .portal{width:100%;max-width:430px}
+  .logo-wrap{text-align:center;margin-bottom:8px}
+  .globe-lg{width:96px;height:96px;border-radius:50%;margin:0 auto 14px;
+    background:conic-gradient(from 220deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8),var(--r1));
+    box-shadow:0 0 60px rgba(94,92,230,.45);animation:spin 14s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .wordmark{font-size:30px;font-weight:700;letter-spacing:.04em}
+  .wordmark small{display:block;font-size:13px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
+  .timer{font-size:54px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.04em;margin:6px 0}
+  .timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
+  .status-line{text-align:center;color:var(--muted);margin-bottom:18px}
+  .rate-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0}
+  .chip{background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:7px 13px;font-size:12px}
+  .tabbar{display:flex;gap:6px;background:var(--bg-2);padding:6px;border-radius:14px;margin:18px 0}
+  .tabbar button{flex:1;background:none;border:none;color:var(--muted);padding:10px;border-radius:10px;cursor:pointer;font-weight:600;font-family:inherit}
+  .tabbar button.active{background:var(--panel-2);color:var(--txt)}
+  .mac{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:14px}
+  .hist-item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+</style>
+</head>
+<body>
+<div class="portal">
+  <div class="card">
+    <div class="logo-wrap">
+      <div class="globe-lg"></div>
+      <div class="wordmark grad-text">SPAWN<small>INTERNET</small></div>
+    </div>
+
+    <div id="timer" class="timer">--:--:--</div>
+    <div id="statusLine" class="status-line">Insert a coin to get online</div>
+    <div class="grad-bar" style="margin:0 0 4px"></div>
+
+    <div class="rate-chips" id="rates"></div>
+
+    <div class="tabbar">
+      <button class="active" data-tab="coin">Coins</button>
+      <button data-tab="voucher">Voucher</button>
+      <button data-tab="history">History</button>
+    </div>
+
+    <!-- COIN TAB -->
+    <div id="tab-coin">
+      <p style="color:var(--muted);font-size:14px;text-align:center;margin-top:0">
+        Drop coins into the machine. Your time updates here automatically.
+      </p>
+      <div style="text-align:center;margin-bottom:14px">
+        <span class="badge active" id="liveBadge">Waiting for coins…</span>
+      </div>
+      <a class="btn btn-primary" id="insertCoinLink"
+         style="width:100%;justify-content:center;text-decoration:none">
+        Insert a coin
+      </a>
+    </div>
+
+    <!-- VOUCHER TAB -->
+    <div id="tab-voucher" class="hidden">
+      <div class="field">
+        <label>Voucher code</label>
+        <input id="voucherCode" placeholder="SPAWN-XXXX-XXXX" autocomplete="off">
+      </div>
+      <button class="btn btn-primary" style="width:100%" id="redeemBtn">Redeem voucher</button>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" class="hidden">
+      <div id="histList"><p style="color:var(--muted);text-align:center">No history yet.</p></div>
+    </div>
+
+    <div class="mac" id="macLine"></div>
+  </div>
+  <p style="text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px">
+    Spawn Internetan · Dipolog City · <a href="/login.html">Staff login</a>
+  </p>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+/* The MAC is normally injected by the captive-portal redirect, e.g.
+   /?mac=AA:BB:CC:DD:EE:FF&device=<uuid>. For demo/testing we fall back to a
+   stored pseudo-MAC so the portal is usable from any browser. */
+const params = new URLSearchParams(location.search);
+let CLIENT_MAC = params.get('mac');
+const DEVICE_ID = params.get('device') || null;
+if (!CLIENT_MAC) {
+  CLIENT_MAC = localStorage.getItem('demo_mac');
+  if (!CLIENT_MAC) {
+    CLIENT_MAC = 'DE:M0:' + Array.from({length:4},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');
+    localStorage.setItem('demo_mac', CLIENT_MAC);
+  }
+}
+document.getElementById('macLine').textContent = 'Device: ' + CLIENT_MAC;
+
+let remaining = 0, ticking = null;
+
+function renderTimer(){
+  const t = document.getElementById('timer');
+  t.textContent = hms(remaining);
+  const live = remaining > 0;
+  t.classList.toggle('live', live);
+  document.getElementById('statusLine').textContent =
+    live ? 'You are online' : 'Insert a coin to get online';
+  document.getElementById('liveBadge').textContent =
+    live ? 'Connected' : 'Waiting for coins…';
+  document.getElementById('liveBadge').className = 'badge ' + (live ? 'online' : 'active');
+}
+function startTick(){
+  clearInterval(ticking);
+  ticking = setInterval(()=>{ if(remaining>0){remaining--;renderTimer();} }, 1000);
+}
+
+async function poll(){
+  try{
+    const d = await API.get('/coin/session/' + encodeURIComponent(CLIENT_MAC));
+    remaining = d.remaining_seconds || 0;
+    renderTimer();
+  }catch(e){ /* offline portal still shows last value */ }
+}
+
+async function loadRates(){
+  // Public: derive a friendly rate list from /api/config is not available;
+  // show the common Spawn tiers. (Live admin rate drives actual computation.)
+  const tiers = [['₱1','10 min'],['₱5','2 hrs'],['₱10','4 hrs'],['₱15','12 hrs'],['₱20','1 day']];
+  document.getElementById('rates').innerHTML =
+    tiers.map(([p,t])=>`<span class="chip"><b>${p}</b> · ${t}</span>`).join('');
+}
+
+async function loadHistory(){
+  try{
+    const d = await API.get('/coin/history/' + encodeURIComponent(CLIENT_MAC));
+    const items = (d.coins||[]).map(c=>
+      `<div class="hist-item"><span>${peso(c.amount)} · ${c.credits} min</span><span style="color:var(--muted)">${fmtDate(c.created_at)}</span></div>`).join('');
+    document.getElementById('histList').innerHTML = items ||
+      '<p style="color:var(--muted);text-align:center">No history yet.</p>';
+  }catch{}
+}
+
+/* tabs */
+document.querySelectorAll('.tabbar button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    ['coin','voucher','history'].forEach(t=>
+      document.getElementById('tab-'+t).classList.toggle('hidden', t!==b.dataset.tab));
+    if(b.dataset.tab==='history') loadHistory();
+  };
+});
+
+/* voucher redeem */
+document.getElementById('redeemBtn').onclick = async ()=>{
+  const code = document.getElementById('voucherCode').value.trim();
+  if(!code) return toast('Enter a voucher code','err');
+  try{
+    const d = await API.post('/vouchers/redeem',{ code, client_mac:CLIENT_MAC, device_id:DEVICE_ID });
+    toast('Voucher redeemed!','ok');
+    document.getElementById('voucherCode').value='';
+    await poll();
+  }catch(e){ toast(e.message,'err'); }
+};
+
+loadRates(); renderTimer(); startTick(); poll();
+setInterval(poll, 5000); // keep in sync with server every 5s
+
+/* Point the "Insert a coin" button at the dedicated portal, carrying the MAC. */
+(function(){
+  const link = document.getElementById('insertCoinLink');
+  if (link) {
+    const q = new URLSearchParams();
+    q.set('mac', CLIENT_MAC);
+    if (DEVICE_ID) q.set('device', DEVICE_ID);
+    link.href = '/insert-coin.html?' + q.toString();
+  }
+})();
+</script>
+</body>
+</html>

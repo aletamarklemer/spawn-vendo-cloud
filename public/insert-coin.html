@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Spawn Internet — Insert Coin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+  body{display:flex;align-items:center;justify-content:center;padding:18px}
+  .portal{width:100%;max-width:430px}
+
+  /* header */
+  .logo-wrap{text-align:center;margin-bottom:10px}
+  .globe-lg{width:72px;height:72px;border-radius:50%;margin:0 auto 12px;
+    background:conic-gradient(from 220deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8),var(--r1));
+    box-shadow:0 0 50px rgba(94,92,230,.45);animation:spin 14s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .wordmark{font-size:24px;font-weight:700;letter-spacing:.04em}
+  .wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
+
+  /* timer */
+  .timer{font-size:48px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.04em;margin:4px 0 2px}
+  .timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
+  .status-line{text-align:center;color:var(--muted);margin-bottom:16px;font-size:14px}
+  .status-line b{color:var(--ok)}
+
+  /* the machine: slot + coin animation */
+  .machine{position:relative;margin:6px auto 18px;width:100%;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:20px;padding:22px 18px 18px;overflow:hidden}
+  .machine::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(420px 120px at 50% -30%,rgba(94,92,230,.18),transparent 70%)}
+  .slot-label{text-align:center;color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}
+  .slot{position:relative;width:120px;height:14px;margin:0 auto;border-radius:8px;z-index:2;
+    background:#05050a;border:1px solid #000;
+    box-shadow:inset 0 3px 6px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.05)}
+  .slot::before{content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);
+    width:96px;height:6px;border-radius:6px 6px 0 0;background:#1c1c28}
+  .drop-zone{position:absolute;left:50%;top:34px;transform:translateX(-50%);width:60px;height:120px;z-index:1}
+
+  /* falling coin */
+  .coin{position:absolute;left:50%;top:0;width:46px;height:46px;border-radius:50%;
+    transform:translateX(-50%);display:grid;place-items:center;font-weight:700;font-size:14px;color:#3a2a00;
+    background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);
+    box-shadow:0 2px 0 #8a5e12,0 0 18px rgba(244,185,66,.6);border:2px solid #d99a2a}
+  .coin.fall{animation:coinFall .65s cubic-bezier(.4,.05,.6,1) forwards}
+  @keyframes coinFall{
+    0%{top:-50px;opacity:0;transform:translateX(-50%) rotateY(0) scale(.7)}
+    15%{opacity:1;transform:translateX(-50%) rotateY(180deg) scale(1)}
+    70%{top:84px;transform:translateX(-50%) rotateY(540deg) scale(1)}
+    85%{top:78px}
+    100%{top:84px;opacity:0;transform:translateX(-50%) rotateY(720deg) scale(.6)}
+  }
+
+  /* credited flash */
+  .credited{position:absolute;left:0;right:0;top:46px;text-align:center;z-index:3;
+    font-weight:700;color:var(--ok);opacity:0;font-size:20px}
+  .credited.show{animation:popUp 1.1s ease forwards}
+  @keyframes popUp{
+    0%{opacity:0;transform:translateY(8px) scale(.9)}
+    20%{opacity:1;transform:translateY(0) scale(1)}
+    80%{opacity:1}
+    100%{opacity:0;transform:translateY(-14px)}
+  }
+
+  /* denomination picker */
+  .denoms{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:18px 0 6px}
+  .denom{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;
+    padding:12px 4px;cursor:pointer;text-align:center;transition:.15s;font-family:inherit;color:var(--txt)}
+  .denom:hover{border-color:var(--r6)}
+  .denom.sel{border-color:transparent;background:var(--panel);
+    box-shadow:0 0 0 2px var(--r6),0 0 18px rgba(10,132,255,.35)}
+  .denom .face{width:34px;height:34px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;
+    font-weight:700;font-size:13px;color:#3a2a00;
+    background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);border:2px solid #d99a2a}
+  .denom .mins{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+
+  .insert-btn{width:100%;margin-top:14px;font-size:16px;padding:15px}
+  .insert-btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .session-meta{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
+  .mac{font-family:ui-monospace,monospace}
+  .links{text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="portal">
+  <div class="card">
+    <div class="logo-wrap">
+      <div class="globe-lg"></div>
+      <div class="wordmark grad-text">SPAWN<small>INTERNET</small></div>
+    </div>
+
+    <div id="timer" class="timer">00:00:00</div>
+    <div id="statusLine" class="status-line">Insert a coin to get online</div>
+    <div class="grad-bar" style="margin:0 0 4px"></div>
+
+    <!-- MACHINE -->
+    <div class="machine">
+      <div class="slot-label">Coin Slot</div>
+      <div class="slot"></div>
+      <div class="drop-zone" id="dropZone"></div>
+      <div class="credited" id="credited"></div>
+    </div>
+
+    <!-- DENOMINATIONS -->
+    <div class="slot-label" style="margin:0">Choose amount</div>
+    <div class="denoms" id="denoms"></div>
+
+    <button class="btn btn-primary insert-btn" id="insertBtn" disabled>Select a coin</button>
+
+    <div class="session-meta">
+      <span class="mac" id="macLine">Device: —</span>
+      <span id="syncLine">Synced just now</span>
+    </div>
+  </div>
+
+  <p class="links">
+    Spawn Internetan · Dipolog City ·
+    <a href="/index.html">Full portal</a> ·
+    <a href="/login.html">Staff login</a>
+  </p>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+/* Coin denominations — kept in sync with the firmware's accepted coins.
+   Minutes shown are the common Spawn tiers for at-a-glance feedback only;
+   the server's live admin rate drives the real credited time. */
+const DENOMS = [
+  { amt: 1,  label: '₱1',  mins: '10 min' },
+  { amt: 5,  label: '₱5',  mins: '2 hrs'  },
+  { amt: 10, label: '₱10', mins: '4 hrs'  },
+  { amt: 15, label: '₱15', mins: '12 hrs' },
+  { amt: 20, label: '₱20', mins: '1 day'  },
+];
+
+/* MAC injected by the captive-portal redirect (?mac=...&device=...).
+   Falls back to a stored demo MAC so the page works from any browser. */
+const params = new URLSearchParams(location.search);
+let CLIENT_MAC = params.get('mac');
+const DEVICE_ID = params.get('device') || null;
+
+/* MikroTik captive-portal params (passed by the hotspot redirect).
+   These let us auto-login the client the instant credits exist,
+   so there is NO "done paying" tap before getting online. */
+const MT_LOGIN  = params.get('link-login-only') || params.get('link-login') || '';
+const MT_DST    = params.get('dst') || params.get('link-orig') || 'http://spawn.internet';
+const MT_USER   = params.get('username') || CLIENT_MAC;        // MAC-as-username (Spawn pattern)
+const MT_PASS   = params.get('password') || CLIENT_MAC;
+let   connected = false;
+if (!CLIENT_MAC) {
+  CLIENT_MAC = localStorage.getItem('demo_mac');
+  if (!CLIENT_MAC) {
+    CLIENT_MAC = 'DE:M0:' + Array.from({length:4},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');
+    localStorage.setItem('demo_mac', CLIENT_MAC);
+  }
+}
+document.getElementById('macLine').textContent = 'Device: ' + CLIENT_MAC;
+
+let remaining = 0, ticking = null, selected = null, busy = false;
+
+/* ---- timer ---- */
+function renderTimer(){
+  const t = document.getElementById('timer');
+  t.textContent = hms(remaining);
+  const live = remaining > 0;
+  t.classList.toggle('live', live);
+  document.getElementById('statusLine').innerHTML =
+    live ? 'You are <b>online</b>' : 'Insert a coin to get online';
+}
+function startTick(){
+  clearInterval(ticking);
+  ticking = setInterval(()=>{ if(remaining>0){remaining--;renderTimer();} }, 1000);
+}
+
+/* ---- denomination picker ---- */
+const denomHost = document.getElementById('denoms');
+function selectDenom(d, el){
+  selected = d;
+  document.querySelectorAll('.denom').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+  const ib = document.getElementById('insertBtn');
+  ib.disabled = false;
+  ib.textContent = `Insert ${d.label}`;
+}
+DENOMS.forEach((d, i)=>{
+  const b = document.createElement('button');
+  b.className = 'denom';
+  b.innerHTML = `<span class="face">${d.amt}</span>${d.label}<span class="mins">${d.mins}</span>`;
+  b.onclick = ()=> selectDenom(d, b);
+  denomHost.appendChild(b);
+  if (i === 0) selectDenom(d, b); // pre-select ₱1 so the button is live on load
+});
+
+/* ---- coin drop animation ---- */
+function playDrop(label){
+  const zone = document.getElementById('dropZone');
+  const coin = document.createElement('div');
+  coin.className = 'coin fall';
+  coin.textContent = label.replace('₱','');
+  zone.appendChild(coin);
+  setTimeout(()=>coin.remove(), 700);
+}
+function flashCredited(text){
+  const c = document.getElementById('credited');
+  c.textContent = text;
+  c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
+}
+
+/* ---- AUTO-CONNECT ----
+   Fires the MikroTik hotspot login the moment the client has time.
+   No "done paying" tap needed. If there is no MikroTik login URL
+   (e.g. testing from a normal browser) it just marks the UI online. */
+function connectClient(){
+  if (connected || remaining <= 0) return;
+  connected = true;
+  document.getElementById('statusLine').innerHTML = 'Connecting you <b>online…</b>';
+
+  if (MT_LOGIN) {
+    // Submit the MikroTik hotspot login. MAC-as-credentials is the Spawn pattern;
+    // adjust MT_USER/MT_PASS above if your hotspot uses a different scheme.
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = MT_LOGIN;
+    f.style.display = 'none';
+    const add = (n,v)=>{ const i=document.createElement('input'); i.name=n; i.value=v; f.appendChild(i); };
+    add('username', MT_USER);
+    add('password', MT_PASS);
+    add('dst', MT_DST);
+    add('popup', 'true');
+    document.body.appendChild(f);
+    f.submit();           // MikroTik authorizes the MAC, then redirects to dst
+  } else {
+    // No captive-portal login URL — local/demo mode. UI just reflects online.
+    toast('You are online', 'ok');
+  }
+}
+
+/* ---- insert ---- */
+document.getElementById('insertBtn').onclick = async ()=>{
+  if(!selected || busy) return;
+  busy = true;
+  const ib = document.getElementById('insertBtn');
+  ib.disabled = true;
+  const before = remaining;
+
+  playDrop(selected.label);
+
+  try{
+    // small delay so the coin visibly drops before the time jumps
+    const [d] = await Promise.all([
+      API.post('/coin/portal-insert', {
+        client_mac: CLIENT_MAC,
+        amount: selected.amt,
+        device_id: DEVICE_ID,
+      }),
+      new Promise(r=>setTimeout(r, 600)),
+    ]);
+    remaining = d.remaining_seconds || 0;
+    renderTimer();
+    const gained = Math.max(0, remaining - before);
+    flashCredited(gained > 0 ? '+ ' + hms(gained) : 'Credited');
+    toast(`${selected.label} accepted`, 'ok');
+    markSynced();
+    connectClient();   // <-- auto-login the instant time is credited; no extra tap
+  }catch(e){
+    toast(e.message || 'Insert failed', 'err');
+  }finally{
+    busy = false;
+    ib.disabled = false;
+    ib.textContent = `Insert ${selected.label}`;
+  }
+};
+
+/* ---- live sync with server ---- */
+let lastSync = Date.now();
+function markSynced(){ lastSync = Date.now(); }
+function tickSyncLabel(){
+  const s = Math.floor((Date.now()-lastSync)/1000);
+  document.getElementById('syncLine').textContent =
+    s < 5 ? 'Synced just now' : `Synced ${s}s ago`;
+}
+async function poll(){
+  try{
+    const d = await API.get('/coin/session/' + encodeURIComponent(CLIENT_MAC));
+    // Only adopt server value if it's ahead (avoids fighting the local 1s tick).
+    const srv = d.remaining_seconds || 0;
+    if (Math.abs(srv - remaining) > 2) remaining = srv;
+    renderTimer();
+    markSynced();
+    if (remaining > 0) connectClient();  // physical coin / existing credits -> connect
+  }catch(e){ /* offline portal keeps last value */ }
+}
+
+renderTimer(); startTick(); poll();
+setInterval(poll, 5000);
+setInterval(tickSyncLabel, 1000);
+</script>
+</body>
+</html>

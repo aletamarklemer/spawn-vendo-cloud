@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spawn Internet — Technician</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="globe"></div><div><b>SPAWN</b><small>TECH</small></div></div>
+    <div class="navlink active" data-sec="devices" onclick="nav('devices')"><span class="dot"></span>Devices</div>
+    <div class="navlink" data-sec="maint" onclick="nav('maint')"><span class="dot"></span>Maintenance</div>
+    <div class="spacer"></div>
+    <div class="navlink" onclick="logout()"><span class="dot"></span>Sign out</div>
+  </aside>
+  <main class="main">
+    <div class="topbar"><h1 class="grad-text">Technician</h1><span class="pill" id="whoami">…</span></div>
+
+    <section data-section="devices">
+      <div class="card"><table><thead><tr><th>Device</th><th>Location</th><th>Status</th><th>Last online</th><th>Set status</th></tr></thead><tbody id="devTable"></tbody></table></div>
+    </section>
+
+    <section data-section="maint" class="hidden">
+      <div class="card" style="margin-bottom:18px"><h3 style="margin-top:0">Log Maintenance Request</h3>
+        <div class="field"><label>Device</label><select id="m_device"></select></div>
+        <div class="field"><label>Issue / troubleshooting note</label><textarea id="m_issue" rows="3"></textarea></div>
+        <button class="btn btn-primary" onclick="addMaint()">Submit</button>
+      </div>
+      <div class="card"><table><thead><tr><th>Created</th><th>Device</th><th>Issue</th><th>Status</th><th>Action</th></tr></thead><tbody id="maintTable"></tbody></table></div>
+    </section>
+  </main>
+</div>
+<script src="/js/api.js"></script>
+<script>
+let DEVICES = [];
+async function boot(){ const p = await requireRole(['technician','admin']); if(!p) return;
+  document.getElementById('whoami').textContent = p.full_name||p.email; nav('devices'); }
+function nav(s){ document.querySelectorAll('.navlink').forEach(n=>n.classList.toggle('active',n.dataset.sec===s));
+  document.querySelectorAll('[data-section]').forEach(x=>x.classList.toggle('hidden',x.dataset.section!==s));
+  if(s==='devices') loadDevices(); else loadMaint(); }
+
+async function loadDevices(){
+  const { devices } = await API.get('/devices'); DEVICES = devices;
+  document.getElementById('devTable').innerHTML = devices.map(d=>`
+    <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
+    <td>${d.location||'—'}</td><td><span class="badge ${d.status}">${d.status}</span></td><td>${fmtDate(d.last_online)}</td>
+    <td><select onchange="setStatus('${d.id}',this.value)">
+      ${['online','offline','maintenance'].map(s=>`<option ${s===d.status?'selected':''}>${s}</option>`).join('')}
+    </select></td></tr>`).join('') || '<tr><td colspan="5" style="color:var(--muted)">No devices.</td></tr>';
+}
+async function setStatus(id,status){ try{ await API.patch('/devices/'+id,{status}); toast('Status updated'); }catch(e){ toast(e.message,'err'); } }
+
+async function loadMaint(){
+  if(!DEVICES.length){ const {devices}=await API.get('/devices'); DEVICES=devices; }
+  document.getElementById('m_device').innerHTML = DEVICES.map(d=>`<option value="${d.id}">${d.device_name}</option>`).join('');
+  const { requests } = await API.get('/maintenance');
+  document.getElementById('maintTable').innerHTML = requests.map(r=>`
+    <tr><td>${fmtDate(r.created_at)}</td><td>${r.vendo_devices?.device_name||'—'}</td><td>${r.issue}</td>
+    <td><span class="badge ${r.status==='resolved'?'online':r.status==='in_progress'?'maintenance':'active'}">${r.status}</span></td>
+    <td>${r.status!=='resolved'?`<button class="btn btn-ghost btn-sm" onclick="resolveM('${r.id}')">Resolve</button>`:''}</td></tr>`).join('')
+    || '<tr><td colspan="5" style="color:var(--muted)">No requests.</td></tr>';
+}
+async function addMaint(){ const device_id=document.getElementById('m_device').value, issue=document.getElementById('m_issue').value.trim();
+  if(!issue) return toast('Describe the issue','err');
+  try{ await API.post('/maintenance',{device_id,issue}); toast('Logged'); document.getElementById('m_issue').value=''; loadMaint(); }catch(e){ toast(e.message,'err'); } }
+async function resolveM(id){ const resolution=prompt('Resolution note:'); if(resolution===null) return;
+  try{ await API.patch('/maintenance/'+id,{resolution,status:'resolved'}); toast('Resolved'); loadMaint(); }catch(e){ toast(e.message,'err'); } }
+boot();
+</script>
+</body>
+</html>
