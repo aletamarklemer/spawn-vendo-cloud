@@ -6,12 +6,9 @@
  *  - supabaseAdmin: uses the service_role key, bypasses RLS. Server-side ONLY.
  *  - supabaseAnon : uses the anon key, respects RLS. Used to validate user
  *                   JWTs and for operations that should honour row-level rules.
- *
- * We deliberately keep the service_role key on the server. The browser only
- * ever receives the anon key (served via /api/config) so Supabase Realtime
- * subscriptions can run client-side under RLS.
  */
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY } = process.env;
 
@@ -23,10 +20,12 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
+  realtime: { transport: WebSocket },
 });
 
 const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY || '', {
   auth: { autoRefreshToken: false, persistSession: false },
+  realtime: { transport: WebSocket },
 });
 
 module.exports = { supabaseAdmin, supabaseAnon, SUPABASE_URL, SUPABASE_ANON_KEY };
