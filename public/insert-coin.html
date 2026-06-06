@@ -65,24 +65,8 @@
     100%{opacity:0;transform:translateY(-14px)}
   }
 
-  /* denomination picker */
-  .denoms{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:18px 0 6px}
-  .denom{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;
-    padding:12px 4px;cursor:pointer;text-align:center;transition:.15s;font-family:inherit;color:var(--txt)}
-  .denom:hover{border-color:var(--r6)}
-  .denom.sel{border-color:transparent;background:var(--panel);
-    box-shadow:0 0 0 2px var(--r6),0 0 18px rgba(10,132,255,.35)}
-  .denom .face{width:34px;height:34px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;
-    font-weight:700;font-size:13px;color:#3a2a00;
-    background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);border:2px solid #d99a2a}
-  .denom .mins{display:block;font-size:10px;color:var(--muted);margin-top:2px}
-
   .insert-btn{width:100%;margin-top:14px;font-size:16px;padding:15px}
   .insert-btn:disabled{opacity:.5;cursor:not-allowed}
-
-  .session-meta{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
-  .mac{font-family:ui-monospace,monospace}
-  .links{text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px}
 
   /* ---- countdown overlay ---- */
   .overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
@@ -102,10 +86,19 @@
     transition:stroke-dashoffset 1s linear;filter:drop-shadow(0 0 8px rgba(52,199,89,.55))}
   .cd-num{position:absolute;inset:0;display:grid;place-items:center;
     font-size:54px;font-weight:700;font-variant-numeric:tabular-nums}
-  .cd-credited{font-size:15px;color:var(--ok);font-weight:600;min-height:20px;margin:6px 0 4px}
-  .cd-sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .cd-slotlbl{color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin:4px 0 10px}
+  .cd-credited{font-size:18px;color:var(--ok);font-weight:700;min-height:24px;margin-bottom:2px}
+  .cd-total{font-size:13px;color:var(--muted);margin-bottom:16px}
+  .cd-total b{color:var(--txt)}
+  .cd-sub{color:var(--muted);font-size:13px;margin-bottom:18px}
   .cd-sub b{color:var(--txt)}
   .done-btn{width:100%;font-size:17px;padding:16px;font-weight:600}
+  /* mini coin drop inside overlay on each detected coin */
+  .cd-zone{position:absolute;left:50%;top:0;width:46px;height:100%;transform:translateX(-50%);pointer-events:none}
+
+  .session-meta{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
+  .mac{font-family:ui-monospace,monospace}
+  .links{text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -128,11 +121,7 @@
       <div class="credited" id="credited"></div>
     </div>
 
-    <!-- DENOMINATIONS -->
-    <div class="slot-label" style="margin:0">Choose amount</div>
-    <div class="denoms" id="denoms"></div>
-
-    <button class="btn btn-primary insert-btn" id="insertBtn" disabled>Select a coin</button>
+    <button class="btn btn-primary insert-btn" id="insertBtn">Insert Coin</button>
 
     <div class="session-meta">
       <span class="mac" id="macLine">Device: —</span>
@@ -150,33 +139,25 @@
 <!-- COUNTDOWN OVERLAY -->
 <div class="overlay" id="overlay">
   <div class="cd-card">
-    <div class="cd-title">Payment Received</div>
+    <div class="cd-title">Insert Your Coins</div>
     <div class="cd-ring">
       <svg width="170" height="170" viewBox="0 0 170 170">
         <circle class="track" cx="85" cy="85" r="76"></circle>
         <circle class="prog" id="cdProg" cx="85" cy="85" r="76"></circle>
       </svg>
       <div class="cd-num" id="cdNum">30</div>
+      <div class="cd-zone" id="cdZone"></div>
     </div>
-    <div class="cd-credited" id="cdCredited"></div>
-    <div class="cd-sub">Insert more coins or tap <b>Done Paying</b> to connect.</div>
+    <div class="cd-slotlbl">Drop coins now · auto-detected</div>
+    <div class="cd-credited" id="cdCredited">Waiting for coin…</div>
+    <div class="cd-total" id="cdTotal"></div>
+    <div class="cd-sub">Keep inserting, or tap <b>Done Paying</b> to connect.</div>
     <button class="btn btn-primary done-btn" id="doneBtn">Done Paying — Connect Now</button>
   </div>
 </div>
 
 <script src="/js/api.js"></script>
 <script>
-/* Coin denominations — kept in sync with the firmware's accepted coins.
-   Minutes shown are the common Spawn tiers for at-a-glance feedback only;
-   the server's live admin rate drives the real credited time. */
-const DENOMS = [
-  { amt: 1,  label: '₱1',  mins: '10 min' },
-  { amt: 5,  label: '₱5',  mins: '2 hrs'  },
-  { amt: 10, label: '₱10', mins: '4 hrs'  },
-  { amt: 15, label: '₱15', mins: '12 hrs' },
-  { amt: 20, label: '₱20', mins: '1 day'  },
-];
-
 /* MAC injected by the captive-portal redirect (?mac=...&device=...).
    Falls back to a stored demo MAC so the page works from any browser. */
 const params = new URLSearchParams(location.search);
@@ -200,12 +181,13 @@ if (!CLIENT_MAC) {
 }
 document.getElementById('macLine').textContent = 'Device: ' + CLIENT_MAC;
 
-let remaining = 0, ticking = null, selected = null, busy = false;
+let remaining = 0, ticking = null, busy = false;
 
 /* ---- countdown config ---- */
-const CD_SECONDS = 30;            // countdown duration after a coin is inserted
+const CD_SECONDS = 30;            // countdown after the first detected coin
 const CD_CIRC = 2 * Math.PI * 76; // ring circumference (r=76)
 let cdLeft = 0, cdTimer = null, cdActive = false;
+let sessionStart = 0;             // remaining at the moment the overlay opened
 document.getElementById('cdProg').style.strokeDasharray = CD_CIRC;
 
 /* ---- timer ---- */
@@ -222,31 +204,12 @@ function startTick(){
   ticking = setInterval(()=>{ if(remaining>0){remaining--;renderTimer();} }, 1000);
 }
 
-/* ---- denomination picker ---- */
-const denomHost = document.getElementById('denoms');
-function selectDenom(d, el){
-  selected = d;
-  document.querySelectorAll('.denom').forEach(x=>x.classList.remove('sel'));
-  el.classList.add('sel');
-  const ib = document.getElementById('insertBtn');
-  ib.disabled = false;
-  ib.textContent = `Insert ${d.label}`;
-}
-DENOMS.forEach((d, i)=>{
-  const b = document.createElement('button');
-  b.className = 'denom';
-  b.innerHTML = `<span class="face">${d.amt}</span>${d.label}<span class="mins">${d.mins}</span>`;
-  b.onclick = ()=> selectDenom(d, b);
-  denomHost.appendChild(b);
-  if (i === 0) selectDenom(d, b); // pre-select ₱1 so the button is live on load
-});
-
 /* ---- coin drop animation ---- */
-function playDrop(label){
-  const zone = document.getElementById('dropZone');
+function playDrop(host){
+  const zone = host || document.getElementById('dropZone');
   const coin = document.createElement('div');
   coin.className = 'coin fall';
-  coin.textContent = label.replace('₱','');
+  coin.textContent = '₱';
   zone.appendChild(coin);
   setTimeout(()=>coin.remove(), 700);
 }
@@ -256,10 +219,9 @@ function flashCredited(text){
   c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
 }
 
-/* ---- AUTO-CONNECT ----
-   Fires the MikroTik hotspot login the moment the client has time.
-   No "done paying" tap needed. If there is no MikroTik login URL
-   (e.g. testing from a normal browser) it just marks the UI online. */
+/* ---- CONNECT ----
+   Fires the MikroTik hotspot login. Called only when the countdown ends
+   or the client taps "Done Paying" — never automatically. */
 function connectClient(){
   if (connected || remaining <= 0) return;
   connected = true;
@@ -286,21 +248,28 @@ function connectClient(){
 }
 
 /* ---- COUNTDOWN OVERLAY ----
-   Shown after a coin is inserted. Client can insert more coins (resets to
-   CD_SECONDS each time) or tap "Done Paying" to connect immediately.
-   When the countdown hits zero, the client is connected automatically. */
+   Opened when the client taps "Insert Coin". The page then just LISTENS:
+   the physical coin acceptor reports each coin to the server, poll() detects
+   the time going up, and we reflect the credited amount here automatically.
+   Each detected coin resets the 30s countdown. Connect happens only when the
+   countdown ends or the client taps "Done Paying". */
 function renderCd(){
   document.getElementById('cdNum').textContent = cdLeft;
   const offset = CD_CIRC * (1 - cdLeft / CD_SECONDS);
   document.getElementById('cdProg').style.strokeDashoffset = offset;
 }
 function openCountdown(){
+  if (cdActive) return;
   cdActive = true;
+  sessionStart = remaining;        // baseline to measure total credited this session
+  document.getElementById('cdCredited').textContent = 'Waiting for coin…';
+  document.getElementById('cdTotal').textContent = '';
   document.getElementById('overlay').classList.add('show');
   resetCountdown();
+  startFastPoll();   // poll more often so coins are detected quickly
 }
 function resetCountdown(){
-  // (re)start the 30s countdown — called on first insert and every extra insert
+  // (re)start the 30s window — called on open and on every detected coin
   cdLeft = CD_SECONDS;
   renderCd();
   clearInterval(cdTimer);
@@ -310,56 +279,33 @@ function resetCountdown(){
     if (cdLeft <= 0) finishCountdown();
   }, 1000);
 }
+/* Called by poll() whenever the server reports MORE time than before —
+   i.e. a physical coin was detected. Resets the countdown and updates text. */
+function onCoinDetected(gained){
+  if (!cdActive) return;
+  playDrop(document.getElementById('cdZone'));
+  flashCredited('+ ' + hms(gained));
+  document.getElementById('cdCredited').textContent = '+ ' + hms(gained) + ' credited';
+  const total = Math.max(0, remaining - sessionStart);
+  document.getElementById('cdTotal').textContent = 'Total added: ' + hms(total);
+  resetCountdown();
+}
 function finishCountdown(){
   if (!cdActive) return;
   cdActive = false;
   clearInterval(cdTimer);
   document.getElementById('overlay').classList.remove('show');
+  stopFastPoll();
   connectClient();   // connect when countdown ends OR Done Paying tapped
 }
 document.getElementById('doneBtn').onclick = finishCountdown;
 
-/* ---- insert ---- */
-document.getElementById('insertBtn').onclick = async ()=>{
-  if(!selected || busy) return;
-  busy = true;
-  const ib = document.getElementById('insertBtn');
-  ib.disabled = true;
-  const before = remaining;
-
-  playDrop(selected.label);
-
-  try{
-    // small delay so the coin visibly drops before the time jumps
-    const [d] = await Promise.all([
-      API.post('/coin/portal-insert', {
-        client_mac: CLIENT_MAC,
-        amount: selected.amt,
-        device_id: DEVICE_ID,
-      }),
-      new Promise(r=>setTimeout(r, 600)),
-    ]);
-    remaining = d.remaining_seconds || 0;
-    renderTimer();
-    const gained = Math.max(0, remaining - before);
-    flashCredited(gained > 0 ? '+ ' + hms(gained) : 'Credited');
-    toast(`${selected.label} accepted`, 'ok');
-    markSynced();
-
-    // Show the credited amount inside the overlay too
-    document.getElementById('cdCredited').textContent =
-      gained > 0 ? 'Credited + ' + hms(gained) : 'Credited';
-
-    // Open the countdown on first insert, or reset it on extra inserts.
-    if (cdActive) resetCountdown();
-    else openCountdown();
-  }catch(e){
-    toast(e.message || 'Insert failed', 'err');
-  }finally{
-    busy = false;
-    ib.disabled = false;
-    ib.textContent = `Insert ${selected.label}`;
-  }
+/* ---- insert coin button ----
+   No amount picking. Tapping just opens the countdown; the physical acceptor
+   handles detection and the server is updated by the firmware's /coin/insert. */
+document.getElementById('insertBtn').onclick = ()=>{
+  if (busy) return;
+  openCountdown();
 };
 
 /* ---- live sync with server ---- */
@@ -373,18 +319,35 @@ function tickSyncLabel(){
 async function poll(){
   try{
     const d = await API.get('/coin/session/' + encodeURIComponent(CLIENT_MAC));
-    // Only adopt server value if it's ahead (avoids fighting the local 1s tick).
     const srv = d.remaining_seconds || 0;
+    const before = remaining;
+    // Only adopt server value if it's ahead (avoids fighting the local 1s tick).
     if (Math.abs(srv - remaining) > 2) remaining = srv;
     renderTimer();
     markSynced();
-    // Note: connection now happens only via the countdown finishing or the
-    // "Done Paying" button — we no longer auto-connect from the poll.
+    // If the server time jumped UP while the countdown is open, a physical
+    // coin was just accepted — reflect it and reset the 30s window.
+    const gained = remaining - before;
+    if (cdActive && gained > 2) onCoinDetected(gained);
+    // Note: we no longer auto-connect here. Connection happens only when the
+    // countdown ends or the client taps "Done Paying".
   }catch(e){ /* offline portal keeps last value */ }
 }
 
+/* Normal poll = every 5s. While the countdown is open we poll every 1.5s so a
+   dropped coin shows up fast. */
+let pollTimer = setInterval(poll, 5000);
+let fastTimer = null;
+function startFastPoll(){
+  if (fastTimer) return;
+  fastTimer = setInterval(poll, 1500);
+}
+function stopFastPoll(){
+  clearInterval(fastTimer);
+  fastTimer = null;
+}
+
 renderTimer(); startTick(); poll();
-setInterval(poll, 5000);
 setInterval(tickSyncLabel, 1000);
 </script>
 </body>
