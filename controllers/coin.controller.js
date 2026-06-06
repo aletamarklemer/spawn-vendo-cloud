@@ -5,21 +5,46 @@ const { ok, fail, asyncHandler } = require('../utils/helpers');
 
 /**
  * POST /api/coin/insert        (device auth: x-device-key)
- * body: { device_id, client_mac, amount, txn_ref }
- * Delegates to the add_credits() Postgres function which atomically logs the
- * coin txn (deduped on txn_ref) and tops up / creates the session.
+ * body: { device_id, amount, txn_ref }   <-- client_mac NO LONGER required
+ *
+ * The coin acceptor cannot know which phone dropped the coin, so we credit
+ * whichever client most recently "armed" this device (tapped Insert Coin).
+ * Resolution + crediting happens atomically in add_credits_from_device().
+ *
+ * Backward compatible: if a client_mac IS sent (old firmware), we still honor
+ * it via the original add_credits() path.
  */
 const insertCoin = asyncHandler(async (req, res) => {
   const { device_id, client_mac, amount, txn_ref } = req.body || {};
-  if (!client_mac || amount == null) return fail(res, 'client_mac and amount required', 400);
+  if (amount == null) return fail(res, 'amount required', 400);
 
-  const { data, error } = await supabaseAdmin.rpc('add_credits', {
-    p_device_id: device_id || null,
-    p_client_mac: client_mac,
-    p_amount: Number(amount),
-    p_txn_ref: txn_ref || null,
-  });
-  if (error) return fail(res, error.message, 400);
+  let data, error;
+
+  if (client_mac) {
+    // Legacy path: explicit MAC provided by firmware.
+    ({ data, error } = await supabaseAdmin.rpc('add_credits', {
+      p_device_id: device_id || null,
+      p_client_mac: client_mac,
+      p_amount: Number(amount),
+      p_txn_ref: txn_ref || null,
+    }));
+  } else {
+    // New path: resolve the armed client for this device.
+    if (!device_id) return fail(res, 'device_id required', 400);
+    ({ data, error } = await supabaseAdmin.rpc('add_credits_from_device', {
+      p_device_id: device_id,
+      p_amount: Number(amount),
+      p_txn_ref: txn_ref || null,
+    }));
+  }
+
+  if (error) {
+    // Friendly message when nobody armed the machine.
+    if (String(error.message).includes('NO_ARMED_CLIENT')) {
+      return fail(res, 'No client is waiting on this device. Tap "Insert Coin" first.', 409);
+    }
+    return fail(res, error.message, 400);
+  }
 
   // Mark device online opportunistically.
   if (device_id) {
@@ -28,6 +53,25 @@ const insertCoin = asyncHandler(async (req, res) => {
       .eq('id', device_id);
   }
   return ok(res, { session: data });
+});
+
+/**
+ * POST /api/coin/arm           (public — captive portal)
+ * body: { device_id, client_mac, seconds? }
+ * The customer's phone "claims" the machine so the next physical coin is
+ * credited to them. Short window (default 90s) re-armed on each Insert tap.
+ */
+const armDevice = asyncHandler(async (req, res) => {
+  const { device_id, client_mac, seconds } = req.body || {};
+  if (!device_id || !client_mac) return fail(res, 'device_id and client_mac required', 400);
+
+  const { data, error } = await supabaseAdmin.rpc('arm_device', {
+    p_device_id: device_id,
+    p_client_mac: client_mac,
+    p_seconds: seconds ? Number(seconds) : 90,
+  });
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { arm: data });
 });
 
 /**
@@ -105,4 +149,4 @@ const history = asyncHandler(async (req, res) => {
   return ok(res, { sessions: sessions || [], coins: coins || [] });
 });
 
-module.exports = { insertCoin, getSession, history, portalInsert };
+module.exports = { insertCoin, getSession, history, portalInsert, armDevice };
