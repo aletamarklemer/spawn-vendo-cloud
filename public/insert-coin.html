@@ -83,6 +83,29 @@
   .session-meta{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
   .mac{font-family:ui-monospace,monospace}
   .links{text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px}
+
+  /* ---- countdown overlay ---- */
+  .overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+    padding:18px;background:rgba(5,5,12,.82);backdrop-filter:blur(8px)}
+  .overlay.show{display:flex;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .cd-card{width:100%;max-width:360px;text-align:center;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:24px;padding:30px 24px;
+    box-shadow:0 0 60px rgba(94,92,230,.4);animation:cdPop .3s cubic-bezier(.2,.8,.3,1.2)}
+  @keyframes cdPop{from{opacity:0;transform:scale(.85) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .cd-title{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+  .cd-ring{position:relative;width:170px;height:170px;margin:0 auto 8px}
+  .cd-ring svg{transform:rotate(-90deg)}
+  .cd-ring .track{fill:none;stroke:var(--line);stroke-width:10}
+  .cd-ring .prog{fill:none;stroke:var(--ok);stroke-width:10;stroke-linecap:round;
+    transition:stroke-dashoffset 1s linear;filter:drop-shadow(0 0 8px rgba(52,199,89,.55))}
+  .cd-num{position:absolute;inset:0;display:grid;place-items:center;
+    font-size:54px;font-weight:700;font-variant-numeric:tabular-nums}
+  .cd-credited{font-size:15px;color:var(--ok);font-weight:600;min-height:20px;margin:6px 0 4px}
+  .cd-sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+  .cd-sub b{color:var(--txt)}
+  .done-btn{width:100%;font-size:17px;padding:16px;font-weight:600}
 </style>
 </head>
 <body>
@@ -124,6 +147,23 @@
   </p>
 </div>
 
+<!-- COUNTDOWN OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="cd-card">
+    <div class="cd-title">Payment Received</div>
+    <div class="cd-ring">
+      <svg width="170" height="170" viewBox="0 0 170 170">
+        <circle class="track" cx="85" cy="85" r="76"></circle>
+        <circle class="prog" id="cdProg" cx="85" cy="85" r="76"></circle>
+      </svg>
+      <div class="cd-num" id="cdNum">30</div>
+    </div>
+    <div class="cd-credited" id="cdCredited"></div>
+    <div class="cd-sub">Insert more coins or tap <b>Done Paying</b> to connect.</div>
+    <button class="btn btn-primary done-btn" id="doneBtn">Done Paying — Connect Now</button>
+  </div>
+</div>
+
 <script src="/js/api.js"></script>
 <script>
 /* Coin denominations — kept in sync with the firmware's accepted coins.
@@ -161,6 +201,12 @@ if (!CLIENT_MAC) {
 document.getElementById('macLine').textContent = 'Device: ' + CLIENT_MAC;
 
 let remaining = 0, ticking = null, selected = null, busy = false;
+
+/* ---- countdown config ---- */
+const CD_SECONDS = 30;            // countdown duration after a coin is inserted
+const CD_CIRC = 2 * Math.PI * 76; // ring circumference (r=76)
+let cdLeft = 0, cdTimer = null, cdActive = false;
+document.getElementById('cdProg').style.strokeDasharray = CD_CIRC;
 
 /* ---- timer ---- */
 function renderTimer(){
@@ -239,6 +285,40 @@ function connectClient(){
   }
 }
 
+/* ---- COUNTDOWN OVERLAY ----
+   Shown after a coin is inserted. Client can insert more coins (resets to
+   CD_SECONDS each time) or tap "Done Paying" to connect immediately.
+   When the countdown hits zero, the client is connected automatically. */
+function renderCd(){
+  document.getElementById('cdNum').textContent = cdLeft;
+  const offset = CD_CIRC * (1 - cdLeft / CD_SECONDS);
+  document.getElementById('cdProg').style.strokeDashoffset = offset;
+}
+function openCountdown(){
+  cdActive = true;
+  document.getElementById('overlay').classList.add('show');
+  resetCountdown();
+}
+function resetCountdown(){
+  // (re)start the 30s countdown — called on first insert and every extra insert
+  cdLeft = CD_SECONDS;
+  renderCd();
+  clearInterval(cdTimer);
+  cdTimer = setInterval(()=>{
+    cdLeft--;
+    renderCd();
+    if (cdLeft <= 0) finishCountdown();
+  }, 1000);
+}
+function finishCountdown(){
+  if (!cdActive) return;
+  cdActive = false;
+  clearInterval(cdTimer);
+  document.getElementById('overlay').classList.remove('show');
+  connectClient();   // connect when countdown ends OR Done Paying tapped
+}
+document.getElementById('doneBtn').onclick = finishCountdown;
+
 /* ---- insert ---- */
 document.getElementById('insertBtn').onclick = async ()=>{
   if(!selected || busy) return;
@@ -265,7 +345,14 @@ document.getElementById('insertBtn').onclick = async ()=>{
     flashCredited(gained > 0 ? '+ ' + hms(gained) : 'Credited');
     toast(`${selected.label} accepted`, 'ok');
     markSynced();
-    connectClient();   // <-- auto-login the instant time is credited; no extra tap
+
+    // Show the credited amount inside the overlay too
+    document.getElementById('cdCredited').textContent =
+      gained > 0 ? 'Credited + ' + hms(gained) : 'Credited';
+
+    // Open the countdown on first insert, or reset it on extra inserts.
+    if (cdActive) resetCountdown();
+    else openCountdown();
   }catch(e){
     toast(e.message || 'Insert failed', 'err');
   }finally{
@@ -291,7 +378,8 @@ async function poll(){
     if (Math.abs(srv - remaining) > 2) remaining = srv;
     renderTimer();
     markSynced();
-    if (remaining > 0) connectClient();  // physical coin / existing credits -> connect
+    // Note: connection now happens only via the countdown finishing or the
+    // "Done Paying" button — we no longer auto-connect from the poll.
   }catch(e){ /* offline portal keeps last value */ }
 }
 
