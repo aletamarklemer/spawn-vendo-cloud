@@ -294,18 +294,56 @@ function finishCountdown(){
   if (!cdActive) return;
   cdActive = false;
   clearInterval(cdTimer);
+  clearInterval(armKeepAlive);
+  armKeepAlive = null;
   document.getElementById('overlay').classList.remove('show');
   stopFastPoll();
   connectClient();   // connect when countdown ends OR Done Paying tapped
 }
 document.getElementById('doneBtn').onclick = finishCountdown;
 
+/* ---- arm the device ----
+   Tells the server "this MAC is about to pay on DEVICE_ID", so the next
+   physical coin (reported by the firmware) is credited to THIS phone.
+   Re-armed periodically while the overlay is open so it never expires
+   mid-payment. */
+let armKeepAlive = null;
+async function armDevice(){
+  if (!DEVICE_ID) return true;   // demo/no-device mode: nothing to arm
+  try{
+    await API.post('/coin/arm', {
+      device_id: DEVICE_ID,
+      client_mac: CLIENT_MAC,
+      seconds: 90,
+    });
+    return true;
+  }catch(e){
+    toast(e.message || 'Could not reach machine', 'err');
+    return false;
+  }
+}
+
 /* ---- insert coin button ----
-   No amount picking. Tapping just opens the countdown; the physical acceptor
-   handles detection and the server is updated by the firmware's /coin/insert. */
-document.getElementById('insertBtn').onclick = ()=>{
-  if (busy) return;
+   No amount picking. Tapping arms the machine for this phone, then opens the
+   countdown. The physical acceptor detects the coin; the server credits it to
+   whoever is armed; poll() reflects it here. */
+document.getElementById('insertBtn').onclick = async ()=>{
+  if (busy || cdActive) return;
+  busy = true;
+  const ib = document.getElementById('insertBtn');
+  const orig = ib.textContent;
+  ib.disabled = true; ib.textContent = 'Preparing…';
+
+  const armed = await armDevice();
+
+  busy = false;
+  ib.disabled = false; ib.textContent = orig;
+  if (!armed) return;
+
   openCountdown();
+  // Keep the arm alive every 60s while the customer is still inserting.
+  clearInterval(armKeepAlive);
+  armKeepAlive = setInterval(armDevice, 60000);
 };
 
 /* ---- live sync with server ---- */
