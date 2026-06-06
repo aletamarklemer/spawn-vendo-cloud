@@ -28,6 +28,7 @@ router.get('/auth/me', authenticate, auth.me);
 // --- coin / session (device + public portal) ---
 router.post('/coin/insert', coinLimiter, deviceAuth, coin.insertCoin);
 router.post('/coin/portal-insert', coinLimiter, coin.portalInsert); // public (captive portal)
+router.post('/coin/arm', coinLimiter, coin.armDevice);              // public (captive portal claims a machine)
 router.get('/coin/session/:mac', coin.getSession);
 router.get('/coin/history/:mac', coin.history);
 
