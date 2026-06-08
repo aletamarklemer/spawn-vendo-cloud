@@ -9,6 +9,7 @@ const coin = require('../controllers/coin.controller');
 const voucher = require('../controllers/voucher.controller');
 const device = require('../controllers/device.controller');
 const admin = require('../controllers/admin.controller');
+const enforcement = require('../controllers/enforcement.controller');
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30 });
@@ -31,6 +32,9 @@ router.post('/coin/portal-insert', coinLimiter, coin.portalInsert); // public (c
 router.post('/coin/arm', coinLimiter, coin.armDevice);              // public (captive portal claims a machine)
 router.get('/coin/session/:mac', coin.getSession);
 router.get('/coin/history/:mac', coin.history);
+
+// --- enforcement (OpenWRT agent polls this) ---
+router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
 
 // --- vouchers ---
 router.post('/vouchers/generate', authenticate, authorize('admin'), voucher.generate);
