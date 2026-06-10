@@ -1,392 +1,109 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Spawn Internet — Insert Coin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css">
-<style>
-  body{display:flex;align-items:center;justify-content:center;padding:18px}
-  .portal{width:100%;max-width:430px}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Spawn Internet</title><style>
+:root{--bg:#070709;--panel:#14141c;--panel-2:#1b1b26;--line:#272735;--txt:#eef0f6;--muted:#9aa0b4;--muted-2:#6b7088;--r1:#ff2d55;--r2:#ff9500;--r3:#ffd60a;--r4:#34c759;--r5:#00c7be;--r6:#0a84ff;--r7:#5e5ce6;--r8:#bf5af2;--ok:#34c759;--bad:#ff453a;--grad:linear-gradient(90deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8));--shadow:0 10px 40px rgba(0,0,0,.5)}
+*{box-sizing:border-box}body{margin:0;background:#070709;color:var(--txt);font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
+.portal{width:100%;max-width:430px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.grad-bar{height:4px;background:var(--grad);border-radius:99px;margin:0 0 4px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-weight:600;padding:12px 20px;border-radius:12px;font-size:14px;font-family:inherit;color:#fff;width:100%}
+.btn-p{background:var(--grad)}.btn-p:disabled{opacity:.5;cursor:not-allowed}
+.logo-wrap{text-align:center;margin-bottom:10px}
+.globe-lg{width:56px;height:56px;border-radius:50%;margin:0 auto 10px;background:conic-gradient(var(--r1),var(--r4),var(--r6),var(--r8),var(--r1));animation:spin 8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wordmark{font-size:24px;font-weight:700;letter-spacing:.04em}
+.wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
+.timer{font-size:48px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
+.sl{text-align:center;color:var(--muted);margin-bottom:16px;font-size:14px}.sl b{color:var(--ok)}
+.machine{position:relative;margin:6px auto 18px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:20px;padding:22px 18px 18px;overflow:hidden}
+.slot-label{text-align:center;color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}
+.slot{width:120px;height:14px;margin:0 auto;border-radius:8px;background:#05050a;border:1px solid #000;box-shadow:inset 0 3px 6px rgba(0,0,0,.9)}
+.dz{position:absolute;left:50%;top:34px;transform:translateX(-50%);width:60px;height:120px}
+.coin{position:absolute;left:50%;top:0;width:46px;height:46px;border-radius:50%;transform:translateX(-50%);display:grid;place-items:center;font-weight:700;font-size:14px;color:#3a2a00;background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);box-shadow:0 2px 0 #8a5e12,0 0 18px rgba(244,185,66,.6)}
+.coin.fall{animation:cf .65s cubic-bezier(.4,.05,.6,1) forwards}
+@keyframes cf{0%{top:-50px;opacity:0}15%{opacity:1}70%{top:84px}85%{top:78px}100%{top:84px;opacity:0}}
+.cr{position:absolute;left:0;right:0;top:46px;text-align:center;font-weight:700;color:var(--ok);opacity:0;font-size:20px}
+.cr.show{animation:pu 1.1s ease forwards}
+@keyframes pu{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+.ibtn{margin-top:14px;font-size:16px;padding:15px}
+.ov{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,12,.82);backdrop-filter:blur(8px)}
+.ov.show{display:flex}
+.cdc{width:100%;max-width:360px;text-align:center;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:24px;padding:30px 24px;box-shadow:0 0 60px rgba(94,92,230,.4)}
+.cd-title{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
 
-  /* header */
-  .logo-wrap{text-align:center;margin-bottom:10px}
-  .globe-lg{width:72px;height:72px;border-radius:50%;margin:0 auto 12px;
-    background:conic-gradient(from 220deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8),var(--r1));
-    box-shadow:0 0 50px rgba(94,92,230,.45);animation:spin 14s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .wordmark{font-size:24px;font-weight:700;letter-spacing:.04em}
-  .wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
 
-  /* timer */
-  .timer{font-size:48px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.04em;margin:4px 0 2px}
-  .timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
-  .status-line{text-align:center;color:var(--muted);margin-bottom:16px;font-size:14px}
-  .status-line b{color:var(--ok)}
 
-  /* the machine: slot + coin animation */
-  .machine{position:relative;margin:6px auto 18px;width:100%;
-    background:linear-gradient(180deg,var(--panel-2),var(--panel));
-    border:1px solid var(--line);border-radius:20px;padding:22px 18px 18px;overflow:hidden}
-  .machine::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(420px 120px at 50% -30%,rgba(94,92,230,.18),transparent 70%)}
-  .slot-label{text-align:center;color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}
-  .slot{position:relative;width:120px;height:14px;margin:0 auto;border-radius:8px;z-index:2;
-    background:#05050a;border:1px solid #000;
-    box-shadow:inset 0 3px 6px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.05)}
-  .slot::before{content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);
-    width:96px;height:6px;border-radius:6px 6px 0 0;background:#1c1c28}
-  .drop-zone{position:absolute;left:50%;top:34px;transform:translateX(-50%);width:60px;height:120px;z-index:1}
 
-  /* falling coin */
-  .coin{position:absolute;left:50%;top:0;width:46px;height:46px;border-radius:50%;
-    transform:translateX(-50%);display:grid;place-items:center;font-weight:700;font-size:14px;color:#3a2a00;
-    background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);
-    box-shadow:0 2px 0 #8a5e12,0 0 18px rgba(244,185,66,.6);border:2px solid #d99a2a}
-  .coin.fall{animation:coinFall .65s cubic-bezier(.4,.05,.6,1) forwards}
-  @keyframes coinFall{
-    0%{top:-50px;opacity:0;transform:translateX(-50%) rotateY(0) scale(.7)}
-    15%{opacity:1;transform:translateX(-50%) rotateY(180deg) scale(1)}
-    70%{top:84px;transform:translateX(-50%) rotateY(540deg) scale(1)}
-    85%{top:78px}
-    100%{top:84px;opacity:0;transform:translateX(-50%) rotateY(720deg) scale(.6)}
-  }
 
-  /* credited flash */
-  .credited{position:absolute;left:0;right:0;top:46px;text-align:center;z-index:3;
-    font-weight:700;color:var(--ok);opacity:0;font-size:20px}
-  .credited.show{animation:popUp 1.1s ease forwards}
-  @keyframes popUp{
-    0%{opacity:0;transform:translateY(8px) scale(.9)}
-    20%{opacity:1;transform:translateY(0) scale(1)}
-    80%{opacity:1}
-    100%{opacity:0;transform:translateY(-14px)}
-  }
+.cd-sub{color:var(--muted);font-size:13px;margin-bottom:18px}.cd-sub b{color:var(--txt)}
+.cdc p{color:var(--muted);font-size:13px;margin:4px 0}
+.dbtn{font-size:17px;padding:16px;font-weight:600;margin-top:8px}
+.sm{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.t{background:var(--panel-2);border:1px solid var(--line);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);font-size:13px;animation:si .25s ease}
+.t.ok{border-left:4px solid var(--ok)}.t.err{border-left:4px solid var(--bad)}
+@keyframes si{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+</style></head><body>
+<div id="toast"></div>
+<div class="portal"><div class="card">
+<div class="logo-wrap"><div class="globe-lg"></div><div class="wordmark grad-text">SPAWN<small>INTERNET</small></div></div>
+<div id="timer" class="timer">00:00:00</div>
+<div id="sl" class="sl">Insert a coin to get online</div>
+<div class="grad-bar"></div>
+<div class="machine"><div class="slot-label">Coin Slot</div><div class="slot"></div><div class="dz" id="dz"></div><div class="cr" id="cr"></div></div>
+<button class="btn btn-p ibtn" id="ib">🪙 Insert Coin</button>
+<div class="sm"><span id="ml">Loading…</span><span id="sy">Synced just now</span></div>
+</div><p style="text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px">Spawn Internetan · Dipolog City</p></div>
 
-  .insert-btn{width:100%;margin-top:14px;font-size:16px;padding:15px}
-  .insert-btn:disabled{opacity:.5;cursor:not-allowed}
+<div class="ov" id="ov"><div class="cdc">
+<div class="cd-title">Insert Your Coins</div>
+<div style="font-size:72px;font-weight:700;text-align:center;margin:10px 0" id="cdn">30</div>
+<div class="cd-sub">Drop coins · auto-detected · tap <b>Done</b> to connect</div>
+<p id="cdc1" style="color:var(--ok);font-weight:700;font-size:18px">Waiting for coin…</p>
+<p id="cdc2"></p>
+<button class="btn btn-p dbtn" id="db">Done Paying — Connect Now</button>
+</div></div>
 
-  /* ---- countdown overlay ---- */
-  .overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
-    padding:18px;background:rgba(5,5,12,.82);backdrop-filter:blur(8px)}
-  .overlay.show{display:flex;animation:fadeIn .25s ease}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  .cd-card{width:100%;max-width:360px;text-align:center;
-    background:linear-gradient(180deg,var(--panel-2),var(--panel));
-    border:1px solid var(--line);border-radius:24px;padding:30px 24px;
-    box-shadow:0 0 60px rgba(94,92,230,.4);animation:cdPop .3s cubic-bezier(.2,.8,.3,1.2)}
-  @keyframes cdPop{from{opacity:0;transform:scale(.85) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
-  .cd-title{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
-  .cd-ring{position:relative;width:170px;height:170px;margin:0 auto 8px}
-  .cd-ring svg{transform:rotate(-90deg)}
-  .cd-ring .track{fill:none;stroke:var(--line);stroke-width:10}
-  .cd-ring .prog{fill:none;stroke:var(--ok);stroke-width:10;stroke-linecap:round;
-    transition:stroke-dashoffset 1s linear;filter:drop-shadow(0 0 8px rgba(52,199,89,.55))}
-  .cd-num{position:absolute;inset:0;display:grid;place-items:center;
-    font-size:54px;font-weight:700;font-variant-numeric:tabular-nums}
-  .cd-slotlbl{color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin:4px 0 10px}
-  .cd-credited{font-size:18px;color:var(--ok);font-weight:700;min-height:24px;margin-bottom:2px}
-  .cd-total{font-size:13px;color:var(--muted);margin-bottom:16px}
-  .cd-total b{color:var(--txt)}
-  .cd-sub{color:var(--muted);font-size:13px;margin-bottom:18px}
-  .cd-sub b{color:var(--txt)}
-  .done-btn{width:100%;font-size:17px;padding:16px;font-weight:600}
-  /* mini coin drop inside overlay on each detected coin */
-  .cd-zone{position:absolute;left:50%;top:0;width:46px;height:100%;transform:translateX(-50%);pointer-events:none}
-
-  .session-meta{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
-  .mac{font-family:ui-monospace,monospace}
-  .links{text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px}
-</style>
-</head>
-<body>
-<div class="portal">
-  <div class="card">
-    <div class="logo-wrap">
-      <div class="globe-lg"></div>
-      <div class="wordmark grad-text">SPAWN<small>INTERNET</small></div>
-    </div>
-
-    <div id="timer" class="timer">00:00:00</div>
-    <div id="statusLine" class="status-line">Insert a coin to get online</div>
-    <div class="grad-bar" style="margin:0 0 4px"></div>
-
-    <!-- MACHINE -->
-    <div class="machine">
-      <div class="slot-label">Coin Slot</div>
-      <div class="slot"></div>
-      <div class="drop-zone" id="dropZone"></div>
-      <div class="credited" id="credited"></div>
-    </div>
-
-    <button class="btn btn-primary insert-btn" id="insertBtn">Insert Coin</button>
-
-    <div class="session-meta">
-      <span class="mac" id="macLine">Device: —</span>
-      <span id="syncLine">Synced just now</span>
-    </div>
-  </div>
-
-  <p class="links">
-    Spawn Internetan · Dipolog City ·
-    <a href="/index.html">Full portal</a> ·
-    <a href="/login.html">Staff login</a>
-  </p>
-</div>
-
-<!-- COUNTDOWN OVERLAY -->
-<div class="overlay" id="overlay">
-  <div class="cd-card">
-    <div class="cd-title">Insert Your Coins</div>
-    <div class="cd-ring">
-      <svg width="170" height="170" viewBox="0 0 170 170">
-        <circle class="track" cx="85" cy="85" r="76"></circle>
-        <circle class="prog" id="cdProg" cx="85" cy="85" r="76"></circle>
-      </svg>
-      <div class="cd-num" id="cdNum">30</div>
-      <div class="cd-zone" id="cdZone"></div>
-    </div>
-    <div class="cd-slotlbl">Drop coins now · auto-detected</div>
-    <div class="cd-credited" id="cdCredited">Waiting for coin…</div>
-    <div class="cd-total" id="cdTotal"></div>
-    <div class="cd-sub">Keep inserting, or tap <b>Done Paying</b> to connect.</div>
-    <button class="btn btn-primary done-btn" id="doneBtn">Done Paying — Connect Now</button>
-  </div>
-</div>
-
-<script src="/js/api.js"></script>
 <script>
-/* MAC injected by the captive-portal redirect (?mac=...&device=...).
-   Falls back to a stored demo MAC so the page works from any browser. */
-const params = new URLSearchParams(location.search);
-let CLIENT_MAC = params.get('mac');
-const DEVICE_ID = params.get('device') || null;
-
-/* MikroTik captive-portal params (passed by the hotspot redirect).
-   These let us auto-login the client the instant credits exist,
-   so there is NO "done paying" tap before getting online. */
-const MT_LOGIN  = params.get('link-login-only') || params.get('link-login') || '';
-const MT_DST    = params.get('dst') || params.get('link-orig') || 'http://spawn.internet';
-const MT_USER   = params.get('username') || CLIENT_MAC;        // MAC-as-username (Spawn pattern)
-const MT_PASS   = params.get('password') || CLIENT_MAC;
-let   connected = false;
-if (!CLIENT_MAC) {
-  CLIENT_MAC = localStorage.getItem('demo_mac');
-  if (!CLIENT_MAC) {
-    CLIENT_MAC = 'DE:M0:' + Array.from({length:4},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');
-    localStorage.setItem('demo_mac', CLIENT_MAC);
-  }
+const RY='https://spawn-vendo-cloud-production-4f63.up.railway.app';
+const DID='8c4492d0-2e30-4a5a-95be-14269a5e2698';
+const CDS=30;
+const P=new URLSearchParams(location.search);
+const AA=P.get('authaction')||'',CI=P.get('clientip')||'',TK=P.get('tok')||'',RD=P.get('redir')||'http://spawn.internet';
+let CM=sessionStorage.getItem('sm');
+if(!CM){CM=CI?'IP:'+CI.replace(/\./g,':'):'XX:'+Array.from({length:5},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');sessionStorage.setItem('sm',CM);}
+document.getElementById('ml').textContent=CI?'IP: '+CI:'ID: '+CM;
+function hms(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return[h,m,x].map(v=>String(v).padStart(2,'0')).join(':');}
+function toast(m,t='ok'){const h=document.getElementById('toast');const e=document.createElement('div');e.className='t '+t;e.textContent=m;h.appendChild(e);setTimeout(()=>e.remove(),3200);}
+async function api(mth,path,body){const r=await fetch(RY+'/api'+path,{method:mth,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>({}));if(!r.ok||j.success===false)throw new Error(j.error||'HTTP '+r.status);return j.data;}
+function connect(){
+  if(!AA){toast('You are online!','ok');document.getElementById('sl').innerHTML='You are <b>online</b>';return;}
+  const u=AA+(AA.includes('?')?'&':'?')+'tok='+encodeURIComponent(TK)+'&redir='+encodeURIComponent(RD);
+  document.getElementById('sl').innerHTML='Connecting <b>online…</b>';
+  setTimeout(()=>{window.location.href=u;},800);
 }
-document.getElementById('macLine').textContent = 'Device: ' + CLIENT_MAC;
+let rem=0,tick=null;
+function rT(){const t=document.getElementById('timer');t.textContent=hms(rem);t.classList.toggle('live',rem>0);if(!cda)document.getElementById('sl').innerHTML=rem>0?'You are <b>online</b>':'Insert a coin to get online';}
+function sT(){clearInterval(tick);tick=setInterval(()=>{if(rem>0){rem--;rT();}},1000);}
+function drop(h){const z=h||document.getElementById('dz');const c=document.createElement('div');c.className='coin fall';c.textContent='₱';z.appendChild(c);setTimeout(()=>c.remove(),700);}
+function flash(x){const c=document.getElementById('cr');c.textContent=x;c.classList.remove('show');void c.offsetWidth;c.classList.add('show');}
+let cl=0,ct=null,cda=false,ss=0;
 
-let remaining = 0, ticking = null, busy = false;
-
-/* ---- countdown config ---- */
-const CD_SECONDS = 30;            // countdown after the first detected coin
-const CD_CIRC = 2 * Math.PI * 76; // ring circumference (r=76)
-let cdLeft = 0, cdTimer = null, cdActive = false;
-let sessionStart = 0;             // remaining at the moment the overlay opened
-document.getElementById('cdProg').style.strokeDasharray = CD_CIRC;
-
-/* ---- timer ---- */
-function renderTimer(){
-  const t = document.getElementById('timer');
-  t.textContent = hms(remaining);
-  const live = remaining > 0;
-  t.classList.toggle('live', live);
-  document.getElementById('statusLine').innerHTML =
-    live ? 'You are <b>online</b>' : 'Insert a coin to get online';
-}
-function startTick(){
-  clearInterval(ticking);
-  ticking = setInterval(()=>{ if(remaining>0){remaining--;renderTimer();} }, 1000);
-}
-
-/* ---- coin drop animation ---- */
-function playDrop(host){
-  const zone = host || document.getElementById('dropZone');
-  const coin = document.createElement('div');
-  coin.className = 'coin fall';
-  coin.textContent = '₱';
-  zone.appendChild(coin);
-  setTimeout(()=>coin.remove(), 700);
-}
-function flashCredited(text){
-  const c = document.getElementById('credited');
-  c.textContent = text;
-  c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
-}
-
-/* ---- CONNECT ----
-   Fires the MikroTik hotspot login. Called only when the countdown ends
-   or the client taps "Done Paying" — never automatically. */
-function connectClient(){
-  if (connected || remaining <= 0) return;
-  connected = true;
-  document.getElementById('statusLine').innerHTML = 'Connecting you <b>online…</b>';
-
-  if (MT_LOGIN) {
-    // Submit the MikroTik hotspot login. MAC-as-credentials is the Spawn pattern;
-    // adjust MT_USER/MT_PASS above if your hotspot uses a different scheme.
-    const f = document.createElement('form');
-    f.method = 'POST';
-    f.action = MT_LOGIN;
-    f.style.display = 'none';
-    const add = (n,v)=>{ const i=document.createElement('input'); i.name=n; i.value=v; f.appendChild(i); };
-    add('username', MT_USER);
-    add('password', MT_PASS);
-    add('dst', MT_DST);
-    add('popup', 'true');
-    document.body.appendChild(f);
-    f.submit();           // MikroTik authorizes the MAC, then redirects to dst
-  } else {
-    // No captive-portal login URL — local/demo mode. UI just reflects online.
-    toast('You are online', 'ok');
-  }
-}
-
-/* ---- COUNTDOWN OVERLAY ----
-   Opened when the client taps "Insert Coin". The page then just LISTENS:
-   the physical coin acceptor reports each coin to the server, poll() detects
-   the time going up, and we reflect the credited amount here automatically.
-   Each detected coin resets the 30s countdown. Connect happens only when the
-   countdown ends or the client taps "Done Paying". */
-function renderCd(){
-  document.getElementById('cdNum').textContent = cdLeft;
-  const offset = CD_CIRC * (1 - cdLeft / CD_SECONDS);
-  document.getElementById('cdProg').style.strokeDashoffset = offset;
-}
-function openCountdown(){
-  if (cdActive) return;
-  cdActive = true;
-  sessionStart = remaining;        // baseline to measure total credited this session
-  document.getElementById('cdCredited').textContent = 'Waiting for coin…';
-  document.getElementById('cdTotal').textContent = '';
-  document.getElementById('overlay').classList.add('show');
-  resetCountdown();
-  startFastPoll();   // poll more often so coins are detected quickly
-}
-function resetCountdown(){
-  // (re)start the 30s window — called on open and on every detected coin
-  cdLeft = CD_SECONDS;
-  renderCd();
-  clearInterval(cdTimer);
-  cdTimer = setInterval(()=>{
-    cdLeft--;
-    renderCd();
-    if (cdLeft <= 0) finishCountdown();
-  }, 1000);
-}
-/* Called by poll() whenever the server reports MORE time than before —
-   i.e. a physical coin was detected. Resets the countdown and updates text. */
-function onCoinDetected(gained){
-  if (!cdActive) return;
-  playDrop(document.getElementById('cdZone'));
-  flashCredited('+ ' + hms(gained));
-  document.getElementById('cdCredited').textContent = '+ ' + hms(gained) + ' credited';
-  const total = Math.max(0, remaining - sessionStart);
-  document.getElementById('cdTotal').textContent = 'Total added: ' + hms(total);
-  resetCountdown();
-}
-function finishCountdown(){
-  if (!cdActive) return;
-  cdActive = false;
-  clearInterval(cdTimer);
-  clearInterval(armKeepAlive);
-  armKeepAlive = null;
-  document.getElementById('overlay').classList.remove('show');
-  stopFastPoll();
-  connectClient();   // connect when countdown ends OR Done Paying tapped
-}
-document.getElementById('doneBtn').onclick = finishCountdown;
-
-/* ---- arm the device ----
-   Tells the server "this MAC is about to pay on DEVICE_ID", so the next
-   physical coin (reported by the firmware) is credited to THIS phone.
-   Re-armed periodically while the overlay is open so it never expires
-   mid-payment. */
-let armKeepAlive = null;
-async function armDevice(){
-  if (!DEVICE_ID) return true;   // demo/no-device mode: nothing to arm
-  try{
-    await API.post('/coin/arm', {
-      device_id: DEVICE_ID,
-      client_mac: CLIENT_MAC,
-      seconds: 90,
-    });
-    return true;
-  }catch(e){
-    toast(e.message || 'Could not reach machine', 'err');
-    return false;
-  }
-}
-
-/* ---- insert coin button ----
-   No amount picking. Tapping arms the machine for this phone, then opens the
-   countdown. The physical acceptor detects the coin; the server credits it to
-   whoever is armed; poll() reflects it here. */
-document.getElementById('insertBtn').onclick = async ()=>{
-  if (busy || cdActive) return;
-  busy = true;
-  const ib = document.getElementById('insertBtn');
-  const orig = ib.textContent;
-  ib.disabled = true; ib.textContent = 'Preparing…';
-
-  const armed = await armDevice();
-
-  busy = false;
-  ib.disabled = false; ib.textContent = orig;
-  if (!armed) return;
-
-  openCountdown();
-  // Keep the arm alive every 60s while the customer is still inserting.
-  clearInterval(armKeepAlive);
-  armKeepAlive = setInterval(armDevice, 60000);
-};
-
-/* ---- live sync with server ---- */
-let lastSync = Date.now();
-function markSynced(){ lastSync = Date.now(); }
-function tickSyncLabel(){
-  const s = Math.floor((Date.now()-lastSync)/1000);
-  document.getElementById('syncLine').textContent =
-    s < 5 ? 'Synced just now' : `Synced ${s}s ago`;
-}
-async function poll(){
-  try{
-    const d = await API.get('/coin/session/' + encodeURIComponent(CLIENT_MAC));
-    const srv = d.remaining_seconds || 0;
-    const before = remaining;
-    // Only adopt server value if it's ahead (avoids fighting the local 1s tick).
-    if (Math.abs(srv - remaining) > 2) remaining = srv;
-    renderTimer();
-    markSynced();
-    // If the server time jumped UP while the countdown is open, a physical
-    // coin was just accepted — reflect it and reset the 30s window.
-    const gained = remaining - before;
-    if (cdActive && gained > 2) onCoinDetected(gained);
-    // Note: we no longer auto-connect here. Connection happens only when the
-    // countdown ends or the client taps "Done Paying".
-  }catch(e){ /* offline portal keeps last value */ }
-}
-
-/* Normal poll = every 5s. While the countdown is open we poll every 1.5s so a
-   dropped coin shows up fast. */
-let pollTimer = setInterval(poll, 5000);
-let fastTimer = null;
-function startFastPoll(){
-  if (fastTimer) return;
-  fastTimer = setInterval(poll, 1500);
-}
-function stopFastPoll(){
-  clearInterval(fastTimer);
-  fastTimer = null;
-}
-
-renderTimer(); startTick(); poll();
-setInterval(tickSyncLabel, 1000);
-</script>
-</body>
-</html>
+function rC(){document.getElementById('cdn').textContent=cl;}
+function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').textContent='Waiting for coin…';document.getElementById('cdc2').textContent='';document.getElementById('ov').classList.add('show');rCC();sFP();}
+function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(()=>{cl--;rC();if(cl<=0)fC();},1000);}
+function onCD(g){if(!cda)return;drop();flash('+ '+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
+function fC(){if(!cda)return;cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
+document.getElementById('db').onclick=fC;
+let ak=null;
+async function arm(){try{await api('POST','/coin/arm',{device_id:DID,client_mac:CM,seconds:90});return true;}catch(e){toast(e.message||'Error','err');return false;}}
+let bsy=false;
+document.getElementById('ib').onclick=async()=>{if(bsy||cda)return;bsy=true;const b=document.getElementById('ib');b.disabled=true;b.textContent='Preparing…';const ok=await arm();bsy=false;b.disabled=false;b.textContent='🪙 Insert Coin';if(!ok)return;oC();clearInterval(ak);ak=setInterval(arm,60000);};
+let ls=Date.now();
+function mS(){ls=Date.now();}
+setInterval(()=>{const s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
+async function poll(){try{const d=await api('GET','/coin/session/'+encodeURIComponent(CM));const sv=d.remaining_seconds||0;const bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();const g=rem-bf;if(cda&&g>2)onCD(g);}catch(e){}}
+let pt=setInterval(poll,5000),ft=null;
+function sFP(){if(ft)return;ft=setInterval(poll,1500);}
+function sTP(){clearInterval(ft);ft=null;}
+rT();sT();poll();
+</script></body></html>
