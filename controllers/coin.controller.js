@@ -56,30 +56,30 @@ const armDevice = asyncHandler(async (req, res) => {
 const getSession = asyncHandler(async (req, res) => {
   const { mac } = req.params;
 
-  // Try exact match first (active only)
+  // Try exact match first (active or paused)
   let { data, error } = await supabaseAdmin
     .from('internet_sessions')
     .select('*')
     .eq('client_mac', mac)
-    .eq('status', 'active')
+    .in('status', ['active', 'paused'])
     .order('created_at', { ascending: false })
     .limit(1).maybeSingle();
 
   if (error) return fail(res, error.message, 400);
 
-  // If not found and IP-based, try matching same IP with any client_mac format
+  // If not found and IP-based, try matching same IP
   if (!data && mac.startsWith('IP:')) {
     const { data: d2 } = await supabaseAdmin
       .from('internet_sessions')
       .select('*')
       .like('client_mac', mac)
-      .eq('status', 'active')
+      .in('status', ['active', 'paused'])
       .order('created_at', { ascending: false })
       .limit(1).maybeSingle();
     if (d2) data = d2;
   }
 
-  // Fallback: any status for display purposes
+  // Fallback: any status for display
   if (!data) {
     const { data: d3 } = await supabaseAdmin
       .from('internet_sessions')
@@ -99,8 +99,76 @@ const getSession = asyncHandler(async (req, res) => {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
     }
+  } else if (data.status === 'paused') {
+    remaining = data.remaining_seconds || 0;
   }
+
   return ok(res, { session: data, remaining_seconds: remaining });
+});
+
+/** POST /api/coin/session/pause  (device auth) */
+const pauseSession = asyncHandler(async (req, res) => {
+  const { client_mac } = req.body || {};
+  if (!client_mac) return fail(res, 'client_mac required', 400);
+
+  // Find active session
+  const { data, error } = await supabaseAdmin
+    .from('internet_sessions')
+    .select('*')
+    .eq('client_mac', client_mac)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1).maybeSingle();
+
+  if (error) return fail(res, error.message, 400);
+  if (!data) return ok(res, { paused: false, message: 'No active session' });
+
+  // Calculate remaining seconds from end_time
+  const remaining = Math.max(0, Math.floor((new Date(data.end_time) - Date.now()) / 1000));
+  if (remaining === 0) return ok(res, { paused: false, message: 'Session already expired' });
+
+  // Pause: save remaining, clear end_time
+  const { error: updateErr } = await supabaseAdmin
+    .from('internet_sessions')
+    .update({ status: 'paused', remaining_seconds: remaining, end_time: null })
+    .eq('id', data.id);
+
+  if (updateErr) return fail(res, updateErr.message, 400);
+  return ok(res, { paused: true, remaining_seconds: remaining });
+});
+
+/** POST /api/coin/session/resume  (device auth) */
+const resumeSession = asyncHandler(async (req, res) => {
+  const { client_mac } = req.body || {};
+  if (!client_mac) return fail(res, 'client_mac required', 400);
+
+  // Find paused session
+  const { data, error } = await supabaseAdmin
+    .from('internet_sessions')
+    .select('*')
+    .eq('client_mac', client_mac)
+    .eq('status', 'paused')
+    .order('created_at', { ascending: false })
+    .limit(1).maybeSingle();
+
+  if (error) return fail(res, error.message, 400);
+  if (!data) return ok(res, { resumed: false, message: 'No paused session' });
+
+  const remaining = data.remaining_seconds || 0;
+  if (remaining === 0) {
+    await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
+    return ok(res, { resumed: false, message: 'Session expired' });
+  }
+
+  // Resume: set new end_time
+  const newEndTime = new Date(Date.now() + remaining * 1000).toISOString();
+  const { error: updateErr } = await supabaseAdmin
+    .from('internet_sessions')
+    .update({ status: 'active', end_time: newEndTime })
+    .eq('id', data.id);
+
+  if (updateErr) return fail(res, updateErr.message, 400);
+  return ok(res, { resumed: true, remaining_seconds: remaining });
 });
 
 const ACCEPTED_DENOMS = [1, 5, 10, 15, 20];
@@ -142,4 +210,4 @@ const history = asyncHandler(async (req, res) => {
   return ok(res, { sessions: sessions || [], coins: coins || [] });
 });
 
-module.exports = { insertCoin, getSession, history, portalInsert, armDevice };
+module.exports = { insertCoin, getSession, history, portalInsert, armDevice, pauseSession, resumeSession };
