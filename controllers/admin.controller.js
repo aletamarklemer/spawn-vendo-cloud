@@ -3,12 +3,13 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler } = require('../utils/helpers');
 const audit = require('../services/audit.service');
+const bcrypt = require('bcryptjs');
 
 function sinceISO(days) {
   return new Date(Date.now() - days * 86400000).toISOString();
 }
 
-/** GET /api/admin/stats — headline dashboard numbers */
+/** GET /api/admin/stats */
 const stats = asyncHandler(async (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const isoToday = today.toISOString();
@@ -37,7 +38,7 @@ const stats = asyncHandler(async (req, res) => {
   });
 });
 
-/** GET /api/admin/revenue?range=daily|weekly|monthly — series for charts */
+/** GET /api/admin/revenue?range=daily|weekly|monthly */
 const revenueSeries = asyncHandler(async (req, res) => {
   const range = req.query.range || 'daily';
   const days = range === 'monthly' ? 180 : range === 'weekly' ? 84 : 30;
@@ -64,9 +65,46 @@ const revenueSeries = asyncHandler(async (req, res) => {
 /** GET /api/admin/transactions */
 const transactions = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('coin_transactions')
-    .select('*, vendo_devices(device_name)').order('created_at', { ascending: false }).limit(200);
+    .select('*, vendo_devices(device_name)').order('created_at', { ascending: false }).limit(500);
   if (error) return fail(res, error.message, 400);
   return ok(res, { transactions: data });
+});
+
+/** DELETE /api/admin/transactions/:id */
+const deleteTransaction = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('coin_transactions').delete().eq('id', req.params.id);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
+/** DELETE /api/admin/transactions — delete all */
+const deleteAllTransactions = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('coin_transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) return fail(res, error.message, 400);
+  await audit.log('transactions.delete_all', req.user.sub, {});
+  return ok(res, { deleted: true });
+});
+
+/** GET /api/admin/sessions */
+const listSessions = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('internet_sessions')
+    .select('*, vendo_devices(device_name)').order('created_at', { ascending: false }).limit(200);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { sessions: data });
+});
+
+/** DELETE /api/admin/sessions/:id */
+const deleteSession = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('internet_sessions').delete().eq('id', req.params.id);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
+/** DELETE /api/admin/sessions/expired */
+const deleteExpiredSessions = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('internet_sessions').delete().eq('status', 'expired');
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
 });
 
 // ---- settings ----
@@ -106,6 +144,39 @@ const setUserActive = asyncHandler(async (req, res) => {
   return ok(res, { user: data });
 });
 
+/** DELETE /api/admin/users/:id */
+const deleteUser = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  // Delete from auth + profiles
+  const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(id);
+  if (authErr) return fail(res, authErr.message, 400);
+  await audit.log('user.delete', req.user.sub, { deleted_id: id });
+  return ok(res, { deleted: true });
+});
+
+/** PATCH /api/admin/users/:id/password */
+const updateUserPassword = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body || {};
+  if (!password || password.length < 8) return fail(res, 'Password must be at least 8 characters', 400);
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
+  if (error) return fail(res, error.message, 400);
+  // Store hashed password in profiles for view feature
+  const hashed = await bcrypt.hash(password, 10);
+  await supabaseAdmin.from('profiles').update({ password_hint: password }).eq('id', id);
+  await audit.log('user.password_change', req.user.sub, { target_id: id });
+  return ok(res, { updated: true });
+});
+
+/** GET /api/admin/users/:id/password */
+const getUserPassword = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { data, error } = await supabaseAdmin.from('profiles')
+    .select('password_hint').eq('id', id).maybeSingle();
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { password: data?.password_hint || '(not stored)' });
+});
+
 // ---- collections ----
 const listCollections = asyncHandler(async (req, res) => {
   let q = supabaseAdmin.from('collections')
@@ -128,6 +199,20 @@ const createCollection = asyncHandler(async (req, res) => {
   return ok(res, { collection: data }, 201);
 });
 
+/** DELETE /api/collections/:id */
+const deleteCollection = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('collections').delete().eq('id', req.params.id);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
+/** DELETE /api/collections — delete all */
+const deleteAllCollections = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('collections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
 /** GET /api/admin/audit */
 const auditLogs = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('audit_logs')
@@ -136,10 +221,19 @@ const auditLogs = asyncHandler(async (req, res) => {
   return ok(res, { logs: data });
 });
 
+/** DELETE /api/admin/audit */
+const deleteAllAudit = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
 module.exports = {
   stats, revenueSeries, transactions,
+  deleteTransaction, deleteAllTransactions,
+  listSessions, deleteSession, deleteExpiredSessions,
   getSettings, updateSettings,
-  listUsers, setUserActive,
-  listCollections, createCollection,
-  auditLogs,
+  listUsers, setUserActive, deleteUser, updateUserPassword, getUserPassword,
+  listCollections, createCollection, deleteCollection, deleteAllCollections,
+  auditLogs, deleteAllAudit,
 };
