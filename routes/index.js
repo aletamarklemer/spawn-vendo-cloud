@@ -71,6 +71,7 @@ router.delete('/admin/sessions/:id', authenticate, authorize('admin'), admin.del
 // settings
 router.get('/admin/settings', authenticate, authorize('admin'), admin.getSettings);
 router.put('/admin/settings', authenticate, authorize('admin'), admin.updateSettings);
+router.get('/pricing', admin.getPublicPricing);
 
 // users
 router.get('/admin/users', authenticate, authorize('admin'), admin.listUsers);

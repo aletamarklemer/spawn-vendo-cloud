@@ -226,11 +226,22 @@ const deleteAllAudit = asyncHandler(async (req, res) => {
   return ok(res, { deleted: true });
 });
 
+/** GET /api/pricing — public, no auth */
+const getPublicPricing = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('settings')
+    .select('peso_rate, minutes_rate')
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1).maybeSingle();
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { pricing: data || { peso_rate: 1, minutes_rate: 15 } });
+});
+
 module.exports = {
   stats, revenueSeries, transactions,
   deleteTransaction, deleteAllTransactions,
   listSessions, deleteSession, deleteExpiredSessions,
-  getSettings, updateSettings,
+  getSettings, updateSettings, getPublicPricing,
   listUsers, setUserActive, deleteUser, updateUserPassword, getUserPassword,
   listCollections, createCollection, deleteCollection, deleteAllCollections,
   auditLogs, deleteAllAudit,
