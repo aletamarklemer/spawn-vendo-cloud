@@ -31,10 +31,12 @@ app.use('/api', apiRoutes);
 // --- static frontend (captive portal + dashboards) ---
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Dashboard routes resolve to their HTML files
+// Dashboard routes — Admin only
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
-app.get('/technician', (req, res) => res.sendFile(path.join(__dirname, 'public/technician/index.html')));
-app.get('/operator', (req, res) => res.sendFile(path.join(__dirname, 'public/operator/index.html')));
+
+// Redirect old role URLs to admin
+app.get('/technician', (req, res) => res.redirect('/admin'));
+app.get('/operator', (req, res) => res.redirect('/admin'));
 
 // --- errors ---
 app.use('/api', notFound);

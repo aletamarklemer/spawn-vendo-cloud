@@ -179,11 +179,9 @@ const getUserPassword = asyncHandler(async (req, res) => {
 
 // ---- collections ----
 const listCollections = asyncHandler(async (req, res) => {
-  let q = supabaseAdmin.from('collections')
+  const { data, error } = await supabaseAdmin.from('collections')
     .select('*, vendo_devices(device_name), profiles(full_name)')
     .order('collection_date', { ascending: false });
-  if (req.user.role === 'operator') q = q.eq('operator_id', req.user.sub);
-  const { data, error } = await q;
   if (error) return fail(res, error.message, 400);
   return ok(res, { collections: data });
 });

@@ -42,28 +42,28 @@ router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteV
 router.delete('/vouchers/voided', authenticate, authorize('admin'), voucher.deleteVoidedVouchers);
 
 // devices
-router.get('/devices', authenticate, authorize('admin', 'technician', 'operator'), device.list);
+router.get('/devices', authenticate, authorize('admin'), device.list);
 router.post('/devices', authenticate, authorize('admin'), device.create);
-router.patch('/devices/:id', authenticate, authorize('admin', 'technician'), device.update);
+router.patch('/devices/:id', authenticate, authorize('admin'), device.update);
 router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);
 router.post('/devices/heartbeat', deviceAuth, device.heartbeat);
 
 // maintenance
-router.get('/maintenance', authenticate, authorize('admin', 'technician'), device.listMaintenance);
-router.post('/maintenance', authenticate, authorize('admin', 'technician'), device.createMaintenance);
-router.patch('/maintenance/:id', authenticate, authorize('admin', 'technician'), device.resolveMaintenance);
+router.get('/maintenance', authenticate, authorize('admin'), device.listMaintenance);
+router.post('/maintenance', authenticate, authorize('admin'), device.createMaintenance);
+router.patch('/maintenance/:id', authenticate, authorize('admin'), device.resolveMaintenance);
 
 // admin stats & revenue
-router.get('/admin/stats', authenticate, authorize('admin', 'operator', 'technician'), admin.stats);
+router.get('/admin/stats', authenticate, authorize('admin'), admin.stats);
 router.get('/admin/revenue', authenticate, authorize('admin'), admin.revenueSeries);
 
 // transactions
-router.get('/admin/transactions', authenticate, authorize('admin', 'operator'), admin.transactions);
+router.get('/admin/transactions', authenticate, authorize('admin'), admin.transactions);
 router.delete('/admin/transactions', authenticate, authorize('admin'), admin.deleteAllTransactions);
 router.delete('/admin/transactions/:id', authenticate, authorize('admin'), admin.deleteTransaction);
 
 // sessions
-router.get('/admin/sessions', authenticate, authorize('admin', 'operator', 'technician'), admin.listSessions);
+router.get('/admin/sessions', authenticate, authorize('admin'), admin.listSessions);
 router.delete('/admin/sessions/expired', authenticate, authorize('admin'), admin.deleteExpiredSessions);
 router.delete('/admin/sessions/:id', authenticate, authorize('admin'), admin.deleteSession);
 
@@ -83,9 +83,9 @@ router.get('/admin/audit', authenticate, authorize('admin'), admin.auditLogs);
 router.delete('/admin/audit', authenticate, authorize('admin'), admin.deleteAllAudit);
 
 // collections
-router.get('/collections', authenticate, authorize('admin', 'operator'), admin.listCollections);
-router.post('/collections', authenticate, authorize('admin', 'operator'), admin.createCollection);
+router.get('/collections', authenticate, authorize('admin'), admin.listCollections);
+router.post('/collections', authenticate, authorize('admin'), admin.createCollection);
 router.delete('/collections', authenticate, authorize('admin'), admin.deleteAllCollections);
-router.delete('/collections/:id', authenticate, authorize('admin', 'operator'), admin.deleteCollection);
+router.delete('/collections/:id', authenticate, authorize('admin'), admin.deleteCollection);
 
 module.exports = router;

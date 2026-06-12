@@ -54,7 +54,6 @@ function togglePw() {
   }
 }
 
-const dest = { admin:'/admin', technician:'/technician', operator:'/operator' };
 async function doLogin(){
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -64,7 +63,7 @@ async function doLogin(){
   try{
     const d = await API.post('/auth/login',{ email, password });
     API.setToken(d.token); API.setProfile(d.profile);
-    location.href = dest[d.profile.role] || '/admin';
+    location.href = '/admin';
   }catch(e){
     toast(e.message,'err');
     btn.textContent = 'Sign in'; btn.disabled = false;
@@ -73,7 +72,7 @@ async function doLogin(){
 document.getElementById('loginBtn').onclick = doLogin;
 document.getElementById('password').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 document.getElementById('email').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('password').focus(); });
-if(API.token()){ API.get('/auth/me').then(d=>{ if(d?.profile) location.href=dest[d.profile.role]||'/admin'; }).catch(()=>API.clear()); }
+if(API.token()){ API.get('/auth/me').then(d=>{ if(d?.profile) location.href='/admin'; }).catch(()=>API.clear()); }
 </script>
 </body>
 </html>
