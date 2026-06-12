@@ -7,6 +7,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/app.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+.btn-danger{background:#ff453a;color:#fff;border:none}
+.btn-danger:hover{background:#d93025}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:28px;min-width:340px;max-width:480px;width:100%;box-shadow:var(--shadow)}
+.modal h3{margin:0 0 18px}
+.modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:44px}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:16px}
+.search-bar{margin-bottom:14px}
+.search-bar input{max-width:320px}
+.tbl-actions{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -15,6 +29,7 @@
     <div class="navlink active" data-sec="dashboard" onclick="nav('dashboard')"><span class="dot"></span>Dashboard</div>
     <div class="navlink" data-sec="devices" onclick="nav('devices')"><span class="dot"></span>Devices</div>
     <div class="navlink" data-sec="transactions" onclick="nav('transactions')"><span class="dot"></span>Transactions</div>
+    <div class="navlink" data-sec="sessions" onclick="nav('sessions')"><span class="dot"></span>Sessions</div>
     <div class="navlink" data-sec="vouchers" onclick="nav('vouchers')"><span class="dot"></span>Vouchers</div>
     <div class="navlink" data-sec="collections" onclick="nav('collections')"><span class="dot"></span>Collections</div>
     <div class="navlink" data-sec="users" onclick="nav('users')"><span class="dot"></span>Users</div>
@@ -62,12 +77,33 @@
         </div>
         <button class="btn btn-primary" style="margin-top:14px" onclick="addDevice()">Add device</button>
       </div>
-      <div class="card"><table><thead><tr><th>Device</th><th>Location</th><th>VLAN</th><th>Status</th><th>Last online</th><th></th></tr></thead><tbody id="devTable"></tbody></table></div>
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteAllDevices()">🗑 Delete All</button>
+        </div>
+        <table><thead><tr><th>Device</th><th>Location</th><th>VLAN</th><th>Status</th><th>Last online</th><th></th></tr></thead><tbody id="devTable"></tbody></table>
+      </div>
     </section>
 
     <!-- TRANSACTIONS -->
     <section data-section="transactions" class="hidden">
-      <div class="card"><table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th></tr></thead><tbody id="txTable"></tbody></table></div>
+      <div class="card">
+        <div class="tbl-actions">
+          <input class="search-bar" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:280px">
+          <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
+        </div>
+        <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th><th></th></tr></thead><tbody id="txTable"></tbody></table>
+      </div>
+    </section>
+
+    <!-- SESSIONS -->
+    <section data-section="sessions" class="hidden">
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteAllSessions()">🗑 Delete All Expired</button>
+        </div>
+        <table><thead><tr><th>Client MAC</th><th>Device</th><th>Status</th><th>Remaining</th><th>End Time</th><th></th></tr></thead><tbody id="sessTable"></tbody></table>
+      </div>
     </section>
 
     <!-- VOUCHERS -->
@@ -79,12 +115,22 @@
         </div>
         <button class="btn btn-primary" style="margin-top:14px" onclick="genVouchers()">Generate</button>
       </div>
-      <div class="card"><table><thead><tr><th>Code</th><th>Minutes</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody id="vchTable"></tbody></table></div>
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteAllVouchers()">🗑 Delete All Voided</button>
+        </div>
+        <table><thead><tr><th>Code</th><th>Minutes</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody id="vchTable"></tbody></table>
+      </div>
     </section>
 
     <!-- COLLECTIONS -->
     <section data-section="collections" class="hidden">
-      <div class="card"><table><thead><tr><th>Date</th><th>Device</th><th>Operator</th><th>Amount</th><th>Notes</th></tr></thead><tbody id="colTable"></tbody></table></div>
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteAllCollections()">🗑 Delete All</button>
+        </div>
+        <table><thead><tr><th>Date</th><th>Device</th><th>Operator</th><th>Amount</th><th>Notes</th><th></th></tr></thead><tbody id="colTable"></tbody></table>
+      </div>
     </section>
 
     <!-- USERS -->
@@ -93,12 +139,19 @@
         <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
           <div><label>Full name</label><input id="u_name"></div>
           <div><label>Email</label><input id="u_email" type="email"></div>
-          <div><label>Password</label><input id="u_pass" type="password"></div>
+          <div><label>Password</label>
+            <div class="pw-wrap">
+              <input id="u_pass" type="password" placeholder="Min 8 characters">
+              <button class="pw-toggle" onclick="togglePw('u_pass',this)" type="button">👁</button>
+            </div>
+          </div>
           <div><label>Role</label><select id="u_role"><option value="operator">Operator</option><option value="technician">Technician</option><option value="admin">Admin</option></select></div>
         </div>
         <button class="btn btn-primary" style="margin-top:14px" onclick="addUser()">Create user</button>
       </div>
-      <div class="card"><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="usrTable"></tbody></table></div>
+      <div class="card">
+        <table><thead><tr><th>User</th><th>Role</th><th>Password</th><th>Status</th><th></th></tr></thead><tbody id="usrTable"></tbody></table>
+      </div>
     </section>
 
     <!-- SETTINGS -->
@@ -113,12 +166,48 @@
 
     <!-- AUDIT -->
     <section data-section="audit" class="hidden">
-      <div class="card"><table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead><tbody id="audTable"></tbody></table></div>
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteAllAudit()">🗑 Delete All Logs</button>
+        </div>
+        <table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead><tbody id="audTable"></tbody></table>
+      </div>
     </section>
   </main>
 </div>
+
+<!-- Change Password Modal -->
+<div id="pwModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Change Password</h3>
+    <input type="hidden" id="pw_uid">
+    <div class="field">
+      <label>New Password</label>
+      <div class="pw-wrap">
+        <input id="pw_new" type="password" placeholder="Min 8 characters">
+        <button class="pw-toggle" onclick="togglePw('pw_new',this)" type="button">👁</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="savePw()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/api.js"></script>
 <script src="/js/admin.js"></script>
-<script>function prev(){const p=document.getElementById('s_peso').value||1,m=document.getElementById('s_min').value||0;document.getElementById('ratePreview').textContent=`₱${p} = ${m} minutes`;}</script>
+<script>
+function prev(){const p=document.getElementById('s_peso').value||1,m=document.getElementById('s_min').value||0;document.getElementById('ratePreview').textContent=`₱${p} = ${m} minutes`;}
+function togglePw(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'👁':'🙈';}
+function closePwModal(){document.getElementById('pwModal').classList.add('hidden');}
+function openPwModal(uid){document.getElementById('pw_uid').value=uid;document.getElementById('pw_new').value='';document.getElementById('pwModal').classList.remove('hidden');}
+async function savePw(){
+  const uid=document.getElementById('pw_uid').value;
+  const pw=document.getElementById('pw_new').value.trim();
+  if(!pw||pw.length<8) return toast('Password must be at least 8 characters','err');
+  try{await API.patch('/admin/users/'+uid+'/password',{password:pw});toast('Password updated');closePwModal();}catch(e){toast(e.message,'err');}
+}
+</script>
 </body>
 </html>
