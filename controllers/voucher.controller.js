@@ -4,12 +4,11 @@ const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler, genVoucherCode } = require('../utils/helpers');
 const audit = require('../services/audit.service');
 
-/** POST /api/vouchers/generate  (admin) body: { minutes, count } */
+/** POST /api/vouchers/generate */
 const generate = asyncHandler(async (req, res) => {
   const minutes = parseInt(req.body?.minutes, 10);
   const count = Math.min(parseInt(req.body?.count, 10) || 1, 500);
   if (!minutes || minutes <= 0) return fail(res, 'minutes must be > 0', 400);
-
   const rows = Array.from({ length: count }, () => ({ code: genVoucherCode(), minutes }));
   const { data, error } = await supabaseAdmin.from('vouchers').insert(rows).select();
   if (error) return fail(res, error.message, 400);
@@ -17,7 +16,7 @@ const generate = asyncHandler(async (req, res) => {
   return ok(res, { vouchers: data }, 201);
 });
 
-/** GET /api/vouchers  (admin) */
+/** GET /api/vouchers */
 const list = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('vouchers')
     .select('*').order('created_at', { ascending: false }).limit(500);
@@ -25,7 +24,7 @@ const list = asyncHandler(async (req, res) => {
   return ok(res, { vouchers: data });
 });
 
-/** POST /api/vouchers/redeem  (public) body: { code, client_mac, device_id } */
+/** POST /api/vouchers/redeem */
 const redeem = asyncHandler(async (req, res) => {
   const { code, client_mac, device_id } = req.body || {};
   if (!code || !client_mac) return fail(res, 'code and client_mac required', 400);
@@ -45,7 +44,7 @@ const redeem = asyncHandler(async (req, res) => {
   return ok(res, { session: data });
 });
 
-/** POST /api/vouchers/void  (admin) body: { id } */
+/** POST /api/vouchers/void */
 const voidVoucher = asyncHandler(async (req, res) => {
   const { id } = req.body || {};
   const { data, error } = await supabaseAdmin.from('vouchers')
@@ -55,4 +54,19 @@ const voidVoucher = asyncHandler(async (req, res) => {
   return ok(res, { voucher: data });
 });
 
-module.exports = { generate, list, redeem, voidVoucher };
+/** DELETE /api/vouchers/:id */
+const deleteVoucher = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('vouchers').delete().eq('id', req.params.id);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
+/** DELETE /api/vouchers/voided — delete all void/used */
+const deleteVoidedVouchers = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('vouchers')
+    .delete().in('status', ['void', 'used']);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
+module.exports = { generate, list, redeem, voidVoucher, deleteVoucher, deleteVoidedVouchers };
