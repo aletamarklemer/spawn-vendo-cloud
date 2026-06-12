@@ -14,6 +14,11 @@
     box-shadow:0 0 50px rgba(94,92,230,.4)}
   .wordmark{font-size:24px;font-weight:700;text-align:center;letter-spacing:.04em}
   .wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6)}
+  .pw-wrap{position:relative}
+  .pw-wrap input{padding-right:46px}
+  .pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px;line-height:1}
+  .pw-toggle:hover{color:var(--txt)}
 </style>
 </head>
 <body>
@@ -24,26 +29,50 @@
     <p style="text-align:center;color:var(--muted);margin-top:0">Staff & Operator Console</p>
     <div class="grad-bar" style="margin-bottom:22px"></div>
     <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username" placeholder="you@spawn.net"></div>
-    <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <div class="field">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+        <button class="pw-toggle" type="button" onclick="togglePw()" id="pwToggleBtn">👁</button>
+      </div>
+    </div>
     <button class="btn btn-primary" style="width:100%" id="loginBtn">Sign in</button>
     <p style="text-align:center;margin-top:18px"><a href="/">← Back to portal</a></p>
   </div>
 </div>
 <script src="/js/api.js"></script>
 <script>
+function togglePw() {
+  const input = document.getElementById('password');
+  const btn = document.getElementById('pwToggleBtn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
 const dest = { admin:'/admin', technician:'/technician', operator:'/operator' };
 async function doLogin(){
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   if(!email||!password) return toast('Enter email and password','err');
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = 'Signing in…'; btn.disabled = true;
   try{
     const d = await API.post('/auth/login',{ email, password });
     API.setToken(d.token); API.setProfile(d.profile);
     location.href = dest[d.profile.role] || '/admin';
-  }catch(e){ toast(e.message,'err'); }
+  }catch(e){
+    toast(e.message,'err');
+    btn.textContent = 'Sign in'; btn.disabled = false;
+  }
 }
 document.getElementById('loginBtn').onclick = doLogin;
 document.getElementById('password').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('email').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('password').focus(); });
 if(API.token()){ API.get('/auth/me').then(d=>{ if(d?.profile) location.href=dest[d.profile.role]||'/admin'; }).catch(()=>API.clear()); }
 </script>
 </body>
