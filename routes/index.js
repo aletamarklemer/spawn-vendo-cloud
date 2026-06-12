@@ -23,6 +23,7 @@ router.get('/health', (req, res) => res.json({ success: true, data: { status: 'o
 router.post('/auth/login', loginLimiter, auth.login);
 router.post('/auth/register', authenticate, authorize('admin'), auth.register);
 router.get('/auth/me', authenticate, auth.me);
+router.patch('/auth/profile', authenticate, auth.updateProfile);
 
 router.post('/coin/insert', coinLimiter, deviceAuth, coin.insertCoin);
 router.post('/coin/portal-insert', coinLimiter, coin.portalInsert);
@@ -33,13 +34,13 @@ router.get('/coin/history/:mac', coin.history);
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
 
-// vouchers
+// vouchers — specific paths must come BEFORE /:id to avoid conflict
 router.post('/vouchers/generate', authenticate, authorize('admin'), voucher.generate);
 router.get('/vouchers', authenticate, authorize('admin'), voucher.list);
 router.post('/vouchers/void', authenticate, authorize('admin'), voucher.voidVoucher);
 router.post('/vouchers/redeem', voucher.redeem);
-router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteVoucher);
 router.delete('/vouchers/voided', authenticate, authorize('admin'), voucher.deleteVoidedVouchers);
+router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteVoucher);
 
 // devices
 router.get('/devices', authenticate, authorize('admin'), device.list);

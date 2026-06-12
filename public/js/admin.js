@@ -203,11 +203,40 @@ async function loadUsers() {
     </td></tr>`).join('');
 }
 async function addUser() {
-  const body = { email: val('u_email'), password: val('u_pass'), full_name: val('u_name'), role: val('u_role') };
-  if (!body.email || !body.password) return toast('Email and password required', 'err');
-  if (body.password.length < 8) return toast('Password must be at least 8 characters', 'err');
-  try { await API.post('/auth/register', body); toast('User created'); loadUsers();
-    ['u_email','u_pass','u_name'].forEach(id => document.getElementById(id).value = ''); } catch (e) { toast(e.message, 'err'); }
+  // User creation disabled — admin-only system
+  toast('User creation is disabled', 'err');
+}
+
+/* ---------- Edit My Profile ---------- */
+function openEditProfile() {
+  const p = API.profile();
+  document.getElementById('ep_name').value = p?.full_name || '';
+  document.getElementById('ep_email').value = p?.email || '';
+  document.getElementById('editProfileModal').classList.remove('hidden');
+}
+function closeEditProfile() {
+  document.getElementById('editProfileModal').classList.add('hidden');
+}
+async function saveProfile() {
+  const full_name = document.getElementById('ep_name').value.trim();
+  const email = document.getElementById('ep_email').value.trim();
+  if (!full_name && !email) return toast('Enter name or email', 'err');
+  const btn = document.getElementById('epSaveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    await API.patch('/auth/profile', { full_name, email });
+    // Update local profile cache
+    const p = API.profile() || {};
+    if (full_name) p.full_name = full_name;
+    if (email) p.email = email;
+    API.setProfile(p);
+    document.getElementById('whoami').textContent = p.full_name || p.email;
+    toast('Profile updated!');
+    closeEditProfile();
+  } catch (e) {
+    toast(e.message, 'err');
+  }
+  btn.textContent = 'Save'; btn.disabled = false;
 }
 async function toggleUser(id, active) {
   try { await API.patch(`/admin/users/${id}/active`, { is_active: active }); loadUsers(); } catch (e) { toast(e.message, 'err'); }

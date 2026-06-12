@@ -40,7 +40,7 @@
   </aside>
 
   <main class="main">
-    <div class="topbar"><h1 class="grad-text">Admin Console</h1><span class="pill" id="whoami">…</span></div>
+    <div class="topbar"><h1 class="grad-text">Admin Console</h1><div style="display:flex;align-items:center;gap:10px"><span class="pill" id="whoami">…</span><button class="btn btn-ghost btn-sm" onclick="openEditProfile()" title="Edit my profile">✏️ Edit Profile</button></div></div>
 
     <!-- DASHBOARD -->
     <section data-section="dashboard">
@@ -135,20 +135,6 @@
 
     <!-- USERS -->
     <section data-section="users" class="hidden">
-      <div class="card" style="margin-bottom:18px"><h3 style="margin-top:0">Create Staff Account</h3>
-        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-          <div><label>Full name</label><input id="u_name"></div>
-          <div><label>Email</label><input id="u_email" type="email"></div>
-          <div><label>Password</label>
-            <div class="pw-wrap">
-              <input id="u_pass" type="password" placeholder="Min 8 characters">
-              <button class="pw-toggle" onclick="togglePw('u_pass',this)" type="button">👁</button>
-            </div>
-          </div>
-          <div><label>Role</label><select id="u_role"><option value="operator">Operator</option><option value="technician">Technician</option><option value="admin">Admin</option></select></div>
-        </div>
-        <button class="btn btn-primary" style="margin-top:14px" onclick="addUser()">Create user</button>
-      </div>
       <div class="card">
         <table><thead><tr><th>User</th><th>Role</th><th>Password</th><th>Status</th><th></th></tr></thead><tbody id="usrTable"></tbody></table>
       </div>
@@ -191,6 +177,19 @@
     <div class="actions">
       <button class="btn btn-ghost btn-sm" onclick="closePwModal()">Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="savePw()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="editProfileModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>✏️ Edit My Profile</h3>
+    <div class="field"><label>Full Name</label><input id="ep_name" type="text" placeholder="Your full name"></div>
+    <div class="field"><label>Email</label><input id="ep_email" type="email" placeholder="your@email.com"></div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeEditProfile()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="epSaveBtn" onclick="saveProfile()">Save</button>
     </div>
   </div>
 </div>

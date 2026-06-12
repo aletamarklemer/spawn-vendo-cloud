@@ -83,4 +83,29 @@ const me = asyncHandler(async (req, res) => {
   return ok(res, { profile });
 });
 
-module.exports = { login, register, me };
+/** PATCH /api/auth/profile — update own name & email */
+const updateProfile = asyncHandler(async (req, res) => {
+  const { full_name, email } = req.body || {};
+  if (!full_name && !email) return fail(res, 'full_name or email required', 400);
+
+  const updates = {};
+  if (full_name) updates.full_name = full_name;
+  if (email) updates.email = email;
+
+  // Update profiles table
+  const { error: pErr } = await supabaseAdmin
+    .from('profiles').update(updates).eq('id', req.user.sub);
+  if (pErr) return fail(res, pErr.message, 400);
+
+  // Update auth email if changed
+  if (email) {
+    const { error: aErr } = await supabaseAdmin.auth.admin
+      .updateUserById(req.user.sub, { email });
+    if (aErr) return fail(res, aErr.message, 400);
+  }
+
+  await audit.log('staff.profile_update', req.user.sub, updates);
+  return ok(res, { updated: true });
+});
+
+module.exports = { login, register, me, updateProfile };
