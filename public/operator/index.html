@@ -6,6 +6,12 @@
 <title>Spawn Internet — Operator</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/app.css">
+<style>
+.btn-danger{background:#ff453a;color:#fff;border:none}
+.btn-danger:hover{background:#d93025}
+.tbl-actions{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.stat-mini{font-size:13px;color:var(--muted)}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -13,6 +19,8 @@
     <div class="brand"><div class="globe"></div><div><b>SPAWN</b><small>OPERATOR</small></div></div>
     <div class="navlink active" data-sec="overview" onclick="nav('overview')"><span class="dot"></span>Overview</div>
     <div class="navlink" data-sec="devices" onclick="nav('devices')"><span class="dot"></span>My Machines</div>
+    <div class="navlink" data-sec="transactions" onclick="nav('transactions')"><span class="dot"></span>Transactions</div>
+    <div class="navlink" data-sec="sessions" onclick="nav('sessions')"><span class="dot"></span>Live Sessions</div>
     <div class="navlink" data-sec="collections" onclick="nav('collections')"><span class="dot"></span>Collections</div>
     <div class="spacer"></div>
     <div class="navlink" onclick="logout()"><span class="dot"></span>Sign out</div>
@@ -20,18 +28,51 @@
   <main class="main">
     <div class="topbar"><h1 class="grad-text">Operator</h1><span class="pill" id="whoami">…</span></div>
 
+    <!-- OVERVIEW -->
     <section data-section="overview">
       <div class="grid stats">
         <div class="card stat accent-2"><div class="label">My Machines</div><div class="value" id="o-machines">0</div></div>
         <div class="card stat accent-3"><div class="label">Online Now</div><div class="value" id="o-online">0</div></div>
         <div class="card stat accent-1"><div class="label">Active Sessions</div><div class="value" id="o-sessions">0</div></div>
+        <div class="card stat accent-4"><div class="label">Revenue Today</div><div class="value" id="o-rev-today">₱0</div></div>
+      </div>
+      <div class="grid stats" style="margin-top:18px">
+        <div class="card stat"><div class="label">This Week</div><div class="value" id="o-rev-week">₱0</div></div>
+        <div class="card stat"><div class="label">This Month</div><div class="value" id="o-rev-month">₱0</div></div>
       </div>
     </section>
 
+    <!-- DEVICES -->
     <section data-section="devices" class="hidden">
-      <div class="card"><table><thead><tr><th>Device</th><th>Location</th><th>Status</th><th>Last online</th></tr></thead><tbody id="devTable"></tbody></table></div>
+      <div class="card">
+        <table><thead><tr><th>Device</th><th>Location</th><th>Status</th><th>Last online</th></tr></thead>
+        <tbody id="devTable"></tbody></table>
+      </div>
     </section>
 
+    <!-- TRANSACTIONS -->
+    <section data-section="transactions" class="hidden">
+      <div class="card">
+        <div class="tbl-actions">
+          <input id="op-tx-search" placeholder="Search…" oninput="filterOpTx()" style="max-width:240px;padding:8px 12px;font-size:13px">
+        </div>
+        <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client</th></tr></thead>
+        <tbody id="opTxTable"></tbody></table>
+      </div>
+    </section>
+
+    <!-- LIVE SESSIONS -->
+    <section data-section="sessions" class="hidden">
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-ghost btn-sm" onclick="loadSessions()">🔄 Refresh</button>
+        </div>
+        <table><thead><tr><th>Client</th><th>Device</th><th>Status</th><th>Time Left</th><th>End Time</th></tr></thead>
+        <tbody id="opSessTable"></tbody></table>
+      </div>
+    </section>
+
+    <!-- COLLECTIONS -->
     <section data-section="collections" class="hidden">
       <div class="card" style="margin-bottom:18px"><h3 style="margin-top:0">Record Collection</h3>
         <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
@@ -42,42 +83,112 @@
         </div>
         <button class="btn btn-primary" style="margin-top:14px" onclick="addCol()">Save collection</button>
       </div>
-      <div class="card"><table><thead><tr><th>Date</th><th>Device</th><th>Amount</th><th>Notes</th></tr></thead><tbody id="colTable"></tbody></table></div>
+      <div class="card">
+        <table><thead><tr><th>Date</th><th>Device</th><th>Amount</th><th>Notes</th></tr></thead>
+        <tbody id="colTable"></tbody></table>
+      </div>
     </section>
   </main>
 </div>
+
 <script src="/js/api.js"></script>
 <script>
 let DEVICES = [];
-async function boot(){ const p=await requireRole(['operator','admin']); if(!p) return;
-  document.getElementById('whoami').textContent=p.full_name||p.email;
-  document.getElementById('c_date').value=new Date().toISOString().slice(0,10); nav('overview'); }
-function nav(s){ document.querySelectorAll('.navlink').forEach(n=>n.classList.toggle('active',n.dataset.sec===s));
-  document.querySelectorAll('[data-section]').forEach(x=>x.classList.toggle('hidden',x.dataset.section!==s));
-  ({overview:loadOverview,devices:loadDevices,collections:loadCollections}[s]||(()=>{}))(); }
+let ALL_OP_TX = [];
 
-async function loadOverview(){ const [{devices},stats]=await Promise.all([API.get('/devices'),API.get('/admin/stats')]);
-  DEVICES=devices; document.getElementById('o-machines').textContent=devices.length;
-  document.getElementById('o-online').textContent=devices.filter(d=>d.status==='online').length;
-  document.getElementById('o-sessions').textContent=stats.active_sessions; }
+async function boot() {
+  const p = await requireRole(['operator','admin']);
+  if (!p) return;
+  document.getElementById('whoami').textContent = p.full_name || p.email;
+  document.getElementById('c_date').value = new Date().toISOString().slice(0,10);
+  nav('overview');
+}
 
-async function loadDevices(){ const {devices}=await API.get('/devices'); DEVICES=devices;
-  document.getElementById('devTable').innerHTML=devices.map(d=>`
-    <tr><td><b>${d.device_name}</b></td><td>${d.location||'—'}</td>
-    <td><span class="badge ${d.status}">${d.status}</span></td><td>${fmtDate(d.last_online)}</td></tr>`).join('')
-    || '<tr><td colspan="4" style="color:var(--muted)">No machines assigned.</td></tr>'; }
+function nav(s) {
+  document.querySelectorAll('.navlink').forEach(n => n.classList.toggle('active', n.dataset.sec === s));
+  document.querySelectorAll('[data-section]').forEach(x => x.classList.toggle('hidden', x.dataset.section !== s));
+  ({overview:loadOverview, devices:loadDevices, transactions:loadOpTx, sessions:loadSessions, collections:loadCollections}[s]||(() => {}))();
+}
 
-async function loadCollections(){ if(!DEVICES.length){const {devices}=await API.get('/devices');DEVICES=devices;}
-  document.getElementById('c_device').innerHTML=DEVICES.map(d=>`<option value="${d.id}">${d.device_name}</option>`).join('');
-  const {collections}=await API.get('/collections');
-  document.getElementById('colTable').innerHTML=collections.map(c=>`
-    <tr><td>${c.collection_date}</td><td>${c.vendo_devices?.device_name||'—'}</td><td>${peso(c.amount)}</td><td>${c.notes||''}</td></tr>`).join('')
-    || '<tr><td colspan="4" style="color:var(--muted)">No collections yet.</td></tr>'; }
+async function loadOverview() {
+  const [{devices}, stats] = await Promise.all([API.get('/devices'), API.get('/admin/stats')]);
+  DEVICES = devices;
+  document.getElementById('o-machines').textContent = devices.length;
+  document.getElementById('o-online').textContent = devices.filter(d => d.status === 'online').length;
+  document.getElementById('o-sessions').textContent = stats.active_sessions;
+  document.getElementById('o-rev-today').textContent = peso(stats.revenue.today);
+  document.getElementById('o-rev-week').textContent = peso(stats.revenue.week);
+  document.getElementById('o-rev-month').textContent = peso(stats.revenue.month);
+}
 
-async function addCol(){ const body={device_id:document.getElementById('c_device').value,amount:document.getElementById('c_amount').value,
-    collection_date:document.getElementById('c_date').value,notes:document.getElementById('c_notes').value};
-  if(!body.amount) return toast('Enter amount','err');
-  try{ await API.post('/collections',body); toast('Saved'); document.getElementById('c_amount').value='';document.getElementById('c_notes').value=''; loadCollections(); }catch(e){ toast(e.message,'err'); } }
+async function loadDevices() {
+  const { devices } = await API.get('/devices');
+  DEVICES = devices;
+  document.getElementById('devTable').innerHTML = devices.map(d => `
+    <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
+    <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
+    <td><span class="badge ${d.status}">${d.status}</span></td>
+    <td>${fmtDate(d.last_online)}</td></tr>`).join('')
+    || '<tr><td colspan="4" style="color:var(--muted)">No machines assigned.</td></tr>';
+}
+
+async function loadOpTx() {
+  const { transactions } = await API.get('/admin/transactions');
+  ALL_OP_TX = transactions;
+  renderOpTx(transactions);
+}
+function renderOpTx(list) {
+  document.getElementById('opTxTable').innerHTML = list.map(t => `
+    <tr><td>${fmtDate(t.created_at)}</td><td>${t.vendo_devices?.device_name || '—'}</td>
+    <td>${peso(t.amount)}</td><td>${t.credits} min</td>
+    <td><small style="color:var(--muted)">${t.client_mac || '—'}</small></td></tr>`).join('')
+    || '<tr><td colspan="5" style="color:var(--muted)">No transactions.</td></tr>';
+}
+function filterOpTx() {
+  const q = document.getElementById('op-tx-search').value.toLowerCase();
+  renderOpTx(ALL_OP_TX.filter(t => (t.client_mac||'').toLowerCase().includes(q) || (t.vendo_devices?.device_name||'').toLowerCase().includes(q)));
+}
+
+async function loadSessions() {
+  try {
+    const { sessions } = await API.get('/admin/sessions');
+    document.getElementById('opSessTable').innerHTML = sessions.map(s => `
+      <tr><td><small style="color:var(--muted)">${s.client_mac}</small></td>
+      <td>${s.vendo_devices?.device_name || '—'}</td>
+      <td><span class="badge ${s.status === 'active' ? 'active' : 'expired'}">${s.status}</span></td>
+      <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : '—'}</td>
+      <td>${fmtDate(s.end_time)}</td></tr>`).join('')
+      || '<tr><td colspan="5" style="color:var(--muted)">No sessions.</td></tr>';
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function loadCollections() {
+  if (!DEVICES.length) { const {devices} = await API.get('/devices'); DEVICES = devices; }
+  document.getElementById('c_device').innerHTML = DEVICES.map(d => `<option value="${d.id}">${d.device_name}</option>`).join('');
+  const { collections } = await API.get('/collections');
+  document.getElementById('colTable').innerHTML = collections.map(c => `
+    <tr><td>${c.collection_date}</td><td>${c.vendo_devices?.device_name || '—'}</td>
+    <td>${peso(c.amount)}</td><td>${c.notes || ''}</td></tr>`).join('')
+    || '<tr><td colspan="4" style="color:var(--muted)">No collections yet.</td></tr>';
+}
+
+async function addCol() {
+  const body = {
+    device_id: document.getElementById('c_device').value,
+    amount: document.getElementById('c_amount').value,
+    collection_date: document.getElementById('c_date').value,
+    notes: document.getElementById('c_notes').value,
+  };
+  if (!body.amount) return toast('Enter amount', 'err');
+  try {
+    await API.post('/collections', body);
+    toast('Saved');
+    document.getElementById('c_amount').value = '';
+    document.getElementById('c_notes').value = '';
+    loadCollections();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
 boot();
 </script>
 </body>
