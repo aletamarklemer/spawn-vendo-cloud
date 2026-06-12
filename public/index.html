@@ -2,185 +2,243 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Spawn Internet — Connect</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spawn Internet — Technician</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/app.css">
 <style>
-  body{display:flex;align-items:center;justify-content:center;padding:18px}
-  .portal{width:100%;max-width:430px}
-  .logo-wrap{text-align:center;margin-bottom:8px}
-  .globe-lg{width:96px;height:96px;border-radius:50%;margin:0 auto 14px;
-    background:conic-gradient(from 220deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8),var(--r1));
-    box-shadow:0 0 60px rgba(94,92,230,.45);animation:spin 14s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .wordmark{font-size:30px;font-weight:700;letter-spacing:.04em}
-  .wordmark small{display:block;font-size:13px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
-  .timer{font-size:54px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.04em;margin:6px 0}
-  .timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
-  .status-line{text-align:center;color:var(--muted);margin-bottom:18px}
-  .rate-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0}
-  .chip{background:var(--panel-2);border:1px solid var(--line);border-radius:99px;padding:7px 13px;font-size:12px}
-  .tabbar{display:flex;gap:6px;background:var(--bg-2);padding:6px;border-radius:14px;margin:18px 0}
-  .tabbar button{flex:1;background:none;border:none;color:var(--muted);padding:10px;border-radius:10px;cursor:pointer;font-weight:600;font-family:inherit}
-  .tabbar button.active{background:var(--panel-2);color:var(--txt)}
-  .mac{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);text-align:center;margin-top:14px}
-  .hist-item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.btn-danger{background:#ff453a;color:#fff;border:none}
+.btn-danger:hover{background:#d93025}
+.tbl-actions{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-dot.online{background:var(--ok)}
+.status-dot.offline{background:var(--bad)}
+.status-dot.maintenance{background:var(--warn)}
 </style>
 </head>
 <body>
-<div class="portal">
-  <div class="card">
-    <div class="logo-wrap">
-      <div class="globe-lg"></div>
-      <div class="wordmark grad-text">SPAWN<small>INTERNET</small></div>
-    </div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="globe"></div><div><b>SPAWN</b><small>TECH</small></div></div>
+    <div class="navlink active" data-sec="devices" onclick="nav('devices')"><span class="dot"></span>Devices</div>
+    <div class="navlink" data-sec="maint" onclick="nav('maint')"><span class="dot"></span>Maintenance</div>
+    <div class="navlink" data-sec="sessions" onclick="nav('sessions')"><span class="dot"></span>Live Sessions</div>
+    <div class="spacer"></div>
+    <div class="navlink" onclick="logout()"><span class="dot"></span>Sign out</div>
+  </aside>
+  <main class="main">
+    <div class="topbar"><h1 class="grad-text">Technician</h1><span class="pill" id="whoami">…</span></div>
 
-    <div id="timer" class="timer">--:--:--</div>
-    <div id="statusLine" class="status-line">Insert a coin to get online</div>
-    <div class="grad-bar" style="margin:0 0 4px"></div>
-
-    <div class="rate-chips" id="rates"></div>
-
-    <div class="tabbar">
-      <button class="active" data-tab="coin">Coins</button>
-      <button data-tab="voucher">Voucher</button>
-      <button data-tab="history">History</button>
-    </div>
-
-    <!-- COIN TAB -->
-    <div id="tab-coin">
-      <p style="color:var(--muted);font-size:14px;text-align:center;margin-top:0">
-        Drop coins into the machine. Your time updates here automatically.
-      </p>
-      <div style="text-align:center;margin-bottom:14px">
-        <span class="badge active" id="liveBadge">Waiting for coins…</span>
+    <!-- DEVICES -->
+    <section data-section="devices">
+      <div class="grid stats" style="margin-bottom:18px">
+        <div class="card stat accent-2"><div class="label">Total Devices</div><div class="value" id="t-total">0</div></div>
+        <div class="card stat accent-3"><div class="label">Online</div><div class="value" id="t-online">0</div></div>
+        <div class="card stat accent-1"><div class="label">Offline</div><div class="value" id="t-offline">0</div></div>
+        <div class="card stat" style="box-shadow:inset 0 3px 0 var(--warn),var(--shadow)"><div class="label">Maintenance</div><div class="value" id="t-maint">0</div></div>
       </div>
-      <a class="btn btn-primary" id="insertCoinLink"
-         style="width:100%;justify-content:center;text-decoration:none">
-        Insert a coin
-      </a>
-    </div>
-
-    <!-- VOUCHER TAB -->
-    <div id="tab-voucher" class="hidden">
-      <div class="field">
-        <label>Voucher code</label>
-        <input id="voucherCode" placeholder="SPAWN-XXXX-XXXX" autocomplete="off">
+      <div class="card">
+        <div class="tbl-actions">
+          <input id="dev-search" placeholder="Search device…" oninput="filterDevices()" style="max-width:240px;padding:8px 12px;font-size:13px">
+          <button class="btn btn-ghost btn-sm" onclick="loadDevices()">🔄 Refresh</button>
+        </div>
+        <table><thead><tr><th>Device</th><th>Location</th><th>Status</th><th>Last online</th><th>Set status</th><th>Actions</th></tr></thead>
+        <tbody id="devTable"></tbody></table>
       </div>
-      <button class="btn btn-primary" style="width:100%" id="redeemBtn">Redeem voucher</button>
-    </div>
+    </section>
 
-    <!-- HISTORY TAB -->
-    <div id="tab-history" class="hidden">
-      <div id="histList"><p style="color:var(--muted);text-align:center">No history yet.</p></div>
-    </div>
+    <!-- MAINTENANCE -->
+    <section data-section="maint" class="hidden">
+      <div class="card" style="margin-bottom:18px"><h3 style="margin-top:0">Log Maintenance Request</h3>
+        <div class="field"><label>Device</label><select id="m_device"></select></div>
+        <div class="field"><label>Issue / troubleshooting note</label><textarea id="m_issue" rows="3" placeholder="Describe the issue…"></textarea></div>
+        <div class="field"><label>Priority</label>
+          <select id="m_priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addMaint()">Submit Request</button>
+      </div>
+      <div class="card">
+        <div class="tbl-actions">
+          <select id="maint-filter" onchange="loadMaint()" style="max-width:180px;padding:8px 12px;font-size:13px">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadMaint()">🔄 Refresh</button>
+        </div>
+        <table><thead><tr><th>Created</th><th>Device</th><th>Issue</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="maintTable"></tbody></table>
+      </div>
+    </section>
 
-    <div class="mac" id="macLine"></div>
-  </div>
-  <p style="text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px">
-    Spawn Internetan · Dipolog City · <a href="/login.html">Staff login</a>
-  </p>
+    <!-- LIVE SESSIONS -->
+    <section data-section="sessions" class="hidden">
+      <div class="card">
+        <div class="tbl-actions">
+          <button class="btn btn-ghost btn-sm" onclick="loadSessions()">🔄 Refresh</button>
+          <span id="sess-count" style="color:var(--muted);font-size:13px"></span>
+        </div>
+        <table><thead><tr><th>Client MAC</th><th>Device</th><th>Status</th><th>Time Left</th><th>End Time</th></tr></thead>
+        <tbody id="sessTable"></tbody></table>
+      </div>
+    </section>
+  </main>
 </div>
 
 <script src="/js/api.js"></script>
 <script>
-/* The MAC is normally injected by the captive-portal redirect, e.g.
-   /?mac=AA:BB:CC:DD:EE:FF&device=<uuid>. For demo/testing we fall back to a
-   stored pseudo-MAC so the portal is usable from any browser. */
-const params = new URLSearchParams(location.search);
-let CLIENT_MAC = params.get('mac');
-const DEVICE_ID = params.get('device') || null;
-if (!CLIENT_MAC) {
-  CLIENT_MAC = localStorage.getItem('demo_mac');
-  if (!CLIENT_MAC) {
-    CLIENT_MAC = 'DE:M0:' + Array.from({length:4},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');
-    localStorage.setItem('demo_mac', CLIENT_MAC);
-  }
-}
-document.getElementById('macLine').textContent = 'Device: ' + CLIENT_MAC;
+let DEVICES = [];
+let ALL_DEVICES = [];
 
-let remaining = 0, ticking = null;
-
-function renderTimer(){
-  const t = document.getElementById('timer');
-  t.textContent = hms(remaining);
-  const live = remaining > 0;
-  t.classList.toggle('live', live);
-  document.getElementById('statusLine').textContent =
-    live ? 'You are online' : 'Insert a coin to get online';
-  document.getElementById('liveBadge').textContent =
-    live ? 'Connected' : 'Waiting for coins…';
-  document.getElementById('liveBadge').className = 'badge ' + (live ? 'online' : 'active');
-}
-function startTick(){
-  clearInterval(ticking);
-  ticking = setInterval(()=>{ if(remaining>0){remaining--;renderTimer();} }, 1000);
+async function boot() {
+  const p = await requireRole(['technician','admin']);
+  if (!p) return;
+  document.getElementById('whoami').textContent = p.full_name || p.email;
+  nav('devices');
 }
 
-async function poll(){
-  try{
-    const d = await API.get('/coin/session/' + encodeURIComponent(CLIENT_MAC));
-    remaining = d.remaining_seconds || 0;
-    renderTimer();
-  }catch(e){ /* offline portal still shows last value */ }
+function nav(s) {
+  document.querySelectorAll('.navlink').forEach(n => n.classList.toggle('active', n.dataset.sec === s));
+  document.querySelectorAll('[data-section]').forEach(x => x.classList.toggle('hidden', x.dataset.section !== s));
+  if (s === 'devices') loadDevices();
+  else if (s === 'maint') loadMaint();
+  else if (s === 'sessions') loadSessions();
 }
 
-async function loadRates(){
-  // Public: derive a friendly rate list from /api/config is not available;
-  // show the common Spawn tiers. (Live admin rate drives actual computation.)
-  const tiers = [['₱1','10 min'],['₱5','2 hrs'],['₱10','4 hrs'],['₱15','12 hrs'],['₱20','1 day']];
-  document.getElementById('rates').innerHTML =
-    tiers.map(([p,t])=>`<span class="chip"><b>${p}</b> · ${t}</span>`).join('');
+async function loadDevices() {
+  const { devices } = await API.get('/devices');
+  DEVICES = devices;
+  ALL_DEVICES = devices;
+  // Update stats
+  document.getElementById('t-total').textContent = devices.length;
+  document.getElementById('t-online').textContent = devices.filter(d => d.status === 'online').length;
+  document.getElementById('t-offline').textContent = devices.filter(d => d.status === 'offline').length;
+  document.getElementById('t-maint').textContent = devices.filter(d => d.status === 'maintenance').length;
+  renderDevices(devices);
 }
 
-async function loadHistory(){
-  try{
-    const d = await API.get('/coin/history/' + encodeURIComponent(CLIENT_MAC));
-    const items = (d.coins||[]).map(c=>
-      `<div class="hist-item"><span>${peso(c.amount)} · ${c.credits} min</span><span style="color:var(--muted)">${fmtDate(c.created_at)}</span></div>`).join('');
-    document.getElementById('histList').innerHTML = items ||
-      '<p style="color:var(--muted);text-align:center">No history yet.</p>';
-  }catch{}
+function renderDevices(list) {
+  document.getElementById('devTable').innerHTML = list.map(d => `
+    <tr>
+      <td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
+      <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
+      <td>
+        <span class="status-dot ${d.status}"></span>
+        <span class="badge ${d.status}">${d.status}</span>
+      </td>
+      <td>${fmtDate(d.last_online)}</td>
+      <td>
+        <select onchange="setStatus('${d.id}',this.value)" style="width:auto;padding:6px 10px;font-size:12px">
+          ${['online','offline','maintenance'].map(s => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="logMaintForDevice('${d.id}','${d.device_name}')">📋 Log Issue</button>
+      </td>
+    </tr>`).join('')
+    || '<tr><td colspan="6" style="color:var(--muted)">No devices.</td></tr>';
 }
 
-/* tabs */
-document.querySelectorAll('.tabbar button').forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    ['coin','voucher','history'].forEach(t=>
-      document.getElementById('tab-'+t).classList.toggle('hidden', t!==b.dataset.tab));
-    if(b.dataset.tab==='history') loadHistory();
-  };
-});
+function filterDevices() {
+  const q = document.getElementById('dev-search').value.toLowerCase();
+  renderDevices(ALL_DEVICES.filter(d =>
+    d.device_name.toLowerCase().includes(q) ||
+    (d.location||'').toLowerCase().includes(q) ||
+    d.mac_address.toLowerCase().includes(q)
+  ));
+}
 
-/* voucher redeem */
-document.getElementById('redeemBtn').onclick = async ()=>{
-  const code = document.getElementById('voucherCode').value.trim();
-  if(!code) return toast('Enter a voucher code','err');
-  try{
-    const d = await API.post('/vouchers/redeem',{ code, client_mac:CLIENT_MAC, device_id:DEVICE_ID });
-    toast('Voucher redeemed!','ok');
-    document.getElementById('voucherCode').value='';
-    await poll();
-  }catch(e){ toast(e.message,'err'); }
-};
+async function setStatus(id, status) {
+  try { await API.patch('/devices/' + id, {status}); toast('Status updated'); loadDevices(); } catch(e) { toast(e.message,'err'); }
+}
 
-loadRates(); renderTimer(); startTick(); poll();
-setInterval(poll, 5000); // keep in sync with server every 5s
+function logMaintForDevice(id, name) {
+  nav('maint');
+  setTimeout(() => {
+    const sel = document.getElementById('m_device');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === id) { sel.selectedIndex = i; break; }
+    }
+    document.getElementById('m_issue').focus();
+  }, 200);
+}
 
-/* Point the "Insert a coin" button at the dedicated portal, carrying the MAC. */
-(function(){
-  const link = document.getElementById('insertCoinLink');
-  if (link) {
-    const q = new URLSearchParams();
-    q.set('mac', CLIENT_MAC);
-    if (DEVICE_ID) q.set('device', DEVICE_ID);
-    link.href = '/insert-coin.html?' + q.toString();
-  }
-})();
+async function loadMaint() {
+  if (!DEVICES.length) { const {devices} = await API.get('/devices'); DEVICES = devices; }
+  document.getElementById('m_device').innerHTML = DEVICES.map(d => `<option value="${d.id}">${d.device_name}</option>`).join('');
+
+  const filterVal = document.getElementById('maint-filter').value;
+  const { requests } = await API.get('/maintenance');
+  const filtered = filterVal ? requests.filter(r => r.status === filterVal) : requests;
+
+  document.getElementById('maintTable').innerHTML = filtered.map(r => `
+    <tr>
+      <td>${fmtDate(r.created_at)}</td>
+      <td>${r.vendo_devices?.device_name || '—'}</td>
+      <td>${r.issue}</td>
+      <td>
+        <span class="badge ${r.status === 'resolved' ? 'online' : r.status === 'in_progress' ? 'maintenance' : 'active'}">
+          ${r.status}
+        </span>
+      </td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        ${r.status === 'open' ? `<button class="btn btn-ghost btn-sm" onclick="updateMaintStatus('${r.id}','in_progress')">▶ Start</button>` : ''}
+        ${r.status !== 'resolved' ? `<button class="btn btn-primary btn-sm" onclick="resolveM('${r.id}')">✓ Resolve</button>` : ''}
+        ${r.resolution ? `<small style="color:var(--muted);display:block;margin-top:4px">✓ ${r.resolution}</small>` : ''}
+      </td>
+    </tr>`).join('')
+    || '<tr><td colspan="5" style="color:var(--muted)">No requests.</td></tr>';
+}
+
+async function addMaint() {
+  const device_id = document.getElementById('m_device').value;
+  const issue = document.getElementById('m_issue').value.trim();
+  if (!issue) return toast('Describe the issue', 'err');
+  try {
+    await API.post('/maintenance', {device_id, issue});
+    toast('Logged');
+    document.getElementById('m_issue').value = '';
+    loadMaint();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function updateMaintStatus(id, status) {
+  try { await API.patch('/maintenance/' + id, {status}); toast('Updated'); loadMaint(); } catch(e) { toast(e.message, 'err'); }
+}
+
+async function resolveM(id) {
+  const resolution = prompt('Resolution note (optional):');
+  if (resolution === null) return;
+  try {
+    await API.patch('/maintenance/' + id, {resolution: resolution || 'Resolved', status: 'resolved'});
+    toast('Resolved');
+    loadMaint();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function loadSessions() {
+  try {
+    const { sessions } = await API.get('/admin/sessions');
+    const active = sessions.filter(s => s.status === 'active');
+    document.getElementById('sess-count').textContent = `${active.length} active session(s)`;
+    document.getElementById('sessTable').innerHTML = sessions.map(s => `
+      <tr>
+        <td><small style="color:var(--muted)">${s.client_mac}</small></td>
+        <td>${s.vendo_devices?.device_name || '—'}</td>
+        <td><span class="badge ${s.status === 'active' ? 'active' : 'expired'}">${s.status}</span></td>
+        <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : '—'}</td>
+        <td>${fmtDate(s.end_time)}</td>
+      </tr>`).join('')
+      || '<tr><td colspan="5" style="color:var(--muted)">No sessions.</td></tr>';
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+boot();
 </script>
 </body>
 </html>
