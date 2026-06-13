@@ -38,13 +38,13 @@ router.post('/coin/session/resume', deviceAuth, coin.resumeSession);
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
 
-// vouchers
+// vouchers — specific routes BEFORE :id param
 router.post('/vouchers/generate', authenticate, authorize('admin'), voucher.generate);
-router.get('/vouchers', authenticate, authorize('admin'), voucher.list);
 router.post('/vouchers/void', authenticate, authorize('admin'), voucher.voidVoucher);
 router.post('/vouchers/redeem', voucher.redeem);
-router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteVoucher);
 router.delete('/vouchers/voided', authenticate, authorize('admin'), voucher.deleteVoidedVouchers);
+router.get('/vouchers', authenticate, authorize('admin'), voucher.list);
+router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteVoucher);
 
 // devices
 router.get('/devices', authenticate, authorize('admin', 'technician', 'operator'), device.list);
