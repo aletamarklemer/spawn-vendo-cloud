@@ -125,7 +125,12 @@ const pauseSession = asyncHandler(async (req, res) => {
 
   // Calculate remaining seconds from end_time
   const remaining = Math.max(0, Math.floor((new Date(data.end_time) - Date.now()) / 1000));
-  if (remaining === 0) return ok(res, { paused: false, message: 'Session already expired' });
+
+  // If less than 10 seconds left, expire instead of pause
+  if (remaining <= 10) {
+    await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
+    return ok(res, { paused: false, message: 'Session expired' });
+  }
 
   // Pause: save remaining, clear end_time
   const { error: updateErr } = await supabaseAdmin
@@ -155,7 +160,8 @@ const resumeSession = asyncHandler(async (req, res) => {
   if (!data) return ok(res, { resumed: false, message: 'No paused session' });
 
   const remaining = data.remaining_seconds || 0;
-  if (remaining === 0) {
+  if (remaining <= 10) {
+    // Too little time left — expire instead of resuming
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
     return ok(res, { resumed: false, message: 'Session expired' });
   }
