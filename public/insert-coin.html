@@ -1,48 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Spawn Internet</title><style>
-:root{--bg:#070709;--panel:#14141c;--panel-2:#1b1b26;--line:#272735;--txt:#eef0f6;--muted:#9aa0b4;--muted-2:#6b7088;--r1:#ff2d55;--r2:#ff9500;--r3:#ffd60a;--r4:#34c759;--r5:#00c7be;--r6:#0a84ff;--r7:#5e5ce6;--r8:#bf5af2;--ok:#34c759;--bad:#ff453a;--grad:linear-gradient(90deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8));--shadow:0 10px 40px rgba(0,0,0,.5)}
-*{box-sizing:border-box}body{margin:0;background:#070709;color:var(--txt);font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
-.portal{width:100%;max-width:430px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
-.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.grad-bar{height:4px;background:var(--grad);border-radius:99px;margin:0 0 4px}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-weight:600;padding:12px 20px;border-radius:12px;font-size:14px;font-family:inherit;color:#fff;width:100%}
-.btn-p{background:var(--grad)}.btn-p:disabled{opacity:.5;cursor:not-allowed}
-.logo-wrap{text-align:center;margin-bottom:10px}
-.globe-lg{width:56px;height:56px;border-radius:50%;margin:0 auto 10px;background:conic-gradient(var(--r1),var(--r4),var(--r6),var(--r8),var(--r1));animation:spin 8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.wordmark{font-size:24px;font-weight:700;letter-spacing:.04em}
-.wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
-.timer{font-size:48px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:4px 0 2px}
-.timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
-.sl{text-align:center;color:var(--muted);margin-bottom:16px;font-size:14px}.sl b{color:var(--ok)}
-.machine{position:relative;margin:6px auto 18px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:20px;padding:22px 18px 18px;overflow:hidden}
-.slot-label{text-align:center;color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}
-.slot{width:120px;height:14px;margin:0 auto;border-radius:8px;background:#05050a;border:1px solid #000;box-shadow:inset 0 3px 6px rgba(0,0,0,.9)}
-.dz{position:absolute;left:50%;top:34px;transform:translateX(-50%);width:60px;height:120px}
-.coin{position:absolute;left:50%;top:0;width:46px;height:46px;border-radius:50%;transform:translateX(-50%);display:grid;place-items:center;font-weight:700;font-size:14px;color:#3a2a00;background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);box-shadow:0 2px 0 #8a5e12,0 0 18px rgba(244,185,66,.6)}
-.coin.fall{animation:cf .65s cubic-bezier(.4,.05,.6,1) forwards}
-@keyframes cf{0%{top:-50px;opacity:0}15%{opacity:1}70%{top:84px}85%{top:78px}100%{top:84px;opacity:0}}
-.cr{position:absolute;left:0;right:0;top:46px;text-align:center;font-weight:700;color:var(--ok);opacity:0;font-size:20px}
-.cr.show{animation:pu 1.1s ease forwards}
-@keyframes pu{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
-.ibtn{margin-top:14px;font-size:16px;padding:15px}
-.ov{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,12,.82);backdrop-filter:blur(8px)}
-.ov.show{display:flex}
-.cdc{width:100%;max-width:360px;text-align:center;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:24px;padding:30px 24px;box-shadow:0 0 60px rgba(94,92,230,.4)}
-.cd-title{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
-
-
-
-
-
-.cd-sub{color:var(--muted);font-size:13px;margin-bottom:18px}.cd-sub b{color:var(--txt)}
-.cdc p{color:var(--muted);font-size:13px;margin:4px 0}
-.dbtn{font-size:17px;padding:16px;font-weight:600;margin-top:8px}
-.sm{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
-#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
-.t{background:var(--panel-2);border:1px solid var(--line);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);font-size:13px;animation:si .25s ease}
-.t.ok{border-left:4px solid var(--ok)}.t.err{border-left:4px solid var(--bad)}
-@keyframes si{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
-</style></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Spawn Internet</title><style>:root{--bg:#070709;--panel:#14141c;--panel-2:#1b1b26;--line:#272735;--txt:#eef0f6;--muted:#9aa0b4;--muted-2:#6b7088;--r1:#ff2d55;--r2:#ff9500;--r3:#ffd60a;--r4:#34c759;--r5:#00c7be;--r6:#0a84ff;--r7:#5e5ce6;--r8:#bf5af2;--ok:#34c759;--bad:#ff453a;--grad:linear-gradient(90deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8));--shadow:0 10px 40px rgba(0,0,0,.5)}*{box-sizing:border-box}body{margin:0;background:#070709;color:var(--txt);font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}.portal{width:100%;max-width:430px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}.grad-bar{height:4px;background:var(--grad);border-radius:99px;margin:0 0 4px}.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-weight:600;padding:12px 20px;border-radius:12px;font-size:14px;font-family:inherit;color:#fff;width:100%}.btn-p{background:var(--grad)}.btn-p:disabled{opacity:.5;cursor:not-allowed}.logo-wrap{text-align:center;margin-bottom:10px}.globe-lg{width:56px;height:56px;border-radius:50%;margin:0 auto 10px;background:conic-gradient(var(--r1),var(--r4),var(--r6),var(--r8),var(--r1))}.wordmark{font-size:24px;font-weight:700;letter-spacing:.04em}.wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6);margin-top:2px}.timer{font-size:48px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:4px 0 2px}.timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}.sl{text-align:center;color:var(--muted);margin-bottom:16px;font-size:14px}.sl b{color:var(--ok)}.machine{position:relative;margin:6px auto 18px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:20px;padding:22px 18px 18px;overflow:hidden}.slot-label{text-align:center;color:var(--muted-2);font-size:11px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px}.slot{width:120px;height:14px;margin:0 auto;border-radius:8px;background:#05050a;border:1px solid #000;box-shadow:inset 0 3px 6px rgba(0,0,0,.9)}.dz{position:absolute;left:50%;top:34px;transform:translateX(-50%);width:60px;height:120px}.coin{position:absolute;left:50%;top:0;width:46px;height:46px;border-radius:50%;transform:translateX(-50%);display:grid;place-items:center;font-weight:700;font-size:14px;color:#3a2a00;background:radial-gradient(circle at 35% 30%,#ffe9a8,#f4b942 55%,#b9821f);box-shadow:0 2px 0 #8a5e12,0 0 18px rgba(244,185,66,.6)}.coin.fall{animation:cf .65s cubic-bezier(.4,.05,.6,1) forwards}@keyframes cf{0%{top:-50px;opacity:0}15%{opacity:1}70%{top:84px}85%{top:78px}100%{top:84px;opacity:0}}.cr{position:absolute;left:0;right:0;top:46px;text-align:center;font-weight:700;color:var(--ok);opacity:0;font-size:20px}.cr.show{animation:pu 1.1s ease forwards}@keyframes pu{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}.ibtn{margin-top:14px;font-size:16px;padding:15px}.ov{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,12,.82);backdrop-filter:blur(8px)}.ov.show{display:flex}.cdc{width:100%;max-width:360px;text-align:center;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:24px;padding:30px 24px;box-shadow:0 0 60px rgba(94,92,230,.4)}.cd-title{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}.cd-sub{color:var(--muted);font-size:13px;margin-bottom:18px}.cd-sub b{color:var(--txt)}.cdc p{color:var(--muted);font-size:13px;margin:4px 0}.dbtn{font-size:17px;padding:16px;font-weight:600;margin-top:8px}.sm{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}.pricing-wrap{margin-top:16px}.pricing-title{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);text-align:center;margin-bottom:8px}.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.price-card{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}.price-coin{font-size:18px;font-weight:700;color:var(--r3);line-height:1}.price-label{font-size:10px;color:var(--muted-2);margin-top:2px}.price-mins{font-size:12px;font-weight:600;color:var(--ok);margin-top:4px}#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}.t{background:var(--panel-2);border:1px solid var(--line);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);font-size:13px;animation:si .25s ease}.t.ok{border-left:4px solid var(--ok)}.t.err{border-left:4px solid var(--bad)}@keyframes si{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}</style></head><body>
 <div id="toast"></div>
 <div class="portal"><div class="card">
 <div class="logo-wrap"><div class="globe-lg"></div><div class="wordmark grad-text">SPAWN<small>INTERNET</small></div></div>
@@ -50,60 +6,101 @@
 <div id="sl" class="sl">Insert a coin to get online</div>
 <div class="grad-bar"></div>
 <div class="machine"><div class="slot-label">Coin Slot</div><div class="slot"></div><div class="dz" id="dz"></div><div class="cr" id="cr"></div></div>
-<button class="btn btn-p ibtn" id="ib">🪙 Insert Coin</button>
-<div class="sm"><span id="ml">Loading…</span><span id="sy">Synced just now</span></div>
-</div><p style="text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px">Spawn Internet · Dipolog City</p></div>
-
+<button class="btn btn-p ibtn" id="ib">&#x1FA99; Insert Coin</button>
+<div class="sm"><span id="ml">Loading...</span><span id="sy">Synced just now</span></div>
+<div class="pricing-wrap">
+<div class="pricing-title">Pricing</div>
+<div class="pricing-grid">
+<div class="price-card"><div class="price-coin">&#8369;1</div><div class="price-label">per coin</div><div class="price-mins" id="p1">...</div></div>
+<div class="price-card"><div class="price-coin">&#8369;5</div><div class="price-label">per coin</div><div class="price-mins" id="p5">...</div></div>
+<div class="price-card"><div class="price-coin">&#8369;10</div><div class="price-label">per coin</div><div class="price-mins" id="p10">...</div></div>
+<div class="price-card"><div class="price-coin">&#8369;25</div><div class="price-label">per coin</div><div class="price-mins" id="p25">...</div></div>
+</div>
+</div>
+</div><p style="text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px">Spawn Internetan &middot; Dipolog City</p></div>
 <div class="ov" id="ov"><div class="cdc">
 <div class="cd-title">Insert Your Coins</div>
 <div style="font-size:72px;font-weight:700;text-align:center;margin:10px 0" id="cdn">30</div>
-<div class="cd-sub">Drop coins · auto-detected · tap <b>Done</b> to connect</div>
-<p id="cdc1" style="color:var(--ok);font-weight:700;font-size:18px">Waiting for coin…</p>
+<div class="cd-sub">Drop coins &middot; auto-detected &middot; tap <b>Done</b> to connect</div>
+<p id="cdc1" style="color:var(--ok);font-weight:700;font-size:18px">Waiting for coin...</p>
 <p id="cdc2"></p>
-<button class="btn btn-p dbtn" id="db">Done Paying — Connect Now</button>
+<button class="btn btn-p dbtn" id="db">Done Paying &mdash; Connect Now</button>
+<button class="btn" style="margin-top:10px;background:rgba(255,69,58,.15);color:var(--bad);border:1px solid var(--bad)" id="cb">&#x2715; Cancel</button>
 </div></div>
-
 <script>
 const RY='https://spawn-vendo-cloud-production-4f63.up.railway.app';
 const DID='8c4492d0-2e30-4a5a-95be-14269a5e2698';
 const CDS=30;
 const P=new URLSearchParams(location.search);
 const AA=P.get('authaction')||'',CI=P.get('clientip')||'',TK=P.get('tok')||'',RD=P.get('redir')||'http://spawn.internet';
-let CM=sessionStorage.getItem('sm');
-if(!CM){CM=CI?'IP:'+CI.replace(/\./g,':'):'XX:'+Array.from({length:5},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');sessionStorage.setItem('sm',CM);}
-document.getElementById('ml').textContent=CI?'IP: '+CI:'ID: '+CM;
-function hms(s){s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return[h,m,x].map(v=>String(v).padStart(2,'0')).join(':');}
-function toast(m,t='ok'){const h=document.getElementById('toast');const e=document.createElement('div');e.className='t '+t;e.textContent=m;h.appendChild(e);setTimeout(()=>e.remove(),3200);}
-async function api(mth,path,body){const r=await fetch(RY+'/api'+path,{method:mth,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const j=await r.json().catch(()=>({}));if(!r.ok||j.success===false)throw new Error(j.error||'HTTP '+r.status);return j.data;}
+let CM=CI?'IP:'+CI.replace(/\./g,':'):sessionStorage.getItem('sm');
+function init(){rT();sT();poll();loadRates();}
+if(TK&&!CM){
+  fetch('http://192.168.1.1:3000/tok/'+TK+'.json')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.mac){
+        CM='MAC:'+d.mac.toUpperCase();
+        sessionStorage.setItem('sm',CM);
+        document.getElementById('ml').textContent='MAC: '+d.mac;
+        init();
+      }
+    }).catch(function(){});
+} else if(!CM){
+  window.location.replace('http://192.168.1.1:3000/insert-coin.html');
+} else {
+  sessionStorage.setItem('sm',CM);
+  document.getElementById('ml').textContent=CI?'IP: '+CI:'MAC: '+CM.replace('MAC:','');
+  init();
+}
+function hms(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return[h,m,x].map(function(v){return String(v).padStart(2,'0');}).join(':');}
+function toast(m,t){t=t||'ok';var h=document.getElementById('toast');var e=document.createElement('div');e.className='t '+t;e.textContent=m;h.appendChild(e);setTimeout(function(){e.remove();},3200);}
+async function api(mth,path,body){var r=await fetch(RY+'/api'+path,{method:mth,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});var j=await r.json().catch(function(){return {};});if(!r.ok||j.success===false)throw new Error(j.error||'HTTP '+r.status);return j.data;}
 function connect(){
   if(!AA){toast('You are online!','ok');document.getElementById('sl').innerHTML='You are <b>online</b>';return;}
-  const u=AA+(AA.includes('?')?'&':'?')+'tok='+encodeURIComponent(TK)+'&redir='+encodeURIComponent(RD);
-  document.getElementById('sl').innerHTML='Connecting <b>online…</b>';
-  setTimeout(()=>{window.location.href=u;},800);
+  var u=AA+(AA.includes('?')?'&':'?')+'tok='+encodeURIComponent(TK)+'&redir='+encodeURIComponent(RD);
+  document.getElementById('sl').innerHTML='Connecting <b>online...</b>';
+  setTimeout(function(){window.location.href=u;},800);
 }
-let rem=0,tick=null;
-function rT(){const t=document.getElementById('timer');t.textContent=hms(rem);t.classList.toggle('live',rem>0);if(!cda)document.getElementById('sl').innerHTML=rem>0?'You are <b>online</b>':'Insert a coin to get online';}
-function sT(){clearInterval(tick);tick=setInterval(()=>{if(rem>0){rem--;rT();}},1000);}
-function drop(h){const z=h||document.getElementById('dz');const c=document.createElement('div');c.className='coin fall';c.textContent='₱';z.appendChild(c);setTimeout(()=>c.remove(),700);}
-function flash(x){const c=document.getElementById('cr');c.textContent=x;c.classList.remove('show');void c.offsetWidth;c.classList.add('show');}
-let cl=0,ct=null,cda=false,ss=0;
-
+var rem=0,tick=null;
+function rT(){var t=document.getElementById('timer');t.textContent=hms(rem);t.classList.toggle('live',rem>0);if(!cda)document.getElementById('sl').innerHTML=rem>0?'You are <b>online</b>':'Insert a coin to get online';}
+function sT(){clearInterval(tick);tick=setInterval(function(){if(rem>0){rem--;rT();}},1000);}
+function drop(){var z=document.getElementById('dz');var c=document.createElement('div');c.className='coin fall';c.textContent='P';z.appendChild(c);setTimeout(function(){c.remove();},700);}
+function flash(x){var c=document.getElementById('cr');c.textContent=x;c.classList.remove('show');void c.offsetWidth;c.classList.add('show');}
+var cl=0,ct=null,cda=false,ss=0;
 function rC(){document.getElementById('cdn').textContent=cl;}
-function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').textContent='Waiting for coin…';document.getElementById('cdc2').textContent='';document.getElementById('ov').classList.add('show');rCC();sFP();}
-function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(()=>{cl--;rC();if(cl<=0)fC();},1000);}
-function onCD(g){if(!cda)return;drop();flash('+ '+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
-function fC(){if(!cda)return;cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
+function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').textContent='Waiting for coin...';document.getElementById('cdc2').textContent='';document.getElementById('ov').classList.add('show');rCC();sFP();}
+function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(function(){cl--;rC();if(cl<=0)cancelCoin();},1000);}
+function onCD(g){if(!cda)return;drop();flash('+'+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
+function fC(){if(!cda)return;if(rem<=0){toast('Insert a coin first!','err');return;}cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
+function cancelCoin(){cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');toast('Cancelled','err');}
 document.getElementById('db').onclick=fC;
-let ak=null;
+document.getElementById('cb').onclick=cancelCoin;
+var ak=null,bsy=false;
 async function arm(){try{await api('POST','/coin/arm',{device_id:DID,client_mac:CM,seconds:90});return true;}catch(e){toast(e.message||'Error','err');return false;}}
-let bsy=false;
-document.getElementById('ib').onclick=async()=>{if(bsy||cda)return;bsy=true;const b=document.getElementById('ib');b.disabled=true;b.textContent='Preparing…';const ok=await arm();bsy=false;b.disabled=false;b.textContent='🪙 Insert Coin';if(!ok)return;oC();clearInterval(ak);ak=setInterval(arm,60000);};
-let ls=Date.now();
+document.getElementById('ib').onclick=async function(){
+  if(bsy||cda)return;bsy=true;
+  var b=document.getElementById('ib');b.disabled=true;b.textContent='Preparing...';
+  var ok=await arm();bsy=false;b.disabled=false;b.textContent='Insert Coin';
+  if(!ok)return;oC();clearInterval(ak);ak=setInterval(arm,60000);
+};
+var ls=Date.now();
 function mS(){ls=Date.now();}
-setInterval(()=>{const s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
-async function poll(){try{const d=await api('GET','/coin/session/'+encodeURIComponent(CM));const sv=d.remaining_seconds||0;const bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();const g=rem-bf;if(cda&&g>2)onCD(g);}catch(e){}}
-let pt=setInterval(poll,5000),ft=null;
+setInterval(function(){var s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
+async function poll(){try{var d=await api('GET','/coin/session/'+encodeURIComponent(CM));var sv=d.remaining_seconds||0;var bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();var g=rem-bf;if(cda&&g>2)onCD(g);}catch(e){}}
+var pt=setInterval(poll,5000),ft=null;
 function sFP(){if(ft)return;ft=setInterval(poll,1500);}
 function sTP(){clearInterval(ft);ft=null;}
-rT();sT();poll();
+async function loadRates(){
+  try{
+    var d=await api('GET','/admin/settings');
+    if(d&&d.settings){
+      var pph=d.settings.minutes_rate/d.settings.peso_rate;
+      [1,5,10,25].forEach(function(p){
+        var el=document.getElementById('p'+p);
+        if(el)el.textContent=Math.round(p*pph)+' min';
+      });
+    }
+  }catch(e){}
+}
 </script></body></html>
