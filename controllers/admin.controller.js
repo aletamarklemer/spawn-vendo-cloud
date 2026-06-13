@@ -1,5 +1,5 @@
 'use strict';
-/** controllers/admin.controller.js — analytics, settings, users, collections */
+/** controllers/admin.controller.js — analytics, settings, users */
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler } = require('../utils/helpers');
 const audit = require('../services/audit.service');
@@ -177,38 +177,15 @@ const getUserPassword = asyncHandler(async (req, res) => {
   return ok(res, { password: data?.password_hint || '(not stored)' });
 });
 
-// ---- collections ----
-const listCollections = asyncHandler(async (req, res) => {
-  const { data, error } = await supabaseAdmin.from('collections')
-    .select('*, vendo_devices(device_name), profiles(full_name)')
-    .order('collection_date', { ascending: false });
+/** GET /api/pricing — public, no auth */
+const getPublicPricing = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('settings')
+    .select('peso_rate, minutes_rate')
+    .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1).maybeSingle();
   if (error) return fail(res, error.message, 400);
-  return ok(res, { collections: data });
-});
-
-const createCollection = asyncHandler(async (req, res) => {
-  const { device_id, amount, collection_date, notes } = req.body || {};
-  if (amount == null) return fail(res, 'amount required', 400);
-  const { data, error } = await supabaseAdmin.from('collections').insert({
-    operator_id: req.user.sub, device_id, amount: Number(amount),
-    collection_date: collection_date || new Date().toISOString().slice(0, 10), notes,
-  }).select().single();
-  if (error) return fail(res, error.message, 400);
-  return ok(res, { collection: data }, 201);
-});
-
-/** DELETE /api/collections/:id */
-const deleteCollection = asyncHandler(async (req, res) => {
-  const { error } = await supabaseAdmin.from('collections').delete().eq('id', req.params.id);
-  if (error) return fail(res, error.message, 400);
-  return ok(res, { deleted: true });
-});
-
-/** DELETE /api/collections — delete all */
-const deleteAllCollections = asyncHandler(async (req, res) => {
-  const { error } = await supabaseAdmin.from('collections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  if (error) return fail(res, error.message, 400);
-  return ok(res, { deleted: true });
+  return ok(res, { pricing: data || { peso_rate: 1, minutes_rate: 10 } });
 });
 
 /** GET /api/admin/audit */
@@ -221,20 +198,10 @@ const auditLogs = asyncHandler(async (req, res) => {
 
 /** DELETE /api/admin/audit */
 const deleteAllAudit = asyncHandler(async (req, res) => {
-  const { error } = await supabaseAdmin.from('audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  const { error } = await supabaseAdmin.from('audit_logs')
+    .delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (error) return fail(res, error.message, 400);
   return ok(res, { deleted: true });
-});
-
-/** GET /api/pricing — public, no auth */
-const getPublicPricing = asyncHandler(async (req, res) => {
-  const { data, error } = await supabaseAdmin.from('settings')
-    .select('peso_rate, minutes_rate')
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(1).maybeSingle();
-  if (error) return fail(res, error.message, 400);
-  return ok(res, { pricing: data || { peso_rate: 1, minutes_rate: 15 } });
 });
 
 module.exports = {
@@ -243,6 +210,5 @@ module.exports = {
   listSessions, deleteSession, deleteExpiredSessions,
   getSettings, updateSettings, getPublicPricing,
   listUsers, setUserActive, deleteUser, updateUserPassword, getUserPassword,
-  listCollections, createCollection, deleteCollection, deleteAllCollections,
   auditLogs, deleteAllAudit,
 };

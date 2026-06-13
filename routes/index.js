@@ -88,10 +88,5 @@ router.delete('/admin/users/:id', authenticate, authorize('admin'), admin.delete
 router.get('/admin/audit', authenticate, authorize('admin'), admin.auditLogs);
 router.delete('/admin/audit', authenticate, authorize('admin'), admin.deleteAllAudit);
 
-// collections
-router.get('/collections', authenticate, authorize('admin', 'operator'), admin.listCollections);
-router.post('/collections', authenticate, authorize('admin', 'operator'), admin.createCollection);
-router.delete('/collections', authenticate, authorize('admin'), admin.deleteAllCollections);
-router.delete('/collections/:id', authenticate, authorize('admin', 'operator'), admin.deleteCollection);
 
 module.exports = router;
