@@ -16,7 +16,7 @@ function nav(section) {
   ({
     dashboard: loadDashboard, devices: loadDevices, transactions: loadTransactions,
     sessions: loadSessions, vouchers: loadVouchers, users: loadUsers,
-    collections: loadCollections, settings: loadSettings, audit: loadAudit,
+    settings: loadSettings, audit: loadAudit,
   }[section] || (() => {}))();
 }
 
@@ -189,23 +189,6 @@ async function deleteAllVouchersForce() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---------- Collections ---------- */
-async function loadCollections() {
-  const { collections } = await API.get('/collections');
-  document.getElementById('colTable').innerHTML = collections.map(c => `
-    <tr><td>${c.collection_date}</td><td>${c.vendo_devices?.device_name || '—'}</td>
-    <td>${c.profiles?.full_name || '—'}</td><td>${peso(c.amount)}</td><td>${c.notes || ''}</td>
-    <td><button class="btn btn-danger btn-sm" onclick="delCollection('${c.id}')">Delete</button></td></tr>`).join('')
-    || '<tr><td colspan="6" style="color:var(--muted)">No collections.</td></tr>';
-}
-async function delCollection(id) {
-  if (!confirm('Delete this collection record?')) return;
-  try { await API.del('/collections/' + id); toast('Deleted'); loadCollections(); } catch (e) { toast(e.message, 'err'); }
-}
-async function deleteAllCollections() {
-  if (!confirm('Delete ALL collection records? This cannot be undone!')) return;
-  try { await API.del('/collections'); toast('All collections deleted'); loadCollections(); } catch (e) { toast(e.message, 'err'); }
-}
 
 /* ---------- Users ---------- */
 async function loadUsers() {
@@ -284,15 +267,6 @@ async function toggleShowPw(uid) {
   }
 }
 
-/* ---------- Collections ---------- */
-async function loadCollections() {
-  const { collections } = await API.get('/collections');
-  document.getElementById('colTable').innerHTML = collections.map(c => `
-    <tr><td>${c.collection_date}</td><td>${c.vendo_devices?.device_name || '—'}</td>
-    <td>${c.profiles?.full_name || '—'}</td><td>${peso(c.amount)}</td><td>${c.notes || ''}</td>
-    <td><button class="btn btn-danger btn-sm" onclick="delCollection('${c.id}')">Delete</button></td></tr>`).join('')
-    || '<tr><td colspan="6" style="color:var(--muted)">No collections.</td></tr>';
-}
 
 /* ---------- Settings ---------- */
 async function loadSettings() {
