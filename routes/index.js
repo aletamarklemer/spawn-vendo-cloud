@@ -20,6 +20,9 @@ router.get('/config', (req, res) =>
 
 router.get('/health', (req, res) => res.json({ success: true, data: { status: 'ok', ts: Date.now() } }));
 
+// public - no auth
+router.get('/pricing', admin.getPublicPricing);
+
 router.post('/auth/login', loginLimiter, auth.login);
 router.post('/auth/register', authenticate, authorize('admin'), auth.register);
 router.get('/auth/me', authenticate, auth.me);
