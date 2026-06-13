@@ -2,6 +2,7 @@
 let CHART = null;
 let ALL_TX = [];
 let ALL_USERS = [];
+let AUTO_REFRESH = null; // global auto-refresh interval
 
 async function boot() {
   const p = await requireRole(['admin']);
@@ -11,25 +12,42 @@ async function boot() {
 }
 
 function nav(section) {
+  // Clear previous auto-refresh
+  if (AUTO_REFRESH) { clearInterval(AUTO_REFRESH); AUTO_REFRESH = null; }
+
   document.querySelectorAll('.navlink').forEach(n => n.classList.toggle('active', n.dataset.sec === section));
   document.querySelectorAll('[data-section]').forEach(s => s.classList.toggle('hidden', s.dataset.section !== section));
-  ({
+
+  const loaders = {
     dashboard: loadDashboard, devices: loadDevices, transactions: loadTransactions,
     sessions: loadSessions, vouchers: loadVouchers, users: loadUsers,
     settings: loadSettings, audit: loadAudit,
-  }[section] || (() => {}))();
+  };
+  if (loaders[section]) loaders[section]();
+
+  // Auto-refresh intervals per section
+  const intervals = {
+    dashboard: 5000,    // 5 seconds
+    sessions: 3000,     // 3 seconds - real-time
+    devices: 5000,      // 5 seconds
+    transactions: 5000, // 5 seconds
+  };
+  if (intervals[section]) {
+    AUTO_REFRESH = setInterval(loaders[section], intervals[section]);
+  }
 }
 
 /* ---------- Dashboard ---------- */
 async function loadDashboard() {
-  const s = await API.get('/admin/stats');
-  document.getElementById('rev-today').textContent = peso(s.revenue.today);
-  document.getElementById('rev-week').textContent = peso(s.revenue.week);
-  document.getElementById('rev-month').textContent = peso(s.revenue.month);
-  document.getElementById('active-sessions').textContent = s.active_sessions;
-  document.getElementById('dev-online').textContent = `${s.devices.online}/${s.devices.total}`;
-  document.getElementById('tx-today').textContent = s.transactions.today;
-  drawRevenue('daily');
+  try {
+    const s = await API.get('/admin/stats');
+    document.getElementById('rev-today').textContent = peso(s.revenue.today);
+    document.getElementById('rev-week').textContent = peso(s.revenue.week);
+    document.getElementById('rev-month').textContent = peso(s.revenue.month);
+    document.getElementById('active-sessions').textContent = s.active_sessions;
+    document.getElementById('dev-online').textContent = `${s.devices.online}/${s.devices.total}`;
+    document.getElementById('tx-today').textContent = s.transactions.today;
+  } catch(e) {}
 }
 
 async function drawRevenue(range) {
@@ -52,15 +70,17 @@ async function drawRevenue(range) {
 
 /* ---------- Devices ---------- */
 async function loadDevices() {
-  const { devices } = await API.get('/devices');
-  document.getElementById('devTable').innerHTML = devices.map(d => `
-    <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
-    <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
-    <td>${d.vlan ?? '—'}</td>
-    <td><span class="badge ${d.status}">${d.status}</span></td>
-    <td>${fmtDate(d.last_online)}</td>
-    <td><button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`).join('')
-    || '<tr><td colspan="6" style="color:var(--muted)">No devices yet.</td></tr>';
+  try {
+    const { devices } = await API.get('/devices');
+    document.getElementById('devTable').innerHTML = devices.map(d => `
+      <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
+      <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
+      <td>${d.vlan ?? '—'}</td>
+      <td><span class="badge ${d.status}">${d.status}</span></td>
+      <td>${fmtDate(d.last_online)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`).join('')
+      || '<tr><td colspan="6" style="color:var(--muted)">No devices yet.</td></tr>';
+  } catch(e) {}
 }
 async function addDevice() {
   const body = {
@@ -87,9 +107,11 @@ async function deleteAllDevices() {
 
 /* ---------- Transactions ---------- */
 async function loadTransactions() {
-  const { transactions } = await API.get('/admin/transactions');
-  ALL_TX = transactions;
-  renderTx(transactions);
+  try {
+    const { transactions } = await API.get('/admin/transactions');
+    ALL_TX = transactions;
+    renderTx(transactions);
+  } catch(e) {}
 }
 function renderTx(list) {
   document.getElementById('txTable').innerHTML = list.map(t => `
@@ -119,12 +141,12 @@ async function loadSessions() {
     document.getElementById('sessTable').innerHTML = sessions.map(s => `
       <tr><td><small style="color:var(--muted)">${s.client_mac}</small></td>
       <td>${s.vendo_devices?.device_name || '—'}</td>
-      <td><span class="badge ${s.status === 'active' ? 'active' : 'expired'}">${s.status}</span></td>
-      <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : '—'}</td>
+      <td><span class="badge ${s.status === 'active' ? 'active' : s.status === 'paused' ? 'maintenance' : 'expired'}">${s.status}</span></td>
+      <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : s.status === 'paused' ? hms(s.remaining_seconds || 0) + ' (paused)' : '—'}</td>
       <td>${fmtDate(s.end_time)}</td>
       <td><button class="btn btn-danger btn-sm" onclick="delSession('${s.id}')">Delete</button></td></tr>`).join('')
       || '<tr><td colspan="6" style="color:var(--muted)">No sessions.</td></tr>';
-  } catch (e) { toast(e.message, 'err'); }
+  } catch (e) {}
 }
 async function delSession(id) {
   if (!confirm('Delete this session?')) return;
@@ -174,21 +196,8 @@ async function delVoucher(id) {
 }
 async function deleteAllVouchers() {
   if (!confirm('Delete all voided/used vouchers?')) return;
-  try {
-    await API.del('/vouchers/voided');
-    toast('Voided vouchers deleted');
-    loadVouchers();
-  } catch (e) { toast(e.message, 'err'); }
+  try { await API.del('/vouchers/voided'); toast('Voided vouchers deleted'); loadVouchers(); } catch (e) { toast(e.message, 'err'); }
 }
-async function deleteAllVouchersForce() {
-  if (!confirm('Delete ALL vouchers including unused? This cannot be undone!')) return;
-  try {
-    await API.del('/vouchers/all');
-    toast('All vouchers deleted');
-    loadVouchers();
-  } catch (e) { toast(e.message, 'err'); }
-}
-
 
 /* ---------- Users ---------- */
 async function loadUsers() {
@@ -211,40 +220,11 @@ async function loadUsers() {
     </td></tr>`).join('');
 }
 async function addUser() {
-  // User creation disabled — admin-only system
-  toast('User creation is disabled', 'err');
-}
-
-/* ---------- Edit My Profile ---------- */
-function openEditProfile() {
-  const p = API.profile();
-  document.getElementById('ep_name').value = p?.full_name || '';
-  document.getElementById('ep_email').value = p?.email || '';
-  document.getElementById('editProfileModal').classList.remove('hidden');
-}
-function closeEditProfile() {
-  document.getElementById('editProfileModal').classList.add('hidden');
-}
-async function saveProfile() {
-  const full_name = document.getElementById('ep_name').value.trim();
-  const email = document.getElementById('ep_email').value.trim();
-  if (!full_name && !email) return toast('Enter name or email', 'err');
-  const btn = document.getElementById('epSaveBtn');
-  btn.textContent = 'Saving…'; btn.disabled = true;
-  try {
-    await API.patch('/auth/profile', { full_name, email });
-    // Update local profile cache
-    const p = API.profile() || {};
-    if (full_name) p.full_name = full_name;
-    if (email) p.email = email;
-    API.setProfile(p);
-    document.getElementById('whoami').textContent = p.full_name || p.email;
-    toast('Profile updated!');
-    closeEditProfile();
-  } catch (e) {
-    toast(e.message, 'err');
-  }
-  btn.textContent = 'Save'; btn.disabled = false;
+  const body = { email: val('u_email'), password: val('u_pass'), full_name: val('u_name'), role: val('u_role') };
+  if (!body.email || !body.password) return toast('Email and password required', 'err');
+  if (body.password.length < 8) return toast('Password must be at least 8 characters', 'err');
+  try { await API.post('/auth/register', body); toast('User created'); loadUsers();
+    ['u_email','u_pass','u_name'].forEach(id => document.getElementById(id).value = ''); } catch (e) { toast(e.message, 'err'); }
 }
 async function toggleUser(id, active) {
   try { await API.patch(`/admin/users/${id}/active`, { is_active: active }); loadUsers(); } catch (e) { toast(e.message, 'err'); }
@@ -266,7 +246,6 @@ async function toggleShowPw(uid) {
     input.type = 'password';
   }
 }
-
 
 /* ---------- Settings ---------- */
 async function loadSettings() {
