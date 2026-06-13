@@ -136,10 +136,16 @@ async function deleteAllSessions() {
 }
 
 /* ---------- Vouchers ---------- */
+function fmtVoucherDuration(mins) {
+  if (mins >= 1440 && mins % 1440 === 0) return (mins / 1440) + ' day' + (mins / 1440 > 1 ? 's' : '');
+  if (mins >= 60 && mins % 60 === 0) return (mins / 60) + ' hour' + (mins / 60 > 1 ? 's' : '');
+  return mins + ' min';
+}
 async function loadVouchers() {
   const { vouchers } = await API.get('/vouchers');
   document.getElementById('vchTable').innerHTML = vouchers.map(v => `
-    <tr><td style="font-family:ui-monospace,monospace">${v.code}</td><td>${v.minutes} min</td>
+    <tr><td style="font-family:ui-monospace,monospace">${v.code}</td>
+    <td>${fmtVoucherDuration(v.minutes)}</td>
     <td><span class="badge ${v.status === 'unused' ? 'active' : v.status === 'used' ? 'expired' : 'offline'}">${v.status}</span></td>
     <td>${fmtDate(v.created_at)}</td>
     <td style="display:flex;gap:6px">
@@ -149,10 +155,17 @@ async function loadVouchers() {
     || '<tr><td colspan="5" style="color:var(--muted)">No vouchers.</td></tr>';
 }
 async function genVouchers() {
-  const minutes = parseInt(val('v_minutes'), 10), count = parseInt(val('v_count'), 10) || 1;
-  if (!minutes) return toast('Enter minutes', 'err');
-  try { const d = await API.post('/vouchers/generate', { minutes, count });
-    toast(`Generated ${d.vouchers.length} voucher(s)`); loadVouchers(); } catch (e) { toast(e.message, 'err'); }
+  const duration = parseInt(val('v_duration'), 10) || 0;
+  const unit = val('v_unit');
+  const count = parseInt(val('v_count'), 10) || 1;
+  if (!duration || duration <= 0) return toast('Enter duration', 'err');
+  let minutes = duration;
+  if (unit === 'hours') minutes = duration * 60;
+  else if (unit === 'days') minutes = duration * 60 * 24;
+  try {
+    const d = await API.post('/vouchers/generate', { minutes, count });
+    toast(`Generated ${d.vouchers.length} voucher(s)`); loadVouchers();
+  } catch (e) { toast(e.message, 'err'); }
 }
 async function voidVch(id) { try { await API.post('/vouchers/void', { id }); toast('Voided'); loadVouchers(); } catch (e) { toast(e.message, 'err'); } }
 async function delVoucher(id) {
@@ -161,7 +174,11 @@ async function delVoucher(id) {
 }
 async function deleteAllVouchers() {
   if (!confirm('Delete all voided/used vouchers?')) return;
-  try { await API.del('/vouchers/voided'); toast('Voided vouchers deleted'); loadVouchers(); } catch (e) { toast(e.message, 'err'); }
+  try {
+    await API.del('/vouchers/voided');
+    toast('Voided vouchers deleted');
+    loadVouchers();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 /* ---------- Collections ---------- */
