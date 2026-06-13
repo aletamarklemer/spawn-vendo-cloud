@@ -43,6 +43,7 @@ router.post('/vouchers/generate', authenticate, authorize('admin'), voucher.gene
 router.post('/vouchers/void', authenticate, authorize('admin'), voucher.voidVoucher);
 router.post('/vouchers/redeem', voucher.redeem);
 router.delete('/vouchers/voided', authenticate, authorize('admin'), voucher.deleteVoidedVouchers);
+router.delete('/vouchers/all', authenticate, authorize('admin'), voucher.deleteAllVouchers);
 router.get('/vouchers', authenticate, authorize('admin'), voucher.list);
 router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteVoucher);
 

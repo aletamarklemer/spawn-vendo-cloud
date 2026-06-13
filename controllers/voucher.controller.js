@@ -69,4 +69,12 @@ const deleteVoidedVouchers = asyncHandler(async (req, res) => {
   return ok(res, { deleted: true });
 });
 
-module.exports = { generate, list, redeem, voidVoucher, deleteVoucher, deleteVoidedVouchers };
+/** DELETE /api/vouchers/all — delete ALL vouchers */
+const deleteAllVouchers = asyncHandler(async (req, res) => {
+  const { error } = await supabaseAdmin.from('vouchers')
+    .delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { deleted: true });
+});
+
+module.exports = { generate, list, redeem, voidVoucher, deleteVoucher, deleteVoidedVouchers, deleteAllVouchers };

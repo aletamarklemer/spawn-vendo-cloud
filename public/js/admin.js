@@ -180,6 +180,14 @@ async function deleteAllVouchers() {
     loadVouchers();
   } catch (e) { toast(e.message, 'err'); }
 }
+async function deleteAllVouchersForce() {
+  if (!confirm('Delete ALL vouchers including unused? This cannot be undone!')) return;
+  try {
+    await API.del('/vouchers/all');
+    toast('All vouchers deleted');
+    loadVouchers();
+  } catch (e) { toast(e.message, 'err'); }
+}
 
 /* ---------- Collections ---------- */
 async function loadCollections() {
