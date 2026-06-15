@@ -100,7 +100,15 @@ const getSession = asyncHandler(async (req, res) => {
       data.status = 'expired';
     }
   } else if (data.status === 'paused') {
-    remaining = data.remaining_seconds || 0;
+    // Check 3-day validity from first pause
+    const VALIDITY_MS = 3 * 24 * 60 * 60 * 1000;
+    if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
+      await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
+      data.status = 'expired';
+      remaining = 0;
+    } else {
+      remaining = data.remaining_seconds || 0;
+    }
   }
 
   return ok(res, { session: data, remaining_seconds: remaining });
@@ -132,10 +140,21 @@ const pauseSession = asyncHandler(async (req, res) => {
     return ok(res, { paused: false, message: 'Session expired' });
   }
 
-  // Pause: save remaining, clear end_time
+  // Check 3-day validity from first pause
+  const VALIDITY_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+  const firstPaused = data.first_paused_at ? new Date(data.first_paused_at).getTime() : Date.now();
+  if (Date.now() - firstPaused > VALIDITY_MS) {
+    await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
+    return ok(res, { paused: false, message: 'Session expired (3-day validity reached)' });
+  }
+
+  // Pause: save remaining, clear end_time, set first_paused_at if not set
+  const pauseUpdate = { status: 'paused', remaining_seconds: remaining, end_time: null };
+  if (!data.first_paused_at) pauseUpdate.first_paused_at = new Date().toISOString();
+
   const { error: updateErr } = await supabaseAdmin
     .from('internet_sessions')
-    .update({ status: 'paused', remaining_seconds: remaining, end_time: null })
+    .update(pauseUpdate)
     .eq('id', data.id);
 
   if (updateErr) return fail(res, updateErr.message, 400);
@@ -164,6 +183,13 @@ const resumeSession = asyncHandler(async (req, res) => {
     // Too little time left — expire instead of resuming
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
     return ok(res, { resumed: false, message: 'Session expired' });
+  }
+
+  // Check 3-day validity from first pause
+  const VALIDITY_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+  if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
+    await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
+    return ok(res, { resumed: false, message: 'Session expired (3-day validity reached)' });
   }
 
   // Resume: set new end_time
