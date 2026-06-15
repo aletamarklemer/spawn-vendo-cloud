@@ -78,7 +78,6 @@ async function loadDevices() {
       return `
       <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
       <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
-      <td>${d.vlan ?? '—'}</td>
       <td>${speedTxt}</td>
       <td><span class="badge ${d.status}">${d.status}</span></td>
       <td>${fmtDate(d.last_online)}</td>
@@ -91,12 +90,12 @@ async function loadDevices() {
 async function addDevice() {
   const body = {
     device_name: val('d_name'), mac_address: val('d_mac'),
-    location: val('d_loc'), area: val('d_area'), vlan: parseInt(val('d_vlan'), 10) || null,
+    location: val('d_loc'), area: val('d_area'),
     download_mbps: parseInt(val('d_dl'), 10) || 0, upload_mbps: parseInt(val('d_ul'), 10) || 0,
   };
   if (!body.device_name || !body.mac_address) return toast('Name and MAC required', 'err');
   try { await API.post('/devices', body); toast('Device added'); loadDevices();
-    ['d_name','d_mac','d_loc','d_area','d_vlan','d_dl','d_ul'].forEach(id => document.getElementById(id).value = '');
+    ['d_name','d_mac','d_loc','d_area','d_dl','d_ul'].forEach(id => document.getElementById(id).value = '');
   } catch (e) { toast(e.message, 'err'); }
 }
 async function editDeviceSpeed(id, curDl, curUl) {

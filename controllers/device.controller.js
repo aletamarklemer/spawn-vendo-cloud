@@ -24,10 +24,10 @@ const list = asyncHandler(async (req, res) => {
 
 /** POST /api/devices  (admin) */
 const create = asyncHandler(async (req, res) => {
-  const { device_name, location, mac_address, vlan, area, operator_id, download_mbps, upload_mbps } = req.body || {};
+  const { device_name, location, mac_address, area, operator_id, download_mbps, upload_mbps } = req.body || {};
   if (!device_name || !mac_address) return fail(res, 'device_name and mac_address required', 400);
   const { data, error } = await supabaseAdmin.from('vendo_devices')
-    .insert({ device_name, location, mac_address, vlan, area, operator_id, download_mbps: download_mbps || 0, upload_mbps: upload_mbps || 0 }).select().single();
+    .insert({ device_name, location, mac_address, area, operator_id, download_mbps: download_mbps || 0, upload_mbps: upload_mbps || 0 }).select().single();
   if (error) return fail(res, error.message, 400);
   await audit.log('device.create', req.user.sub, { device_name, mac_address });
   return ok(res, { device: data }, 201);
