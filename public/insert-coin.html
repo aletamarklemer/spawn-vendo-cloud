@@ -8,7 +8,7 @@
 <div class="machine"><div class="slot-label">Coin Slot</div><div class="slot"></div><div class="dz" id="dz"></div><div class="cr" id="cr"></div></div>
 <button class="btn btn-p ibtn" id="ib">&#x1FA99; Insert Coin</button>
 <div class="sm"><span id="ml">Loading...</span><span id="sy">Synced just now</span></div>
-<div class="pricing-wrap">
+<div class="pricing-wrap" id="pw" style="display:none">
 <div class="pricing-title">Pricing</div>
 <div class="pricing-grid">
 <div class="price-card"><div class="price-coin">&#8369;1</div><div class="price-label">per coin</div><div class="price-mins" id="p1">...</div></div>
@@ -36,16 +36,21 @@ const AA=P.get('authaction')||'',CI=P.get('clientip')||'',TK=P.get('tok')||'',RD
 let CM=CI?'IP:'+CI.replace(/\./g,':'):sessionStorage.getItem('sm');
 function init(){rT();sT();poll();loadRates();}
 if(TK&&!CM){
-  fetch('http://192.168.1.1:3000/tok/'+TK+'.json')
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.mac){
-        CM='MAC:'+d.mac.toUpperCase();
-        sessionStorage.setItem('sm',CM);
-        document.getElementById('ml').textContent='MAC: '+d.mac;
-        init();
-      }
-    }).catch(function(){});
+  var _tries=0;
+  function _fetchTok(){
+    _tries++;
+    fetch('http://192.168.1.1:3000/tok/'+TK+'.json?_='+Date.now())
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.mac){
+          CM='MAC:'+d.mac.toUpperCase();
+          sessionStorage.setItem('sm',CM);
+          document.getElementById('ml').textContent='MAC: '+d.mac;
+          init();
+        } else if(_tries<10){setTimeout(_fetchTok,800);}
+      }).catch(function(){if(_tries<10){setTimeout(_fetchTok,800);}});
+  }
+  _fetchTok();
 } else if(!CM){
   window.location.replace('http://192.168.1.1:3000/insert-coin.html');
 } else {
@@ -65,15 +70,16 @@ function connect(){
 var rem=0,tick=null;
 function rT(){var t=document.getElementById('timer');t.textContent=hms(rem);t.classList.toggle('live',rem>0);if(!cda)document.getElementById('sl').innerHTML=rem>0?'You are <b>online</b>':'Insert a coin to get online';}
 function sT(){clearInterval(tick);tick=setInterval(function(){if(rem>0){rem--;rT();}},1000);}
+function playCoinSound(){try{var ac=new(window.AudioContext||window.webkitAudioContext)();var t=ac.currentTime;[880,1318,1760].forEach(function(f,i){var o=ac.createOscillator();var g=ac.createGain();o.connect(g);g.connect(ac.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*0.06);g.gain.linearRampToValueAtTime(0.3,t+i*0.06+0.01);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.06+0.15);o.start(t+i*0.06);o.stop(t+i*0.06+0.15);});}catch(e){}}
 function drop(){var z=document.getElementById('dz');var c=document.createElement('div');c.className='coin fall';c.textContent='P';z.appendChild(c);setTimeout(function(){c.remove();},700);}
 function flash(x){var c=document.getElementById('cr');c.textContent=x;c.classList.remove('show');void c.offsetWidth;c.classList.add('show');}
 var cl=0,ct=null,cda=false,ss=0;
 function rC(){document.getElementById('cdn').textContent=cl;}
-function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').textContent='Waiting for coin...';document.getElementById('cdc2').textContent='';document.getElementById('ov').classList.add('show');rCC();sFP();}
+function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').textContent='Waiting for coin...';document.getElementById('cdc2').textContent='';var _ov=document.querySelector('#ov .cdc');var _pw=document.getElementById('pw');_pw.style.display='block';_ov.appendChild(_pw);document.getElementById('ov').classList.add('show');rCC();sFP();}
 function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(function(){cl--;rC();if(cl<=0)cancelCoin();},1000);}
-function onCD(g){if(!cda)return;drop();flash('+'+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
-function fC(){if(!cda)return;if(rem<=0){toast('Insert a coin first!','err');return;}cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
-function cancelCoin(){cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');toast('Cancelled','err');}
+function onCD(g){if(!cda)return;playCoinSound();drop();flash('+'+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
+function fC(){if(!cda)return;if(rem<=0){toast('Insert a coin first!','err');return;}document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
+function cancelCoin(){document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');toast('Cancelled','err');}
 document.getElementById('db').onclick=fC;
 document.getElementById('cb').onclick=cancelCoin;
 var ak=null,bsy=false;
@@ -91,14 +97,14 @@ async function poll(){try{var d=await api('GET','/coin/session/'+encodeURICompon
 var pt=setInterval(poll,5000),ft=null;
 function sFP(){if(ft)return;ft=setInterval(poll,1500);}
 function sTP(){clearInterval(ft);ft=null;}
-async function loadRates(){
+async function loadRates(){var _cr=sessionStorage.getItem('rates');if(_cr){var _rd=JSON.parse(_cr);[1,5,10,25].forEach(function(p){var el=document.getElementById('p'+p);if(el)el.textContent=(function(m){return m>=60?(Math.floor(m/60)+'h '+(m%60?m%60+'min':'')).trim():m+' min';})(Math.round(p*_rd));});return;}
   try{
-    var d=await api('GET','/admin/settings');
-    if(d&&d.settings){
-      var pph=d.settings.minutes_rate/d.settings.peso_rate;
+    var d=await fetch(RY+'/api/pricing').then(function(r){return r.json();}).then(function(j){return j.data;}).catch(function(){return null;});
+    if(d&&d.pricing){sessionStorage.setItem('rates',JSON.stringify(d.pricing.minutes_rate/d.pricing.peso_rate));
+      var pph=d.pricing.minutes_rate/d.pricing.peso_rate;
       [1,5,10,25].forEach(function(p){
         var el=document.getElementById('p'+p);
-        if(el)el.textContent=Math.round(p*pph)+' min';
+        if(el)el.textContent=(function(m){return m>=60?(Math.floor(m/60)+'h '+(m%60?m%60+'min':'')).trim():m+' min';})(Math.round(p*pph));
       });
     }
   }catch(e){}
