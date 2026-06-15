@@ -24,10 +24,10 @@ const list = asyncHandler(async (req, res) => {
 
 /** POST /api/devices  (admin) */
 const create = asyncHandler(async (req, res) => {
-  const { device_name, location, mac_address, vlan, area, operator_id } = req.body || {};
+  const { device_name, location, mac_address, vlan, area, operator_id, download_mbps, upload_mbps } = req.body || {};
   if (!device_name || !mac_address) return fail(res, 'device_name and mac_address required', 400);
   const { data, error } = await supabaseAdmin.from('vendo_devices')
-    .insert({ device_name, location, mac_address, vlan, area, operator_id }).select().single();
+    .insert({ device_name, location, mac_address, vlan, area, operator_id, download_mbps: download_mbps || 0, upload_mbps: upload_mbps || 0 }).select().single();
   if (error) return fail(res, error.message, 400);
   await audit.log('device.create', req.user.sub, { device_name, mac_address });
   return ok(res, { device: data }, 201);
@@ -95,7 +95,21 @@ const resolveMaintenance = asyncHandler(async (req, res) => {
   return ok(res, { request: data });
 });
 
+/** GET /api/devices/speed?device_id=xxx  (device auth) — returns Mbps for enforcement */
+const getSpeed = asyncHandler(async (req, res) => {
+  const { device_id } = req.query || {};
+  if (!device_id) return fail(res, 'device_id required', 400);
+  const { data, error } = await supabaseAdmin.from('vendo_devices')
+    .select('download_mbps, upload_mbps').eq('id', device_id).maybeSingle();
+  if (error) return fail(res, error.message, 400);
+  return ok(res, {
+    download_mbps: data?.download_mbps || 0,
+    upload_mbps: data?.upload_mbps || 0,
+  });
+});
+
 module.exports = {
+  getSpeed,
   list, create, update, heartbeat, remove,
   listMaintenance, createMaintenance, resolveMaintenance,
 };

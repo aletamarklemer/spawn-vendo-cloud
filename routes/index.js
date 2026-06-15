@@ -54,6 +54,7 @@ router.post('/devices', authenticate, authorize('admin'), device.create);
 router.patch('/devices/:id', authenticate, authorize('admin', 'technician'), device.update);
 router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);
 router.post('/devices/heartbeat', deviceAuth, device.heartbeat);
+router.get('/devices/speed', deviceAuth, device.getSpeed);
 
 // maintenance
 router.get('/maintenance', authenticate, authorize('admin', 'technician'), device.listMaintenance);

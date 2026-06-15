@@ -72,24 +72,45 @@ async function drawRevenue(range) {
 async function loadDevices() {
   try {
     const { devices } = await API.get('/devices');
-    document.getElementById('devTable').innerHTML = devices.map(d => `
+    document.getElementById('devTable').innerHTML = devices.map(d => {
+      const dl = d.download_mbps || 0, ul = d.upload_mbps || 0;
+      const speedTxt = (dl === 0 && ul === 0) ? '<span style="color:var(--muted)">Unlimited</span>' : `↓${dl||'∞'} ↑${ul||'∞'} Mbps`;
+      return `
       <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
       <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
       <td>${d.vlan ?? '—'}</td>
+      <td>${speedTxt}</td>
       <td><span class="badge ${d.status}">${d.status}</span></td>
       <td>${fmtDate(d.last_online)}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`).join('')
-      || '<tr><td colspan="6" style="color:var(--muted)">No devices yet.</td></tr>';
+      <td><button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>
+          <button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`;
+    }).join('')
+      || '<tr><td colspan="7" style="color:var(--muted)">No devices yet.</td></tr>';
   } catch(e) {}
 }
 async function addDevice() {
   const body = {
     device_name: val('d_name'), mac_address: val('d_mac'),
     location: val('d_loc'), area: val('d_area'), vlan: parseInt(val('d_vlan'), 10) || null,
+    download_mbps: parseInt(val('d_dl'), 10) || 0, upload_mbps: parseInt(val('d_ul'), 10) || 0,
   };
   if (!body.device_name || !body.mac_address) return toast('Name and MAC required', 'err');
   try { await API.post('/devices', body); toast('Device added'); loadDevices();
-    ['d_name','d_mac','d_loc','d_area','d_vlan'].forEach(id => document.getElementById(id).value = '');
+    ['d_name','d_mac','d_loc','d_area','d_vlan','d_dl','d_ul'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function editDeviceSpeed(id, curDl, curUl) {
+  const dl = prompt('Download speed limit (Mbps)\n0 = unlimited', curDl);
+  if (dl === null) return;
+  const ul = prompt('Upload speed limit (Mbps)\n0 = unlimited', curUl);
+  if (ul === null) return;
+  try {
+    await API.patch('/devices/' + id, {
+      download_mbps: parseInt(dl, 10) || 0,
+      upload_mbps: parseInt(ul, 10) || 0,
+    });
+    toast('Speed updated');
+    loadDevices();
   } catch (e) { toast(e.message, 'err'); }
 }
 async function delDevice(id) {
