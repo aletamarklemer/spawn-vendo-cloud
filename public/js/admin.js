@@ -272,5 +272,37 @@ async function deleteAllAudit() {
   try { await API.del('/admin/audit'); toast('Audit logs cleared'); loadAudit(); } catch (e) { toast(e.message, 'err'); }
 }
 
+/* ===== Edit Profile ===== */
+function openEditProfile() {
+  const p = API.profile() || {};
+  document.getElementById('ep_name').value = p.full_name || '';
+  document.getElementById('ep_email').value = p.email || '';
+  document.getElementById('editProfileModal').classList.remove('hidden');
+}
+function closeEditProfile() {
+  document.getElementById('editProfileModal').classList.add('hidden');
+}
+async function saveProfile() {
+  const full_name = document.getElementById('ep_name').value.trim();
+  const email = document.getElementById('ep_email').value.trim();
+  if (!full_name && !email) { toast('Enter a name or email', 'err'); return; }
+  const btn = document.getElementById('epSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const body = {};
+    if (full_name) body.full_name = full_name;
+    if (email) body.email = email;
+    const data = await API.patch('/auth/profile', body);
+    if (data && data.profile) API.setProfile(data.profile);
+    document.getElementById('whoami').textContent = full_name || email;
+    toast('Profile updated');
+    closeEditProfile();
+  } catch (e) {
+    toast(e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
 const val = (id) => document.getElementById(id).value.trim();
 boot();

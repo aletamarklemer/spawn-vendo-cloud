@@ -105,7 +105,12 @@ const updateProfile = asyncHandler(async (req, res) => {
   }
 
   await audit.log('staff.profile_update', req.user.sub, updates);
-  return ok(res, { updated: true });
+
+  // Fetch and return updated profile
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('*').eq('id', req.user.sub).maybeSingle();
+
+  return ok(res, { updated: true, profile });
 });
 
 module.exports = { login, register, me, updateProfile };

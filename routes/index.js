@@ -26,6 +26,7 @@ router.get('/pricing', admin.getPublicPricing);
 router.post('/auth/login', loginLimiter, auth.login);
 router.post('/auth/register', authenticate, authorize('admin'), auth.register);
 router.get('/auth/me', authenticate, auth.me);
+router.patch('/auth/profile', authenticate, auth.updateProfile);
 
 router.post('/coin/insert', coinLimiter, deviceAuth, coin.insertCoin);
 router.post('/coin/portal-insert', coinLimiter, coin.portalInsert);
