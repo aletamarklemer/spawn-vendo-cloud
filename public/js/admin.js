@@ -157,15 +157,27 @@ async function deleteAllTx() {
 /* ---------- Sessions ---------- */
 async function loadSessions() {
   try {
+    // Fetch validity days from settings (default 3)
+    let validityDays = 3;
+    try { const { settings } = await API.get('/admin/settings'); if (settings && settings.pause_validity_days) validityDays = settings.pause_validity_days; } catch (e) {}
     const { sessions } = await API.get('/admin/sessions');
-    document.getElementById('sessTable').innerHTML = sessions.map(s => `
+    document.getElementById('sessTable').innerHTML = sessions.map(s => {
+      let validityTxt = '—';
+      if (s.first_paused_at) {
+        const exp = new Date(new Date(s.first_paused_at).getTime() + validityDays * 86400000);
+        const expired = Date.now() > exp.getTime();
+        validityTxt = `<span style="color:${expired ? 'var(--bad)' : 'var(--ok)'}">${fmtDate(exp.toISOString())}${expired ? ' (expired)' : ''}</span>`;
+      }
+      return `
       <tr><td><small style="color:var(--muted)">${s.client_mac}</small></td>
       <td>${s.vendo_devices?.device_name || '—'}</td>
       <td><span class="badge ${s.status === 'active' ? 'active' : s.status === 'paused' ? 'maintenance' : 'expired'}">${s.status}</span></td>
       <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : s.status === 'paused' ? hms(s.remaining_seconds || 0) + ' (paused)' : '—'}</td>
       <td>${fmtDate(s.end_time)}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="delSession('${s.id}')">Delete</button></td></tr>`).join('')
-      || '<tr><td colspan="6" style="color:var(--muted)">No sessions.</td></tr>';
+      <td>${validityTxt}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="delSession('${s.id}')">Delete</button></td></tr>`;
+    }).join('')
+      || '<tr><td colspan="7" style="color:var(--muted)">No sessions.</td></tr>';
   } catch (e) {}
 }
 async function delSession(id) {
