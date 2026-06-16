@@ -126,6 +126,14 @@
             <label>How many</label>
             <input id="v_count" type="number" value="1" min="1">
           </div>
+          <div>
+            <label>Download (Mbps)</label>
+            <input id="v_dl" type="number" min="0" value="2" placeholder="0 = unlimited">
+          </div>
+          <div>
+            <label>Upload (Mbps)</label>
+            <input id="v_ul" type="number" min="0" value="2" placeholder="0 = unlimited">
+          </div>
         </div>
         <p style="color:var(--muted);font-size:13px;margin-top:10px">= <b id="v_preview">60 minutes</b> per voucher</p>
         <button class="btn btn-primary" style="margin-top:10px" onclick="genVouchers()">Generate</button>

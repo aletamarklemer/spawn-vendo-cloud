@@ -8,11 +8,13 @@ const audit = require('../services/audit.service');
 const generate = asyncHandler(async (req, res) => {
   const minutes = parseInt(req.body?.minutes, 10);
   const count = Math.min(parseInt(req.body?.count, 10) || 1, 500);
+  const download_mbps = parseInt(req.body?.download_mbps, 10) || 0;
+  const upload_mbps = parseInt(req.body?.upload_mbps, 10) || 0;
   if (!minutes || minutes <= 0) return fail(res, 'minutes must be > 0', 400);
-  const rows = Array.from({ length: count }, () => ({ code: genVoucherCode(), minutes }));
+  const rows = Array.from({ length: count }, () => ({ code: genVoucherCode(), minutes, download_mbps, upload_mbps }));
   const { data, error } = await supabaseAdmin.from('vouchers').insert(rows).select();
   if (error) return fail(res, error.message, 400);
-  await audit.log('voucher.generate', req.user.sub, { minutes, count });
+  await audit.log('voucher.generate', req.user.sub, { minutes, count, download_mbps, upload_mbps });
   return ok(res, { vouchers: data }, 201);
 });
 

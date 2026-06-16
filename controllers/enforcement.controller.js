@@ -31,10 +31,22 @@ const allowedClients = asyncHandler(async (req, res) => {
     status: 'paused',
   }));
 
+  // Build speed map: MAC -> "dl_ul" (only for clients with voucher speed set)
+  const speeds = {};
+  rows.forEach((r) => {
+    if (r.download_mbps != null || r.upload_mbps != null) {
+      speeds[norm(r.client_mac)] = {
+        download_mbps: r.download_mbps,
+        upload_mbps: r.upload_mbps,
+      };
+    }
+  });
+
   return ok(res, {
     macs: activeClients.map((c) => c.client_mac),   // only active MACs
     paused_macs: pausedClients.map((c) => c.client_mac), // paused MACs separate
     clients: [...activeClients, ...pausedClients],
+    speeds,  // per-MAC voucher speed override
     count: activeClients.length,
     server_time: new Date().toISOString(),
   });

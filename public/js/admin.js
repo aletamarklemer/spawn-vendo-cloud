@@ -205,7 +205,9 @@ async function genVouchers() {
   if (unit === 'hours') minutes = duration * 60;
   else if (unit === 'days') minutes = duration * 60 * 24;
   try {
-    const d = await API.post('/vouchers/generate', { minutes, count });
+    const download_mbps = parseInt(val('v_dl'), 10) || 0;
+    const upload_mbps = parseInt(val('v_ul'), 10) || 0;
+    const d = await API.post('/vouchers/generate', { minutes, count, download_mbps, upload_mbps });
     toast(`Generated ${d.vouchers.length} voucher(s)`); loadVouchers();
   } catch (e) { toast(e.message, 'err'); }
 }
