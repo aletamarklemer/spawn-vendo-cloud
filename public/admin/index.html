@@ -162,7 +162,9 @@
         <p style="color:var(--muted);font-size:14px">Customers get <b id="ratePreview"></b>. Formula: minutes = (amount ÷ peso&nbsp;rate) × minutes&nbsp;rate.</p>
         <div class="field"><label>Peso rate (₱)</label><input id="s_peso" type="number" step="0.01" oninput="prev()"></div>
         <div class="field"><label>Minutes per peso rate</label><input id="s_min" type="number" oninput="prev()"></div>
-        <button class="btn btn-primary" onclick="saveSettings()">Save rates</button>
+        <div class="field"><label>Pause/Resume validity (days)</label><input id="s_validity" type="number" min="1" value="3" placeholder="3"></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-4px">Paused sessions expire after this many days from first pause.</p>
+        <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
       </div>
     </section>
 

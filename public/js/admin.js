@@ -276,11 +276,11 @@ async function toggleShowPw(uid) {
 /* ---------- Settings ---------- */
 async function loadSettings() {
   const { settings } = await API.get('/admin/settings');
-  if (settings) { document.getElementById('s_peso').value = settings.peso_rate; document.getElementById('s_min').value = settings.minutes_rate; }
+  if (settings) { document.getElementById('s_peso').value = settings.peso_rate; document.getElementById('s_min').value = settings.minutes_rate; if(document.getElementById('s_validity')) document.getElementById('s_validity').value = settings.pause_validity_days || 3; }
   prev();
 }
 async function saveSettings() {
-  try { await API.put('/admin/settings', { peso_rate: Number(val('s_peso')), minutes_rate: parseInt(val('s_min'), 10) });
+  try { await API.put('/admin/settings', { peso_rate: Number(val('s_peso')), minutes_rate: parseInt(val('s_min'), 10), pause_validity_days: parseInt(val('s_validity'), 10) || 3 });
     toast('Rates updated'); } catch (e) { toast(e.message, 'err'); }
 }
 

@@ -3,6 +3,21 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler } = require('../utils/helpers');
 
+// Fetch pause validity in milliseconds from settings (default 3 days)
+async function getValidityMs() {
+  try {
+    const { data } = await supabaseAdmin
+      .from('settings').select('pause_validity_days')
+      .eq('is_active', true).order('updated_at', { ascending: false })
+      .limit(1).maybeSingle();
+    const days = (data && data.pause_validity_days) || 3;
+    return days * 24 * 60 * 60 * 1000;
+  } catch (e) {
+    return 3 * 24 * 60 * 60 * 1000;
+  }
+}
+
+
 const insertCoin = asyncHandler(async (req, res) => {
   const { device_id, client_mac, amount, txn_ref } = req.body || {};
   if (amount == null) return fail(res, 'amount required', 400);
@@ -100,8 +115,8 @@ const getSession = asyncHandler(async (req, res) => {
       data.status = 'expired';
     }
   } else if (data.status === 'paused') {
-    // Check 3-day validity from first pause
-    const VALIDITY_MS = 3 * 24 * 60 * 60 * 1000;
+    // Check validity from first pause (configurable)
+    const VALIDITY_MS = await getValidityMs();
     if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
@@ -140,8 +155,8 @@ const pauseSession = asyncHandler(async (req, res) => {
     return ok(res, { paused: false, message: 'Session expired' });
   }
 
-  // Check 3-day validity from first pause
-  const VALIDITY_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+  // Check validity from first pause (configurable)
+  const VALIDITY_MS = await getValidityMs();
   const firstPaused = data.first_paused_at ? new Date(data.first_paused_at).getTime() : Date.now();
   if (Date.now() - firstPaused > VALIDITY_MS) {
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
@@ -185,8 +200,8 @@ const resumeSession = asyncHandler(async (req, res) => {
     return ok(res, { resumed: false, message: 'Session expired' });
   }
 
-  // Check 3-day validity from first pause
-  const VALIDITY_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+  // Check validity from first pause (configurable)
+  const VALIDITY_MS = await getValidityMs();
   if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
     return ok(res, { resumed: false, message: 'Session expired (3-day validity reached)' });

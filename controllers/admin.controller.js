@@ -118,12 +118,14 @@ const getSettings = asyncHandler(async (req, res) => {
 const updateSettings = asyncHandler(async (req, res) => {
   const peso_rate = Number(req.body?.peso_rate);
   const minutes_rate = parseInt(req.body?.minutes_rate, 10);
+  let pause_validity_days = parseInt(req.body?.pause_validity_days, 10);
   if (!peso_rate || !minutes_rate) return fail(res, 'peso_rate and minutes_rate required', 400);
+  if (!pause_validity_days || pause_validity_days < 1) pause_validity_days = 3;
   await supabaseAdmin.from('settings').update({ is_active: false }).eq('is_active', true);
   const { data, error } = await supabaseAdmin.from('settings')
-    .insert({ peso_rate, minutes_rate, is_active: true }).select().single();
+    .insert({ peso_rate, minutes_rate, pause_validity_days, is_active: true }).select().single();
   if (error) return fail(res, error.message, 400);
-  await audit.log('settings.update', req.user.sub, { peso_rate, minutes_rate });
+  await audit.log('settings.update', req.user.sub, { peso_rate, minutes_rate, pause_validity_days });
   return ok(res, { settings: data });
 });
 
