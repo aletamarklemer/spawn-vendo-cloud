@@ -220,6 +220,10 @@ async function deleteAllVouchers() {
   if (!confirm('Delete all voided/used vouchers?')) return;
   try { await API.del('/vouchers/voided'); toast('Voided vouchers deleted'); loadVouchers(); } catch (e) { toast(e.message, 'err'); }
 }
+async function deleteAllVouchersForce() {
+  if (!confirm('Delete ALL vouchers (including unused)? This cannot be undone!')) return;
+  try { await API.del('/vouchers/all'); toast('All vouchers deleted'); loadVouchers(); } catch (e) { toast(e.message, 'err'); }
+}
 
 /* ---------- Users ---------- */
 async function loadUsers() {
