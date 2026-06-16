@@ -69,9 +69,11 @@ async function drawRevenue(range) {
 }
 
 /* ---------- Devices ---------- */
+let ALL_DEVICES = [];
 async function loadDevices() {
   try {
     const { devices } = await API.get('/devices');
+    ALL_DEVICES = devices;
     document.getElementById('devTable').innerHTML = devices.map(d => {
       const dl = d.download_mbps || 0, ul = d.upload_mbps || 0;
       const speedTxt = (dl === 0 && ul === 0) ? '<span style="color:var(--muted)">Unlimited</span>' : `↓${dl||'∞'} ↑${ul||'∞'} Mbps`;
@@ -81,7 +83,8 @@ async function loadDevices() {
       <td>${speedTxt}</td>
       <td><span class="badge ${d.status}">${d.status}</span></td>
       <td>${fmtDate(d.last_online)}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>
+      <td><button class="btn btn-ghost btn-sm" onclick="editDevice('${d.id}')">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>
           <button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`;
     }).join('')
       || '<tr><td colspan="7" style="color:var(--muted)">No devices yet.</td></tr>';
@@ -109,6 +112,29 @@ async function editDeviceSpeed(id, curDl, curUl) {
       upload_mbps: parseInt(ul, 10) || 0,
     });
     toast('Speed updated');
+    loadDevices();
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function editDevice(id) {
+  const dev = (ALL_DEVICES || []).find(d => d.id === id);
+  if (!dev) { toast('Device not found', 'err'); return; }
+  const name = prompt('Device Name', dev.device_name || '');
+  if (name === null) return;
+  const mac = prompt('MAC Address', dev.mac_address || '');
+  if (mac === null) return;
+  const loc = prompt('Location', dev.location || '');
+  if (loc === null) return;
+  const area = prompt('Area', dev.area || '');
+  if (area === null) return;
+  if (!name.trim() || !mac.trim()) { toast('Name and MAC required', 'err'); return; }
+  try {
+    await API.patch('/devices/' + id, {
+      device_name: name.trim(),
+      mac_address: mac.trim(),
+      location: loc.trim(),
+      area: area.trim(),
+    });
+    toast('Device updated');
     loadDevices();
   } catch (e) { toast(e.message, 'err'); }
 }
