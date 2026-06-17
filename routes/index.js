@@ -35,6 +35,8 @@ router.get('/coin/session/:mac', coin.getSession);
 router.get('/coin/history/:mac', coin.history);
 router.post('/coin/session/pause', deviceAuth, coin.pauseSession);
 router.post('/coin/session/resume', deviceAuth, coin.resumeSession);
+router.post('/coin/session/pause-client', coin.pauseSession);
+router.post('/coin/session/resume-client', coin.resumeSession);
 
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
