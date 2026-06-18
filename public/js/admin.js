@@ -1,6 +1,7 @@
 /* public/js/admin.js — admin dashboard controller */
 let CHART = null;
 let ALL_TX = [];
+let ALL_SESS = [];
 let ALL_USERS = [];
 let AUTO_REFRESH = null; // global auto-refresh interval
 
@@ -156,7 +157,8 @@ async function loadTransactions() {
   try {
     const { transactions } = await API.get('/admin/transactions');
     ALL_TX = transactions;
-    renderTx(transactions);
+    populateDeviceFilter('tx-device-filter', transactions);
+    filterTx();
   } catch(e) {}
 }
 function renderTx(list) {
@@ -169,7 +171,11 @@ function renderTx(list) {
 }
 function filterTx() {
   const q = document.getElementById('tx-search').value.toLowerCase();
-  renderTx(ALL_TX.filter(t => (t.client_mac||'').toLowerCase().includes(q) || (t.vendo_devices?.device_name||'').toLowerCase().includes(q)));
+  const dev = (document.getElementById('tx-device-filter')||{}).value || '';
+  renderTx(ALL_TX.filter(t =>
+    ((t.client_mac||'').toLowerCase().includes(q) || (t.vendo_devices?.device_name||'').toLowerCase().includes(q)) &&
+    (!dev || t.device_id === dev)
+  ));
 }
 async function delTx(id) {
   if (!confirm('Delete this transaction?')) return;
@@ -181,30 +187,59 @@ async function deleteAllTx() {
 }
 
 /* ---------- Sessions ---------- */
+let SESS_VALIDITY_DAYS = 3;
 async function loadSessions() {
   try {
-    // Fetch validity days from settings (default 3)
-    let validityDays = 3;
-    try { const { settings } = await API.get('/admin/settings'); if (settings && settings.pause_validity_days) validityDays = settings.pause_validity_days; } catch (e) {}
+    try { const { settings } = await API.get('/admin/settings'); if (settings && settings.pause_validity_days) SESS_VALIDITY_DAYS = settings.pause_validity_days; } catch (e) {}
     const { sessions } = await API.get('/admin/sessions');
-    document.getElementById('sessTable').innerHTML = sessions.map(s => {
-      let validityTxt = '—';
-      if (s.first_paused_at) {
-        const exp = new Date(new Date(s.first_paused_at).getTime() + validityDays * 86400000);
-        const expired = Date.now() > exp.getTime();
-        validityTxt = `<span style="color:${expired ? 'var(--bad)' : 'var(--ok)'}">${fmtDate(exp.toISOString())}${expired ? ' (expired)' : ''}</span>`;
-      }
-      return `
-      <tr><td><small style="color:var(--muted)">${s.client_mac}</small></td>
-      <td>${s.vendo_devices?.device_name || '—'}</td>
-      <td><span class="badge ${s.status === 'active' ? 'active' : s.status === 'paused' ? 'maintenance' : 'expired'}">${s.status}</span></td>
-      <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : s.status === 'paused' ? hms(s.remaining_seconds || 0) + ' (paused)' : '—'}</td>
-      <td>${fmtDate(s.end_time)}</td>
-      <td>${validityTxt}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="delSession('${s.id}')">Delete</button></td></tr>`;
-    }).join('')
-      || '<tr><td colspan="7" style="color:var(--muted)">No sessions.</td></tr>';
+    ALL_SESS = sessions;
+    populateDeviceFilter('sess-device-filter', sessions);
+    filterSessions();
   } catch (e) {}
+}
+function filterSessions() {
+  const q = ((document.getElementById('sess-search')||{}).value || '').toLowerCase();
+  const dev = (document.getElementById('sess-device-filter')||{}).value || '';
+  const list = ALL_SESS.filter(s =>
+    ((s.client_mac||'').toLowerCase().includes(q) || (s.device_info||'').toLowerCase().includes(q) || (s.vendo_devices?.device_name||'').toLowerCase().includes(q)) &&
+    (!dev || s.device_id === dev)
+  );
+  renderSessions(list);
+}
+function renderSessions(list) {
+  const validityDays = SESS_VALIDITY_DAYS;
+  document.getElementById('sessTable').innerHTML = list.map(s => {
+    let validityTxt = '—';
+    if (s.first_paused_at) {
+      const exp = new Date(new Date(s.first_paused_at).getTime() + validityDays * 86400000);
+      const expired = Date.now() > exp.getTime();
+      validityTxt = `<span style="color:${expired ? 'var(--bad)' : 'var(--ok)'}">${fmtDate(exp.toISOString())}${expired ? ' (expired)' : ''}</span>`;
+    }
+    const phone = s.device_info ? `<span style="color:var(--text)">${s.device_info}</span>` : '<span style="color:var(--muted)">—</span>';
+    return `
+    <tr><td><small style="color:var(--muted)">${s.client_mac}</small></td>
+    <td><small>${phone}</small></td>
+    <td>${s.vendo_devices?.device_name || '—'}</td>
+    <td><span class="badge ${s.status === 'active' ? 'active' : s.status === 'paused' ? 'maintenance' : 'expired'}">${s.status}</span></td>
+    <td>${s.status === 'active' ? hms(Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000))) : s.status === 'paused' ? hms(s.remaining_seconds || 0) + ' (paused)' : '—'}</td>
+    <td>${fmtDate(s.end_time)}</td>
+    <td>${validityTxt}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="delSession('${s.id}')">Delete</button></td></tr>`;
+  }).join('')
+    || '<tr><td colspan="8" style="color:var(--muted)">No sessions.</td></tr>';
+}
+/* Populate a device dropdown from a list with device_id + vendo_devices.device_name */
+function populateDeviceFilter(selId, list) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const cur = sel.value;
+  const seen = {};
+  list.forEach(x => { if (x.device_id && x.vendo_devices?.device_name) seen[x.device_id] = x.vendo_devices.device_name; });
+  const opts = ['<option value="">All Vendo</option>'].concat(
+    Object.keys(seen).map(id => `<option value="${id}">${seen[id]}</option>`)
+  );
+  sel.innerHTML = opts.join('');
+  if (cur && seen[cur]) sel.value = cur;
 }
 async function delSession(id) {
   if (!confirm('Delete this session?')) return;

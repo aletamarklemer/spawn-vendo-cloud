@@ -89,7 +89,8 @@
     <section data-section="transactions" class="hidden">
       <div class="card">
         <div class="tbl-actions">
-          <input class="search-bar" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:280px">
+          <input class="search-bar" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:240px;margin-right:8px">
+          <select id="tx-device-filter" onchange="filterTx()" style="max-width:180px"><option value="">All Vendo</option></select>
           <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
         </div>
         <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th><th></th></tr></thead><tbody id="txTable"></tbody></table>
@@ -100,9 +101,11 @@
     <section data-section="sessions" class="hidden">
       <div class="card">
         <div class="tbl-actions">
+          <input class="search-bar" id="sess-search" placeholder="Search MAC, phone, device…" oninput="filterSessions()" style="max-width:240px;margin-right:8px">
+          <select id="sess-device-filter" onchange="filterSessions()" style="max-width:180px;margin-right:8px"><option value="">All Vendo</option></select>
           <button class="btn btn-danger btn-sm" onclick="deleteAllSessions()">🗑 Delete All Expired</button>
         </div>
-        <table><thead><tr><th>Client MAC</th><th>Device</th><th>Status</th><th>Remaining</th><th>End Time</th><th>Validity Until</th><th></th></tr></thead><tbody id="sessTable"></tbody></table>
+        <table><thead><tr><th>Client MAC</th><th>Phone</th><th>Device</th><th>Status</th><th>Remaining</th><th>End Time</th><th>Validity Until</th><th></th></tr></thead><tbody id="sessTable"></tbody></table>
       </div>
     </section>
 
