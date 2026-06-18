@@ -81,6 +81,10 @@ router.delete('/admin/sessions/:id', authenticate, authorize('admin'), admin.del
 router.get('/admin/settings', authenticate, authorize('admin'), admin.getSettings);
 router.put('/admin/settings', authenticate, authorize('admin'), admin.updateSettings);
 
+// pricing tiers
+router.get('/admin/pricing-tiers', authenticate, authorize('admin'), admin.getPricingTiers);
+router.put('/admin/pricing-tiers', authenticate, authorize('admin'), admin.savePricingTiers);
+
 // users
 router.get('/admin/users', authenticate, authorize('admin'), admin.listUsers);
 router.patch('/admin/users/:id/active', authenticate, authorize('admin'), admin.setUserActive);

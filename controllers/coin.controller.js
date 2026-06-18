@@ -44,6 +44,9 @@ const insertCoin = asyncHandler(async (req, res) => {
     if (String(error.message).includes('NO_ARMED_CLIENT')) {
       return fail(res, 'No client is waiting on this device. Tap "Insert Coin" first.', 409);
     }
+    if (String(error.message).includes('NO_PRICING_TIER')) {
+      return fail(res, `No pricing tier for ₱${amount}.`, 400);
+    }
     return fail(res, error.message, 400);
   }
 
@@ -221,13 +224,23 @@ const resumeSession = asyncHandler(async (req, res) => {
 
 const ACCEPTED_DENOMS = [1, 5, 10, 15, 20];
 
+// Accepted amounts come from active pricing tiers when configured,
+// otherwise fall back to the legacy fixed denominations.
+async function getAcceptedAmounts() {
+  const { data } = await supabaseAdmin.from('pricing_tiers')
+    .select('amount').eq('is_active', true);
+  if (data && data.length) return data.map((r) => Number(r.amount));
+  return ACCEPTED_DENOMS;
+}
+
 const portalInsert = asyncHandler(async (req, res) => {
   const { client_mac, amount, device_id } = req.body || {};
   if (!client_mac) return fail(res, 'client_mac required', 400);
 
   const amt = Number(amount);
-  if (!ACCEPTED_DENOMS.includes(amt)) {
-    return fail(res, `amount must be one of ₱${ACCEPTED_DENOMS.join(', ₱')}`, 400);
+  const accepted = await getAcceptedAmounts();
+  if (!accepted.includes(amt)) {
+    return fail(res, `amount must be one of ₱${accepted.join(', ₱')}`, 400);
   }
 
   const txn_ref = `PORTAL-${client_mac}-${Date.now()}`;
@@ -238,7 +251,12 @@ const portalInsert = asyncHandler(async (req, res) => {
     p_amount: amt,
     p_txn_ref: txn_ref,
   });
-  if (error) return fail(res, error.message, 400);
+  if (error) {
+    if (String(error.message).includes('NO_PRICING_TIER')) {
+      return fail(res, `No pricing tier for ₱${amt}.`, 400);
+    }
+    return fail(res, error.message, 400);
+  }
 
   let remaining = 0;
   if (data && data.end_time) {

@@ -351,10 +351,52 @@ async function loadSettings() {
   const { settings } = await API.get('/admin/settings');
   if (settings) { document.getElementById('s_peso').value = settings.peso_rate; document.getElementById('s_min').value = settings.minutes_rate; if(document.getElementById('s_validity')) document.getElementById('s_validity').value = settings.pause_validity_days || 3; }
   prev();
+  loadTiers();
 }
 async function saveSettings() {
   try { await API.put('/admin/settings', { peso_rate: Number(val('s_peso')), minutes_rate: parseInt(val('s_min'), 10), pause_validity_days: parseInt(val('s_validity'), 10) || 3 });
     toast('Rates updated'); } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---------- Pricing Tiers ---------- */
+const TIER_UNITS = [['minute', 'Minutes'], ['hour', 'Hours'], ['day', 'Days']];
+function tierUnitOpts(sel) {
+  return TIER_UNITS.map(([v, label]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${label}</option>`).join('');
+}
+function tierRowHtml(t) {
+  t = t || { amount: '', duration_value: '', duration_unit: 'minute' };
+  return `<tr>
+    <td><input type="number" step="0.01" min="0" class="t-amt" value="${t.amount}" placeholder="₱" style="width:90px"></td>
+    <td><input type="number" min="1" class="t-val" value="${t.duration_value}" placeholder="0" style="width:80px"></td>
+    <td><select class="t-unit">${tierUnitOpts(t.duration_unit)}</select></td>
+    <td><button class="btn btn-danger btn-sm" type="button" onclick="this.closest('tr').remove();updateTierNote()">✕</button></td>
+  </tr>`;
+}
+function addTierRow(t) {
+  document.getElementById('tierRows').insertAdjacentHTML('beforeend', tierRowHtml(t));
+  updateTierNote();
+}
+function updateTierNote() {
+  const has = document.querySelectorAll('#tierRows tr').length > 0;
+  const note = document.getElementById('tierEmptyNote');
+  if (note) note.style.display = has ? 'none' : '';
+}
+async function loadTiers() {
+  const { tiers } = await API.get('/admin/pricing-tiers');
+  const body = document.getElementById('tierRows');
+  if (!body) return;
+  body.innerHTML = '';
+  (tiers || []).forEach(addTierRow);
+  updateTierNote();
+}
+async function saveTiers() {
+  const rows = [...document.querySelectorAll('#tierRows tr')].map(tr => ({
+    amount: tr.querySelector('.t-amt').value,
+    duration_value: tr.querySelector('.t-val').value,
+    duration_unit: tr.querySelector('.t-unit').value,
+  }));
+  try { await API.put('/admin/pricing-tiers', { tiers: rows }); toast('Pricing tiers saved'); }
+  catch (e) { toast(e.message, 'err'); }
 }
 
 /* ---------- Audit ---------- */

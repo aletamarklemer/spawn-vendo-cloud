@@ -129,6 +129,60 @@ const updateSettings = asyncHandler(async (req, res) => {
   return ok(res, { settings: data });
 });
 
+// ---- pricing tiers ----
+const UNIT_SECONDS = { minute: 60, hour: 3600, day: 86400 };
+
+/** GET /api/admin/pricing-tiers */
+const getPricingTiers = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('pricing_tiers')
+    .select('*').eq('is_active', true)
+    .order('sort_order', { ascending: true }).order('amount', { ascending: true });
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { tiers: data || [] });
+});
+
+/** PUT /api/admin/pricing-tiers — replace the whole active tier set */
+const savePricingTiers = asyncHandler(async (req, res) => {
+  const incoming = Array.isArray(req.body?.tiers) ? req.body.tiers : null;
+  if (!incoming) return fail(res, 'tiers array required', 400);
+
+  const rows = [];
+  const seenAmounts = new Set();
+  for (let i = 0; i < incoming.length; i++) {
+    const t = incoming[i] || {};
+    const amount = Number(t.amount);
+    const duration_value = parseInt(t.duration_value, 10);
+    const duration_unit = String(t.duration_unit || '').toLowerCase();
+    if (!amount || amount <= 0) return fail(res, `Row ${i + 1}: amount must be greater than 0`, 400);
+    if (!duration_value || duration_value <= 0) return fail(res, `Row ${i + 1}: duration must be greater than 0`, 400);
+    if (!UNIT_SECONDS[duration_unit]) return fail(res, `Row ${i + 1}: unit must be minute, hour, or day`, 400);
+    if (seenAmounts.has(amount)) return fail(res, `Duplicate amount ₱${amount} — each amount must be unique`, 400);
+    seenAmounts.add(amount);
+    rows.push({
+      amount,
+      duration_value,
+      duration_unit,
+      seconds: duration_value * UNIT_SECONDS[duration_unit],
+      is_active: true,
+      sort_order: i,
+    });
+  }
+
+  // Replace: drop existing active tiers, then insert the new set.
+  const { error: delErr } = await supabaseAdmin.from('pricing_tiers')
+    .delete().eq('is_active', true);
+  if (delErr) return fail(res, delErr.message, 400);
+
+  let inserted = [];
+  if (rows.length) {
+    const { data, error } = await supabaseAdmin.from('pricing_tiers').insert(rows).select();
+    if (error) return fail(res, error.message, 400);
+    inserted = data;
+  }
+  await audit.log('pricing_tiers.update', req.user.sub, { count: rows.length });
+  return ok(res, { tiers: inserted });
+});
+
 // ---- users ----
 const listUsers = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles')
@@ -179,15 +233,23 @@ const getUserPassword = asyncHandler(async (req, res) => {
   return ok(res, { password: data?.password_hint || '(not stored)' });
 });
 
-/** GET /api/pricing — public, no auth */
+/** GET /api/pricing — public, no auth. Returns tiers (preferred) + linear rate (fallback). */
 const getPublicPricing = asyncHandler(async (req, res) => {
-  const { data, error } = await supabaseAdmin.from('settings')
-    .select('peso_rate, minutes_rate')
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(1).maybeSingle();
-  if (error) return fail(res, error.message, 400);
-  return ok(res, { pricing: data || { peso_rate: 1, minutes_rate: 10 } });
+  const [{ data: settings }, { data: tiers }] = await Promise.all([
+    supabaseAdmin.from('settings')
+      .select('peso_rate, minutes_rate')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1).maybeSingle(),
+    supabaseAdmin.from('pricing_tiers')
+      .select('amount, duration_value, duration_unit, seconds')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }).order('amount', { ascending: true }),
+  ]);
+  return ok(res, {
+    pricing: settings || { peso_rate: 1, minutes_rate: 10 },
+    tiers: tiers || [],
+  });
 });
 
 /** GET /api/admin/audit */
@@ -211,6 +273,7 @@ module.exports = {
   deleteTransaction, deleteAllTransactions,
   listSessions, deleteSession, deleteExpiredSessions,
   getSettings, updateSettings, getPublicPricing,
+  getPricingTiers, savePricingTiers,
   listUsers, setUserActive, deleteUser, updateUserPassword, getUserPassword,
   auditLogs, deleteAllAudit,
 };

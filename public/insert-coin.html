@@ -10,7 +10,7 @@
 <div class="sm"><span id="ml">Loading...</span><span id="sy">Synced just now</span></div>
 <div class="pricing-wrap" id="pw" style="display:none">
 <div class="pricing-title">Pricing</div>
-<div class="pricing-grid">
+<div class="pricing-grid" id="pricingGrid">
 <div class="price-card"><div class="price-coin">&#8369;1</div><div class="price-label">per coin</div><div class="price-mins" id="p1">...</div></div>
 <div class="price-card"><div class="price-coin">&#8369;5</div><div class="price-label">per coin</div><div class="price-mins" id="p5">...</div></div>
 <div class="price-card"><div class="price-coin">&#8369;10</div><div class="price-label">per coin</div><div class="price-mins" id="p10">...</div></div>
@@ -97,14 +97,29 @@ async function poll(){try{var d=await api('GET','/coin/session/'+encodeURICompon
 var pt=setInterval(poll,5000),ft=null;
 function sFP(){if(ft)return;ft=setInterval(poll,1500);}
 function sTP(){clearInterval(ft);ft=null;}
-async function loadRates(){var _cr=sessionStorage.getItem('rates');if(_cr){var _rd=JSON.parse(_cr);[1,5,10,25].forEach(function(p){var el=document.getElementById('p'+p);if(el)el.textContent=(function(m){return m>=60?(Math.floor(m/60)+'h '+(m%60?m%60+'min':'')).trim():m+' min';})(Math.round(p*_rd));});return;}
+function durLbl(sec){
+  sec=Math.max(0,Math.floor(sec));
+  if(sec>=86400&&sec%86400===0){var d=sec/86400;return d+(d>1?'days':'day');}
+  var h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  if(h>0)return h+'h'+(m?' '+m+'min':'');
+  return m+' min';
+}
+async function loadRates(){
   try{
     var d=await fetch(RY+'/api/pricing').then(function(r){return r.json();}).then(function(j){return j.data;}).catch(function(){return null;});
-    if(d&&d.pricing){sessionStorage.setItem('rates',JSON.stringify(d.pricing.minutes_rate/d.pricing.peso_rate));
+    if(!d)return;
+    var grid=document.getElementById('pricingGrid');
+    if(grid&&d.tiers&&d.tiers.length){
+      grid.innerHTML=d.tiers.map(function(t){
+        return '<div class="price-card"><div class="price-coin">&#8369;'+Number(t.amount)+'</div><div class="price-label">per coin</div><div class="price-mins">'+durLbl(t.seconds)+'</div></div>';
+      }).join('');
+      return;
+    }
+    if(d.pricing){
       var pph=d.pricing.minutes_rate/d.pricing.peso_rate;
       [1,5,10,25].forEach(function(p){
         var el=document.getElementById('p'+p);
-        if(el)el.textContent=(function(m){return m>=60?(Math.floor(m/60)+'h '+(m%60?m%60+'min':'')).trim():m+' min';})(Math.round(p*pph));
+        if(el)el.textContent=durLbl(Math.round(p*pph)*60);
       });
     }
   }catch(e){}

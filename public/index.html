@@ -72,9 +72,23 @@ function hms(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floo
 function minsLabel(m){return m>=60?Math.floor(m/60)+'hr'+(m%60?' '+m%60+'m':''):m+'m';}
 function toast(m,t){t=t||'ok';var h=document.getElementById('toast');var e=document.createElement('div');e.className='t '+t;e.textContent=m;h.appendChild(e);setTimeout(function(){e.remove();},3200);}
 async function api(mth,path,body){var r=await fetch(RY+'/api'+path,{method:mth,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});var j=await r.json().catch(function(){return{};});if(!r.ok||j.success===false)throw new Error(j.error||'HTTP '+r.status);return j.data;}
+function durLbl(sec){
+  sec=Math.max(0,Math.floor(sec));
+  if(sec>=86400&&sec%86400===0){var d=sec/86400;return d+(d>1?'days':'day');}
+  var h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  if(h>0)return h+'hr'+(m?' '+m+'m':'');
+  return m+'m';
+}
 async function loadPricing(){
   try{
     var d=await api('GET','/pricing');
+    var grid=document.getElementById('pricingGrid');
+    if(grid&&d.tiers&&d.tiers.length){
+      grid.innerHTML=d.tiers.map(function(t){
+        return '<div class="price-card"><div class="price-coin">&#8369;'+Number(t.amount)+'</div><div class="price-label">per coin</div><div class="price-mins">'+durLbl(t.seconds)+'</div></div>';
+      }).join('');
+      return;
+    }
     var rate=d.pricing;
     if(!rate)return;
     var pph=rate.minutes_rate/rate.peso_rate;
