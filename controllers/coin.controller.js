@@ -56,13 +56,14 @@ const insertCoin = asyncHandler(async (req, res) => {
 });
 
 const armDevice = asyncHandler(async (req, res) => {
-  const { device_id, client_mac, seconds } = req.body || {};
+  const { device_id, client_mac, seconds, device_info } = req.body || {};
   if (!device_id || !client_mac) return fail(res, 'device_id and client_mac required', 400);
 
   const { data, error } = await supabaseAdmin.rpc('arm_device', {
     p_device_id: device_id,
     p_client_mac: client_mac,
     p_seconds: seconds ? Number(seconds) : 90,
+    p_device_info: device_info || null,
   });
   if (error) return fail(res, error.message, 400);
   return ok(res, { arm: data });
