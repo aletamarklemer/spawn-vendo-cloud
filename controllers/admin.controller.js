@@ -116,16 +116,22 @@ const getSettings = asyncHandler(async (req, res) => {
 });
 
 const updateSettings = asyncHandler(async (req, res) => {
-  const peso_rate = Number(req.body?.peso_rate);
-  const minutes_rate = parseInt(req.body?.minutes_rate, 10);
   let pause_validity_days = parseInt(req.body?.pause_validity_days, 10);
-  if (!peso_rate || !minutes_rate) return fail(res, 'peso_rate and minutes_rate required', 400);
   if (!pause_validity_days || pause_validity_days < 1) pause_validity_days = 3;
+
+  // Pricing is driven by pricing_tiers; settings only carries session config.
+  // Carry over the legacy rate columns (NOT NULL) from the current active row.
+  const { data: current } = await supabaseAdmin.from('settings')
+    .select('peso_rate, minutes_rate').eq('is_active', true)
+    .order('updated_at', { ascending: false }).limit(1).maybeSingle();
+  const peso_rate = current?.peso_rate ?? 1;
+  const minutes_rate = current?.minutes_rate ?? 10;
+
   await supabaseAdmin.from('settings').update({ is_active: false }).eq('is_active', true);
   const { data, error } = await supabaseAdmin.from('settings')
     .insert({ peso_rate, minutes_rate, pause_validity_days, is_active: true }).select().single();
   if (error) return fail(res, error.message, 400);
-  await audit.log('settings.update', req.user.sub, { peso_rate, minutes_rate, pause_validity_days });
+  await audit.log('settings.update', req.user.sub, { pause_validity_days });
   return ok(res, { settings: data });
 });
 
@@ -233,23 +239,14 @@ const getUserPassword = asyncHandler(async (req, res) => {
   return ok(res, { password: data?.password_hint || '(not stored)' });
 });
 
-/** GET /api/pricing — public, no auth. Returns tiers (preferred) + linear rate (fallback). */
+/** GET /api/pricing — public, no auth. Returns the active pricing tiers. */
 const getPublicPricing = asyncHandler(async (req, res) => {
-  const [{ data: settings }, { data: tiers }] = await Promise.all([
-    supabaseAdmin.from('settings')
-      .select('peso_rate, minutes_rate')
-      .eq('is_active', true)
-      .order('updated_at', { ascending: false })
-      .limit(1).maybeSingle(),
-    supabaseAdmin.from('pricing_tiers')
-      .select('amount, duration_value, duration_unit, seconds')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true }).order('amount', { ascending: true }),
-  ]);
-  return ok(res, {
-    pricing: settings || { peso_rate: 1, minutes_rate: 10 },
-    tiers: tiers || [],
-  });
+  const { data, error } = await supabaseAdmin.from('pricing_tiers')
+    .select('amount, duration_value, duration_unit, seconds')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true }).order('amount', { ascending: true });
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { tiers: data || [] });
 });
 
 /** GET /api/admin/audit */

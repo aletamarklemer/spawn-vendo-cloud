@@ -32,8 +32,8 @@ create unique index if not exists uniq_pricing_active_amount
 create index if not exists idx_pricing_active_sort
   on public.pricing_tiers(sort_order) where is_active = true;
 
--- 2) Rewrite add_credits to prefer pricing tiers (exact match), with a
---    linear fallback only when there are no active tiers at all.
+-- 2) Rewrite add_credits to use pricing tiers ONLY (exact match).
+--    No linear fallback: an inserted amount with no matching tier is rejected.
 --    DROP first: the original function declared parameter defaults, and
 --    CREATE OR REPLACE cannot remove them (Postgres error 42P13).
 drop function if exists public.add_credits(uuid, text, numeric, text);
@@ -47,11 +47,9 @@ create function public.add_credits(
 returns public.internet_sessions
 language plpgsql security definer set search_path = public as $$
 declare
-  v_setting   public.settings%rowtype;
   v_minutes   integer;
   v_seconds   integer;
   v_session   public.internet_sessions%rowtype;
-  v_has_tiers boolean;
 begin
   -- Dedupe: if this txn_ref already exists, return current/most-recent session.
   if p_txn_ref is not null and exists (select 1 from coin_transactions where txn_ref = p_txn_ref) then
@@ -60,25 +58,13 @@ begin
     return v_session;
   end if;
 
-  -- Resolve duration: pricing tiers (exact match) first, linear fallback only
-  -- when no active tiers are configured.
-  select exists(select 1 from pricing_tiers where is_active = true) into v_has_tiers;
-
-  if v_has_tiers then
-    select seconds into v_seconds from pricing_tiers
-      where is_active = true and amount = p_amount limit 1;
-    if v_seconds is null then
-      raise exception 'NO_PRICING_TIER';   -- amount has no matching tier
-    end if;
-    v_minutes := round(v_seconds / 60.0);
-  else
-    select * into v_setting from settings where is_active = true order by updated_at desc limit 1;
-    if not found then
-      v_setting.peso_rate := 1; v_setting.minutes_rate := 10;
-    end if;
-    v_minutes := floor((p_amount / v_setting.peso_rate) * v_setting.minutes_rate);
-    v_seconds := v_minutes * 60;
+  -- Resolve duration from pricing tiers (exact match only).
+  select seconds into v_seconds from pricing_tiers
+    where is_active = true and amount = p_amount limit 1;
+  if v_seconds is null then
+    raise exception 'NO_PRICING_TIER';   -- amount has no matching tier
   end if;
+  v_minutes := round(v_seconds / 60.0);
 
   insert into coin_transactions (device_id, amount, credits, client_mac, txn_ref)
   values (p_device_id, p_amount, v_minutes, p_client_mac, p_txn_ref);

@@ -222,15 +222,11 @@ const resumeSession = asyncHandler(async (req, res) => {
   return ok(res, { resumed: true, remaining_seconds: remaining });
 });
 
-const ACCEPTED_DENOMS = [1, 5, 10, 15, 20];
-
-// Accepted amounts come from active pricing tiers when configured,
-// otherwise fall back to the legacy fixed denominations.
+// Accepted amounts come from the active pricing tiers.
 async function getAcceptedAmounts() {
   const { data } = await supabaseAdmin.from('pricing_tiers')
     .select('amount').eq('is_active', true);
-  if (data && data.length) return data.map((r) => Number(r.amount));
-  return ACCEPTED_DENOMS;
+  return (data || []).map((r) => Number(r.amount));
 }
 
 const portalInsert = asyncHandler(async (req, res) => {
@@ -239,6 +235,9 @@ const portalInsert = asyncHandler(async (req, res) => {
 
   const amt = Number(amount);
   const accepted = await getAcceptedAmounts();
+  if (!accepted.length) {
+    return fail(res, 'No pricing tiers configured. Please set rates in the admin panel.', 400);
+  }
   if (!accepted.includes(amt)) {
     return fail(res, `amount must be one of ₱${accepted.join(', ₱')}`, 400);
   }

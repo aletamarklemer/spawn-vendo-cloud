@@ -109,18 +109,13 @@ async function loadRates(){
     var d=await fetch(RY+'/api/pricing').then(function(r){return r.json();}).then(function(j){return j.data;}).catch(function(){return null;});
     if(!d)return;
     var grid=document.getElementById('pricingGrid');
-    if(grid&&d.tiers&&d.tiers.length){
+    if(!grid)return;
+    if(d.tiers&&d.tiers.length){
       grid.innerHTML=d.tiers.map(function(t){
         return '<div class="price-card"><div class="price-coin">&#8369;'+Number(t.amount)+'</div><div class="price-label">per coin</div><div class="price-mins">'+durLbl(t.seconds)+'</div></div>';
       }).join('');
-      return;
-    }
-    if(d.pricing){
-      var pph=d.pricing.minutes_rate/d.pricing.peso_rate;
-      [1,5,10,25].forEach(function(p){
-        var el=document.getElementById('p'+p);
-        if(el)el.textContent=durLbl(Math.round(p*pph)*60);
-      });
+    }else{
+      grid.innerHTML='<div style="grid-column:1/-1;color:var(--muted-2);font-size:13px;text-align:center">No pricing set yet.</div>';
     }
   }catch(e){}
 }
