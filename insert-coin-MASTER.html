@@ -39,7 +39,7 @@ if(TK&&!CM){
   var _tries=0;
   function _fetchTok(){
     _tries++;
-    fetch('http://192.168.1.1:3000/tok/'+TK+'.json?_='+Date.now())
+    fetch('http://10.0.0.1:3000/tok/'+TK+'.json?_='+Date.now())
       .then(function(r){return r.json();})
       .then(function(d){
         if(d.mac){
@@ -52,7 +52,7 @@ if(TK&&!CM){
   }
   _fetchTok();
 } else if(!CM){
-  window.location.replace('http://192.168.1.1:3000/insert-coin.html');
+  window.location.replace('http://10.0.0.1:3000/insert-coin.html');
 } else {
   sessionStorage.setItem('sm',CM);
   document.getElementById('ml').textContent=CI?'IP: '+CI:'MAC: '+CM.replace('MAC:','');
