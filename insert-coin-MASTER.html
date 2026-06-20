@@ -7,10 +7,13 @@
 <div class="grad-bar"></div>
 <div class="machine"><div class="slot-label">Coin Slot</div><div class="slot"></div><div class="dz" id="dz"></div><div class="cr" id="cr"></div></div>
 <button class="btn btn-p ibtn" id="ib">&#x1FA99; Insert Coin</button>
+<button class="btn ibtn" id="vb" style="margin-top:10px;background:var(--panel-2);border:1px solid var(--line);color:var(--txt)">&#x1F3AB; Enter Voucher Code</button>
+<button class="btn ibtn" id="pzb" style="margin-top:10px;background:rgba(255,149,0,.15);border:1px solid #ff9500;color:#ff9500;display:none">&#x23F8; Pause Time</button>
+<button class="btn ibtn" id="rzb" style="margin-top:10px;background:rgba(52,199,89,.15);border:1px solid var(--ok);color:var(--ok);display:none">&#x25B6; Resume Time</button>
 <div class="sm"><span id="ml">Loading...</span><span id="sy">Synced just now</span></div>
 <div class="pricing-wrap" id="pw" style="display:none">
 <div class="pricing-title">Pricing</div>
-<div class="pricing-grid">
+<div class="pricing-grid" id="pricingGrid">
 <div class="price-card"><div class="price-coin">&#8369;1</div><div class="price-label">per coin</div><div class="price-mins" id="p1">...</div></div>
 <div class="price-card"><div class="price-coin">&#8369;5</div><div class="price-label">per coin</div><div class="price-mins" id="p5">...</div></div>
 <div class="price-card"><div class="price-coin">&#8369;10</div><div class="price-label">per coin</div><div class="price-mins" id="p10">...</div></div>
@@ -27,34 +30,42 @@
 <button class="btn btn-p dbtn" id="db">Done Paying &mdash; Connect Now</button>
 <button class="btn" style="margin-top:10px;background:rgba(255,69,58,.15);color:var(--bad);border:1px solid var(--bad)" id="cb">&#x2715; Cancel</button>
 </div></div>
+<div class="ov" id="vov"><div class="cdc">
+<div class="cd-title">&#x1F3AB; Voucher Code</div>
+<div class="cd-sub">Enter your voucher code to get internet time</div>
+<input id="vcode" type="text" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" style="width:100%;padding:16px;font-size:20px;text-align:center;letter-spacing:.15em;text-transform:uppercase;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;color:var(--txt);font-family:inherit;margin-bottom:8px">
+<p id="vmsg" style="min-height:18px;font-size:13px;margin:4px 0"></p>
+<button class="btn btn-p dbtn" id="vsub">Redeem Voucher</button>
+<button class="btn" style="margin-top:10px;background:rgba(255,69,58,.15);color:var(--bad);border:1px solid var(--bad)" id="vcb">&#x2715; Cancel</button>
+</div></div>
 <script>
 const RY='https://spawn-vendo-cloud-production-4f63.up.railway.app';
 const DID='8c4492d0-2e30-4a5a-95be-14269a5e2698';
 const CDS=30;
 const P=new URLSearchParams(location.search);
-const AA=P.get('authaction')||'',CI=P.get('clientip')||'',TK=P.get('tok')||'',RD=P.get('redir')||'http://spawn.internet';
-let CM=CI?'IP:'+CI.replace(/\./g,':'):sessionStorage.getItem('sm');
+const AA=P.get('authaction')||'',CI=P.get('clientip')||'',CMAC=P.get('clientmac')||'',TK=P.get('tok')||'',RD=P.get('redir')||'http://connectivitycheck.gstatic.com/generate_204';var _ipm=(AA||'').match(/clientip=([0-9.]+)/);var CLIENTIP=_ipm?_ipm[1]:'';
+let CM=CI?'IP:'+CI.replace(/\./g,':'):(TK?null:sessionStorage.getItem('sm'));
 function init(){rT();sT();poll();loadRates();}
-if(TK&&!CM){
+if(CMAC&&!CM){CM='MAC:'+CMAC.toUpperCase();sessionStorage.setItem('sm',CM);localStorage.setItem('spawn_mac',CM);document.getElementById('ml').textContent='MAC: '+CMAC;init();}else if(CI){CM='IP:'+CI.replace(/\./g,':');sessionStorage.setItem('sm',CM);localStorage.setItem('spawn_mac',CM);document.getElementById('ml').textContent='IP: '+CI;init();(function(){try{fetch('http://10.0.0.1:3000/cgi-bin/whoami?_='+Date.now()).then(function(r){return r.json();}).then(function(d){if(d.hostname){window.__hostName=d.hostname;if(typeof buildPhoneInfo==='function')buildPhoneInfo();}}).catch(function(){});}catch(e){}})();}else if(TK&&!CM){
   var _tries=0;
   function _fetchTok(){
     _tries++;
-    fetch('http://10.0.0.1:3000/tok/'+TK+'.json?_='+Date.now())
+    fetch('http://10.0.0.1:3000/ip/'+CLIENTIP+'.json?_='+Date.now())
       .then(function(r){return r.json();})
       .then(function(d){
         if(d.mac){
           CM='MAC:'+d.mac.toUpperCase();
-          sessionStorage.setItem('sm',CM);
+          sessionStorage.setItem('sm',CM);localStorage.setItem('spawn_mac',CM);
           document.getElementById('ml').textContent='MAC: '+d.mac;
           init();
-        } else if(_tries<10){setTimeout(_fetchTok,800);}
-      }).catch(function(){if(_tries<10){setTimeout(_fetchTok,800);}});
+        } else if(_tries<15){setTimeout(_fetchTok,400);}
+      }).catch(function(){if(_tries<15){setTimeout(_fetchTok,400);}});
   }
   _fetchTok();
 } else if(!CM){
-  window.location.replace('http://10.0.0.1:3000/insert-coin.html');
+  var _it=0;(function _fetchIP(){_it++;fetch('http://10.0.0.1:3000/cgi-bin/whoami?_='+Date.now()).then(function(r){return r.json();}).then(function(d){if(d.mac){CM='MAC:'+d.mac.toUpperCase();if(d.hostname){window.__hostName=d.hostname;if(typeof buildPhoneInfo==='function')buildPhoneInfo();}sessionStorage.setItem('sm',CM);localStorage.setItem('spawn_mac',CM);document.getElementById('ml').textContent='MAC: '+d.mac;init();}else if(_it<8){setTimeout(_fetchIP,1000);}else{document.getElementById('ml').textContent='Connect via WiFi portal';}}).catch(function(){if(_it<8){setTimeout(_fetchIP,1000);}else{document.getElementById('ml').textContent='Connect via WiFi portal';}});})();
 } else {
-  sessionStorage.setItem('sm',CM);
+  sessionStorage.setItem('sm',CM);localStorage.setItem('spawn_mac',CM);
   document.getElementById('ml').textContent=CI?'IP: '+CI:'MAC: '+CM.replace('MAC:','');
   init();
 }
@@ -69,7 +80,7 @@ function connect(){
 }
 var rem=0,tick=null;
 function rT(){var t=document.getElementById('timer');t.textContent=hms(rem);t.classList.toggle('live',rem>0);if(!cda)document.getElementById('sl').innerHTML=rem>0?'You are <b>online</b>':'Insert a coin to get online';}
-function sT(){clearInterval(tick);tick=setInterval(function(){if(rem>0){rem--;rT();}},1000);}
+var SPAUSED=false;function sT(){clearInterval(tick);tick=setInterval(function(){if(rem>0&&!SPAUSED){rem--;rT();}},1000);}
 function playCoinSound(){try{var ac=new(window.AudioContext||window.webkitAudioContext)();var t=ac.currentTime;[880,1318,1760].forEach(function(f,i){var o=ac.createOscillator();var g=ac.createGain();o.connect(g);g.connect(ac.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+i*0.06);g.gain.linearRampToValueAtTime(0.3,t+i*0.06+0.01);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.06+0.15);o.start(t+i*0.06);o.stop(t+i*0.06+0.15);});}catch(e){}}
 function drop(){var z=document.getElementById('dz');var c=document.createElement('div');c.className='coin fall';c.textContent='P';z.appendChild(c);setTimeout(function(){c.remove();},700);}
 function flash(x){var c=document.getElementById('cr');c.textContent=x;c.classList.remove('show');void c.offsetWidth;c.classList.add('show');}
@@ -82,8 +93,42 @@ function fC(){if(!cda)return;if(rem<=0){toast('Insert a coin first!','err');retu
 function cancelCoin(){document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');toast('Cancelled','err');}
 document.getElementById('db').onclick=fC;
 document.getElementById('cb').onclick=cancelCoin;
+/* ===== Voucher redeem ===== */
+document.getElementById('vb').onclick=function(){
+  if(cda)return;
+  document.getElementById('vcode').value='';
+  document.getElementById('vmsg').textContent='';
+  document.getElementById('vov').classList.add('show');
+  setTimeout(function(){document.getElementById('vcode').focus();},100);
+};
+document.getElementById('vcb').onclick=function(){
+  document.getElementById('vov').classList.remove('show');
+};
+document.getElementById('vsub').onclick=async function(){
+  var code=document.getElementById('vcode').value.trim().toUpperCase();
+  var msg=document.getElementById('vmsg');
+  if(!code){msg.style.color='var(--bad)';msg.textContent='Please enter a code';return;}
+  if(!CM){msg.style.color='var(--bad)';msg.textContent='Loading device info, please wait...';return;}
+  var b=document.getElementById('vsub');b.disabled=true;b.textContent='Redeeming...';
+  msg.style.color='var(--muted)';msg.textContent='Checking voucher...';
+  try{
+    var d=await api('POST','/vouchers/redeem',{code:code,client_mac:CM,device_id:DID});
+    var secs=(d.session&&d.session.remaining_seconds)||0;
+    playCoinSound();
+    msg.style.color='var(--ok)';msg.textContent='Success! +'+hms(secs)+' added';
+    if(d.session&&d.session.remaining_seconds){rem=d.session.remaining_seconds;sessionStorage.setItem('rt',rem);rT();}
+    setTimeout(function(){
+      document.getElementById('vov').classList.remove('show');
+      sTP();connect();
+    },1500);
+  }catch(e){
+    msg.style.color='var(--bad)';msg.textContent=e.message||'Invalid voucher';
+  }finally{
+    b.disabled=false;b.textContent='Redeem Voucher';
+  }
+};
 var ak=null,bsy=false;
-async function arm(){try{await api('POST','/coin/arm',{device_id:DID,client_mac:CM,seconds:90});return true;}catch(e){toast(e.message||'Error','err');return false;}}
+async function arm(){try{if(!window.__hostName){try{var hr=await fetch('http://10.0.0.1:3000/cgi-bin/whoami?_='+Date.now());var hd=await hr.json();if(hd.hostname){window.__hostName=hd.hostname;buildPhoneInfo();}}catch(e){}}await api('POST','/coin/arm',{device_id:DID,client_mac:CM,seconds:90,device_info:window.__phoneInfo||''});return true;}catch(e){toast(e.message||'Error','err');return false;}}
 document.getElementById('ib').onclick=async function(){
   if(bsy||cda)return;bsy=true;
   var b=document.getElementById('ib');b.disabled=true;b.textContent='Preparing...';
@@ -93,20 +138,54 @@ document.getElementById('ib').onclick=async function(){
 var ls=Date.now();
 function mS(){ls=Date.now();}
 setInterval(function(){var s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
-async function poll(){try{var d=await api('GET','/coin/session/'+encodeURIComponent(CM));var sv=d.remaining_seconds||0;var bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();var g=rem-bf;if(cda&&g>2)onCD(g);}catch(e){}}
-var pt=setInterval(poll,5000),ft=null;
+async function poll(){try{var d=await api('GET','/coin/session/'+encodeURIComponent(CM));var sv=d.remaining_seconds||0;var bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();var g=rem-bf;if(cda&&g>2)onCD(g);var st=(d.session&&d.session.status)||'none';var prevSt=window.__lastSt;window.__lastSt=st;if(prevSt&&prevSt!==st){var ci=new Image();ci.src='http://connectivitycheck.gstatic.com/generate_204?_='+Date.now();if(typeof sFP==='function')sFP();}SPAUSED=(st==='paused');if(typeof updatePRButtons==='function')updatePRButtons(st);}catch(e){}}
+var pt=setInterval(poll,3000),ft=null;
 function sFP(){if(ft)return;ft=setInterval(poll,1500);}
 function sTP(){clearInterval(ft);ft=null;}
-async function loadRates(){var _cr=sessionStorage.getItem('rates');if(_cr){var _rd=JSON.parse(_cr);[1,5,10,25].forEach(function(p){var el=document.getElementById('p'+p);if(el)el.textContent=(function(m){return m>=60?(Math.floor(m/60)+'h '+(m%60?m%60+'min':'')).trim():m+' min';})(Math.round(p*_rd));});return;}
+function durLbl(s){s=Number(s)||0;if(s>=86400){var d=Math.round(s/86400);return d+(d>1?' days':' day');}if(s>=3600){var h=s/3600;h=(h%1===0)?h:h.toFixed(1);return h+(h>1?' hrs':' hr');}var m=Math.round(s/60);return m+' min';}
+async function loadRates(){try{var d=await fetch(RY+'/api/pricing').then(function(r){return r.json();}).then(function(j){return j.data;}).catch(function(){return null;});if(!d)return;var grid=document.getElementById('pricingGrid');if(grid&&d.tiers&&d.tiers.length){grid.innerHTML=d.tiers.map(function(t){return '<div class="price-card"><div class="price-coin">\u20B1'+Number(t.amount)+'</div><div class="price-label">per coin</div><div class="price-mins">'+durLbl(t.seconds)+'</div></div>';}).join('');sessionStorage.setItem('tiers',JSON.stringify(d.tiers));return;}if(grid&&d.pricing){var pph=d.pricing.minutes_rate/d.pricing.peso_rate;[1,5,10,25].forEach(function(p){var el=document.getElementById('p'+p);if(el)el.textContent=durLbl(Math.round(p*pph)*60);});}}catch(e){}}
+
+/* ===== Manual Pause/Resume buttons ===== */
+async function doPause(){
+  if(!CM)return;
+  var b=document.getElementById('pzb');
+  SPAUSED=true;rT();
+  if(typeof updatePRButtons==='function')updatePRButtons('paused');
+  toast('Paused','ok');
+  b.disabled=true;
   try{
-    var d=await fetch(RY+'/api/pricing').then(function(r){return r.json();}).then(function(j){return j.data;}).catch(function(){return null;});
-    if(d&&d.pricing){sessionStorage.setItem('rates',JSON.stringify(d.pricing.minutes_rate/d.pricing.peso_rate));
-      var pph=d.pricing.minutes_rate/d.pricing.peso_rate;
-      [1,5,10,25].forEach(function(p){
-        var el=document.getElementById('p'+p);
-        if(el)el.textContent=(function(m){return m>=60?(Math.floor(m/60)+'h '+(m%60?m%60+'min':'')).trim():m+' min';})(Math.round(p*pph));
-      });
-    }
-  }catch(e){}
+    await api('POST','/coin/session/pause-client',{client_mac:CM});
+    sFP();
+  }catch(e){SPAUSED=false;rT();if(typeof updatePRButtons==='function')updatePRButtons('active');toast(e.message||'Error','err');}
+  b.disabled=false;b.innerHTML='&#x23F8; Pause Time';
 }
+async function doResume(){
+  if(!CM)return;
+  var b=document.getElementById('rzb');
+  SPAUSED=false;rT();
+  if(typeof updatePRButtons==='function')updatePRButtons('active');
+  toast('Resumed','ok');
+  b.disabled=true;
+  try{
+    await api('POST','/coin/session/resume-client',{client_mac:CM});
+    sFP();
+  }catch(e){SPAUSED=true;rT();if(typeof updatePRButtons==='function')updatePRButtons('paused');toast(e.message||'Error','err');}
+  b.disabled=false;b.innerHTML='&#x25B6; Resume Time';
+}
+document.getElementById('pzb').onclick=doPause;
+document.getElementById('rzb').onclick=doResume;
+/* Update button visibility based on session status */
+function updatePRButtons(status){
+  var pz=document.getElementById('pzb'),rz=document.getElementById('rzb');
+  if(status==='active'){pz.style.display='block';rz.style.display='none';}
+  else if(status==='paused'){pz.style.display='none';rz.style.display='block';}
+  else{pz.style.display='none';rz.style.display='none';}
+}
+window.__phoneInfo='';window.__hostName='';
+function pdBrand(s){if(/^SM-|samsung/i.test(s))return'Samsung';if(/redmi|xiaomi|^mi |poco|^M2|^2[0-9]{3}/i.test(s))return'Xiaomi';if(/^CPH|oppo/i.test(s))return'Oppo';if(/^V2|vivo/i.test(s))return'Vivo';if(/^RMX|realme/i.test(s))return'Realme';if(/infinix/i.test(s))return'Infinix';if(/tecno/i.test(s))return'Tecno';if(/pixel|google/i.test(s))return'Google';if(/huawei/i.test(s))return'Huawei';if(/honor/i.test(s))return'Honor';if(/iphone|ipad|apple/i.test(s))return'Apple';return'';}
+function pdTitle(s){return s.toLowerCase().replace(/\b\w/g,function(c){return c.toUpperCase();}).replace(/\b(5g|4g|3g|lte|hd|x9c|a15|a12e)\b/gi,function(m){return m.toUpperCase();});}
+function pdCleanHost(h){if(!h)return'';var x=h.replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();if(/^(android|localhost|unknown|\*)$/i.test(x)||/^android [0-9a-fx]{4,}$/i.test(x)||x.length<3)return'';var br=pdBrand(x);var t=pdTitle(x);if(br&&t.toLowerCase().indexOf(br.toLowerCase())<0)return br+' '+t;return t;}
+function pdFromUA(){var ua=navigator.userAgent||'';var brand='',os='',model='';if(/iPhone|iPad|iPod/i.test(ua)){os='iOS';var m=ua.match(/OS (\d+[_\.]\d+)/);if(m)os='iOS '+m[1].replace(/_/g,'.');brand='Apple';model=/iPad/i.test(ua)?'iPad':(/iPod/i.test(ua)?'iPod':'iPhone');}else if(/Android/i.test(ua)){os='Android';var av=ua.match(/Android (\d+(?:\.\d+)?)/);if(av)os='Android '+av[1];var mm=ua.match(/;\s*([^;)]+?)\s*(?:Build\/|\))/);if(mm&&mm[1]){model=mm[1].trim();if(/^(K|Android|wv)$/i.test(model)||model.length<2)model='';}brand=pdBrand(model);}else if(/Windows/i.test(ua)){os='Windows';brand='PC';}else if(/Mac/i.test(ua)){os='macOS';brand='Mac';}var parts=[];if(brand&&model&&brand.toLowerCase()!==model.toLowerCase()&&model.toLowerCase().indexOf(brand.toLowerCase())<0)parts.push(brand+' '+model);else if(model)parts.push(model);else if(brand)parts.push(brand);if(os)parts.push(os);return{str:parts.join(' \u2022 ')||'',os:os};}
+function buildPhoneInfo(){var ua=pdFromUA();var host=pdCleanHost(window.__hostName||'');var result='';if(host){result=host;if(ua.os&&host.toLowerCase().indexOf(ua.os.split(' ')[0].toLowerCase())<0)result+=' \u2022 '+ua.os;}else if(ua.str){result=ua.str;}else{result='Unknown device';}window.__phoneInfo=result;return result;}
+buildPhoneInfo();
 </script></body></html>
