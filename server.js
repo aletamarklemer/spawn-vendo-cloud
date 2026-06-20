@@ -38,12 +38,25 @@ app.use(helmet({
 }));
 
 // CORS — restrict to known origins (set CORS_ORIGINS=comma,separated,list in .env)
+// Same-origin requests (dashboard -> kaugalingong API) ALWAYS allowed.
+// External cross-origin requests blocked unless naa sa CORS_ORIGINS whitelist.
 const allowedOrigins = (process.env.CORS_ORIGINS || `http://localhost:${PORT}`)
   .split(',').map((s) => s.trim()).filter(Boolean);
+
+// Auto-allow ang kaugalingong Railway/public domain (same-origin dashboard)
+const SELF_HOSTS = [
+  'https://spawn-vendo-cloud-production-4f63.up.railway.app', // known production domain
+  process.env.RAILWAY_PUBLIC_DOMAIN,            // Railway auto-sets ni
+  process.env.RAILWAY_STATIC_URL,
+  process.env.PUBLIC_URL,
+].filter(Boolean).map((h) => h.startsWith('http') ? h : `https://${h}`);
+
 app.use(cors({
   origin(origin, cb) {
-    // allow same-origin / non-browser clients (no Origin header) and whitelisted origins
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // allow same-origin / non-browser clients (no Origin header)
+    if (!origin) return cb(null, true);
+    // allow whitelisted origins + kaugalingong host (same-origin dashboard)
+    if (allowedOrigins.includes(origin) || SELF_HOSTS.includes(origin)) return cb(null, true);
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
