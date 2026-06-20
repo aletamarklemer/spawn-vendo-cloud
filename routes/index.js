@@ -9,6 +9,7 @@ const voucher = require('../controllers/voucher.controller');
 const device = require('../controllers/device.controller');
 const admin = require('../controllers/admin.controller');
 const enforcement = require('../controllers/enforcement.controller');
+const portal = require('../controllers/portal.controller');
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 
@@ -22,6 +23,14 @@ router.get('/health', (req, res) => res.json({ success: true, data: { status: 'o
 
 // public - no auth
 router.get('/pricing', admin.getPublicPricing);
+
+// --- Portal auto-update ---
+// Router polls /version (lightweight) ug pulls /latest (deviceAuth).
+// Admin mo-publish via PUT /portal.
+router.get('/portal/version', deviceAuth, portal.version);
+router.get('/portal/latest',  deviceAuth, portal.latest);
+router.get('/portal',         authenticate, authorize('admin'), portal.getMeta);
+router.put('/portal',         authenticate, authorize('admin'), portal.publish);
 
 router.post('/auth/login', loginLimiter, auth.login);
 router.post('/auth/register', authenticate, authorize('admin'), auth.register);
