@@ -23,7 +23,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "https://cdn.jsdelivr.net"],
+      // 'unsafe-inline' allows inline <script> blocks (internal admin tool — pages use inline JS)
+      scriptSrc:  ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      // scriptSrcAttr allows inline event handlers like onclick="..." (29+ sa dashboard)
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc:    ["'self'", "https://fonts.gstatic.com"],
       imgSrc:     ["'self'", "data:"],
