@@ -1,9 +1,8 @@
 'use strict';
 /** controllers/admin.controller.js — analytics, settings, users */
 const { supabaseAdmin } = require('../config/supabase');
-const { ok, fail, asyncHandler } = require('../utils/helpers');
+const { ok, fail, asyncHandler, encryptSecret, decryptSecret } = require('../utils/helpers');
 const audit = require('../services/audit.service');
-const bcrypt = require('bcryptjs');
 
 function sinceISO(days) {
   return new Date(Date.now() - days * 86400000).toISOString();
@@ -223,9 +222,9 @@ const updateUserPassword = asyncHandler(async (req, res) => {
   if (!password || password.length < 8) return fail(res, 'Password must be at least 8 characters', 400);
   const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
   if (error) return fail(res, error.message, 400);
-  // Store hashed password in profiles for view feature
-  const hashed = await bcrypt.hash(password, 10);
-  await supabaseAdmin.from('profiles').update({ password_hint: password }).eq('id', id);
+  // Store ENCRYPTED password (AES-256-GCM, reversible) for view feature — NOT plaintext
+  const encrypted = encryptSecret(password);
+  await supabaseAdmin.from('profiles').update({ password_hint: encrypted }).eq('id', id);
   await audit.log('user.password_change', req.user.sub, { target_id: id });
   return ok(res, { updated: true });
 });
@@ -236,7 +235,10 @@ const getUserPassword = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles')
     .select('password_hint').eq('id', id).maybeSingle();
   if (error) return fail(res, error.message, 400);
-  return ok(res, { password: data?.password_hint || '(not stored)' });
+  if (!data?.password_hint) return ok(res, { password: '(not stored)' });
+  // Decrypt; kung dili ma-decrypt (luma nga plaintext o changed key), ingna nga re-set
+  const plain = decryptSecret(data.password_hint);
+  return ok(res, { password: plain || '(unavailable — please reset password)' });
 });
 
 /** GET /api/pricing — public, no auth. Returns the active pricing tiers. */
