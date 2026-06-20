@@ -30,7 +30,7 @@ app.use(helmet({
       styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc:    ["'self'", "https://fonts.gstatic.com"],
       imgSrc:     ["'self'", "data:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://cdn.jsdelivr.net"],
       objectSrc:  ["'none'"],
       frameAncestors: ["'self'"],
       // --- ZAP fix: explicit directives nga walay default-src fallback ---
