@@ -56,21 +56,36 @@ const getMeta = asyncHandler(async (req, res) => {
 /** PUT /api/portal — admin: upload bag-ong portal, auto-bump version */
 const publish = asyncHandler(async (req, res) => {
   const { html, notes } = req.body || {};
+  return await doPublish(res, html, notes, req.user?.sub);
+});
+
+/**
+ * POST /api/portal/raw — publish via RAW html body (Content-Type: text/html).
+ * Para sa router/BusyBox nga lisod mag-JSON-escape sa dako nga HTML.
+ * Notes mo-gikan sa ?notes= query param.
+ * Auth: deviceAuth (router naay DEVICE_KEY) — pero admin-level action,
+ * mao nga kini gi-guard pud sa x-publish-key (lahi nga shared secret).
+ */
+const publishRaw = asyncHandler(async (req, res) => {
+  const html = typeof req.body === 'string' ? req.body : '';
+  const notes = req.query.notes || 'Published via router (raw)';
+  return await doPublish(res, html, notes, null);
+});
+
+/** Shared publish logic */
+async function doPublish(res, html, notes, userId) {
   if (!html || typeof html !== 'string' || html.length < 100) {
     return fail(res, 'Valid portal html required (min 100 chars)', 400);
   }
-  // Safety: siguraduha nga naa ang IP-fallback fix (dili mo-publish ug luma nga portal)
   if (!html.includes('/ip/')) {
     return fail(res, 'Portal html walay /ip/ IP-fallback fix — mobalik ang Loading bug. Rejected.', 400);
   }
 
   const checksum = md5(html);
 
-  // Kuhaa ang current version para i-increment
   const { data: cur } = await supabaseAdmin
     .from('portal_releases').select('version, checksum').eq('id', 1).maybeSingle();
 
-  // Kung parehas ra ang checksum, walay kausaban — ayaw bump
   if (cur && cur.checksum === checksum) {
     return ok(res, { version: cur.version, unchanged: true, message: 'Walay kausaban sa portal' });
   }
@@ -86,12 +101,12 @@ const publish = asyncHandler(async (req, res) => {
       checksum,
       notes: notes || null,
       updated_at: new Date().toISOString(),
-      updated_by: req.user?.sub || null,
+      updated_by: userId || null,
     }, { onConflict: 'id' });
   if (error) return fail(res, error.message, 400);
 
-  await audit.log('portal.publish', req.user?.sub || null, { version: newVersion, checksum });
+  await audit.log('portal.publish', userId || null, { version: newVersion, checksum });
   return ok(res, { version: newVersion, checksum, message: `Portal published as v${newVersion}` });
-});
+}
 
-module.exports = { version, latest, getMeta, publish };
+module.exports = { version, latest, getMeta, publish, publishRaw };

@@ -26,11 +26,13 @@ router.get('/pricing', admin.getPublicPricing);
 
 // --- Portal auto-update ---
 // Router polls /version (lightweight) ug pulls /latest (deviceAuth).
-// Admin mo-publish via PUT /portal.
+// Admin mo-publish via PUT /portal (JSON). Router mo-publish via POST /portal/raw (raw html).
+const express = require('express');
 router.get('/portal/version', deviceAuth, portal.version);
 router.get('/portal/latest',  deviceAuth, portal.latest);
 router.get('/portal',         authenticate, authorize('admin'), portal.getMeta);
 router.put('/portal',         authenticate, authorize('admin'), portal.publish);
+router.post('/portal/raw',    deviceAuth, express.text({ type: '*/*', limit: '1mb' }), portal.publishRaw);
 
 router.post('/auth/login', loginLimiter, auth.login);
 router.post('/auth/register', authenticate, authorize('admin'), auth.register);
