@@ -33,6 +33,13 @@ app.use(helmet({
       connectSrc: ["'self'"],
       objectSrc:  ["'none'"],
       frameAncestors: ["'self'"],
+      // --- ZAP fix: explicit directives nga walay default-src fallback ---
+      baseUri:    ["'self'"],        // pugngan ang <base> tag hijack
+      formAction: ["'self'"],        // forms mo-submit ra sa kaugalingong server
+      frameSrc:   ["'none'"],        // walay iframe embedding
+      workerSrc:  ["'self'"],        // web workers gikan ra sa kaugalingon
+      manifestSrc:["'self'"],
+      mediaSrc:   ["'self'"],
     },
   },
 }));
@@ -64,6 +71,12 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'test') app.use(morgan('tiny'));
+
+// --- ZAP fix: no-cache para sa API responses (sensitive data dili ma-cache) ---
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, max-age=0');
+  next();
+});
 
 // --- API ---
 app.use('/api', apiRoutes);
