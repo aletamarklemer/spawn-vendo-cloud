@@ -87,7 +87,7 @@ sync_once() {
 
   NDS_JSON=""
   for try in 1 2 3; do
-    NDS_JSON="$(ndsctl json 2>/dev/null)"
+    NDS_JSON="$(cat /tmp/nds-cache.json 2>/dev/null)"
     [ -n "$NDS_JSON" ] && echo "$NDS_JSON" | grep -q '"client_list_length"' && break
     sleep 1
   done
@@ -99,21 +99,15 @@ sync_once() {
 
   # ACTIVE sessions: ensure authenticated + apply speed (NO idle auto-pause)
   for mac in $ACTIVE_MACS; do
-    if echo "$CONNECTED_MACS" | grep -qi "$mac"; then
-      state="$(echo "$NDS_JSON" | grep -A30 "\"mac\":\"$mac\"" | grep '"state"' | head -1 | sed 's/.*"state":"//;s/".*//')"
-      [ "$state" != "Authenticated" ] && ndsctl auth "$mac" >/dev/null 2>&1 && log "AUTH $mac"
-      apply_tc "$mac"
-    fi
+    ndsctl auth "$mac" >/dev/null 2>&1
+    apply_tc "$mac"
   done
 
   # PAUSED sessions (paused via manual button): deauth to cut internet (time stops)
   for mac in $PAUSED_MACS; do
     if echo "$CONNECTED_MACS" | grep -qi "$mac"; then
-      state="$(echo "$NDS_JSON" | grep -A30 "\"mac\":\"$mac\"" | grep '"state"' | head -1 | sed 's/.*"state":"//;s/".*//')"
-      if [ "$state" = "Authenticated" ]; then
         clear_tc "$mac"
         ndsctl deauth "$mac" >/dev/null 2>&1 && log "DEAUTH $mac (paused)"
-      fi
     fi
   done
 
