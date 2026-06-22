@@ -10,6 +10,7 @@ const device = require('../controllers/device.controller');
 const admin = require('../controllers/admin.controller');
 const enforcement = require('../controllers/enforcement.controller');
 const portal = require('../controllers/portal.controller');
+const script = require('../controllers/script.controller');
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 
@@ -33,6 +34,13 @@ router.get('/portal/latest',  deviceAuth, portal.latest);
 router.get('/portal',         authenticate, authorize('admin'), portal.getMeta);
 router.put('/portal',         authenticate, authorize('admin'), portal.publish);
 router.post('/portal/raw',    deviceAuth, express.text({ type: '*/*', limit: '1mb' }), portal.publishRaw);
+
+// --- Router script auto-update ---
+router.get('/script/manifest', deviceAuth, script.manifest);
+router.get('/script/:name',    deviceAuth, script.getScript);
+router.get('/script',          authenticate, authorize('admin'), script.listMeta);
+router.put('/script',          authenticate, authorize('admin'), script.publish);
+router.post('/script/raw',     deviceAuth, express.text({ type: '*/*', limit: '512kb' }), script.publishRaw);
 
 router.post('/auth/login', loginLimiter, auth.login);
 router.post('/auth/register', authenticate, authorize('admin'), auth.register);
