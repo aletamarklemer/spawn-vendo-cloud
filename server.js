@@ -30,7 +30,7 @@ app.use(helmet({
       styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc:    ["'self'", "https://fonts.gstatic.com"],
       imgSrc:     ["'self'", "data:"],
-      connectSrc: ["'self'", "https://cdn.jsdelivr.net"],
+      connectSrc: ["'self'"],
       objectSrc:  ["'none'"],
       frameAncestors: ["'self'"],
       // --- ZAP fix: explicit directives nga walay default-src fallback ---
@@ -64,6 +64,11 @@ app.use(cors({
     if (!origin) return cb(null, true);
     // allow whitelisted origins + kaugalingong host (same-origin dashboard)
     if (allowedOrigins.includes(origin) || SELF_HOSTS.includes(origin)) return cb(null, true);
+    // allow vendo captive portals: private LAN IPs (10.x, 192.168.x, 172.16-31.x) on port 3000.
+    // Kada vendo naay kaugalingong LAN IP — ang portal mo-fetch session/pricing gikan sa Railway.
+    if (/^http:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}):3000$/.test(origin)) {
+      return cb(null, true);
+    }
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
