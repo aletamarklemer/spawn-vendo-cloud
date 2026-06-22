@@ -35,6 +35,35 @@ const manifest = asyncHandler(async (req, res) => {
   return ok(res, { scripts: data || [] });
 });
 
+/**
+ * GET /api/script/manifest-raw — plain-text manifest para sa BusyBox (walay node).
+ * Format kada linya: name|version|checksum|target_path|restart_cmd
+ */
+const manifestRaw = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('script_releases')
+    .select('name, version, checksum, target_path, restart_cmd');
+  if (error) return res.status(400).type('text/plain').send('');
+  const lines = (data || []).map((x) =>
+    [x.name, x.version, x.checksum, x.target_path, x.restart_cmd || ''].join('|')
+  );
+  return res.type('text/plain').send(lines.join('\n'));
+});
+
+/**
+ * GET /api/script/:name/raw — plain-text script content para sa BusyBox.
+ * Mo-serve sa raw script (dili JSON-wrapped) — dili na kinahanglan ug node sa unescape.
+ */
+const getScriptRaw = asyncHandler(async (req, res) => {
+  const { name } = req.params;
+  const { data, error } = await supabaseAdmin
+    .from('script_releases')
+    .select('content')
+    .eq('name', name).maybeSingle();
+  if (error || !data) return res.status(404).type('text/plain').send('');
+  return res.type('text/plain').send(data.content);
+});
+
 /** GET /api/script/:name — full content sa usa ka script */
 const getScript = asyncHandler(async (req, res) => {
   const { name } = req.params;
@@ -112,4 +141,4 @@ const publishRaw = asyncHandler(async (req, res) => {
   return await doPublish(res, name, content, restartCmd, notes, null);
 });
 
-module.exports = { manifest, getScript, listMeta, publish, publishRaw };
+module.exports = { manifest, manifestRaw, getScript, getScriptRaw, listMeta, publish, publishRaw };

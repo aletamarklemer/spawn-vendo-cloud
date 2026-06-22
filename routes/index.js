@@ -31,12 +31,15 @@ router.get('/pricing', admin.getPublicPricing);
 const express = require('express');
 router.get('/portal/version', deviceAuth, portal.version);
 router.get('/portal/latest',  deviceAuth, portal.latest);
+router.get('/portal/latest-raw', deviceAuth, portal.latestRaw);
 router.get('/portal',         authenticate, authorize('admin'), portal.getMeta);
 router.put('/portal',         authenticate, authorize('admin'), portal.publish);
 router.post('/portal/raw',    deviceAuth, express.text({ type: '*/*', limit: '1mb' }), portal.publishRaw);
 
 // --- Router script auto-update ---
 router.get('/script/manifest', deviceAuth, script.manifest);
+router.get('/script/manifest-raw', deviceAuth, script.manifestRaw);
+router.get('/script/:name/raw', deviceAuth, script.getScriptRaw);
 router.get('/script/:name',    deviceAuth, script.getScript);
 router.get('/script',          authenticate, authorize('admin'), script.listMeta);
 router.put('/script',          authenticate, authorize('admin'), script.publish);

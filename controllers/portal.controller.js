@@ -42,6 +42,20 @@ const latest = asyncHandler(async (req, res) => {
   return ok(res, { version: data.version, html: data.html, checksum: data.checksum });
 });
 
+/**
+ * GET /api/portal/latest-raw — plain HTML para sa BusyBox (walay node).
+ * Mo-serve sa raw HTML (dili JSON-wrapped) — dili na kinahanglan ug node sa unescape.
+ */
+const latestRaw = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('portal_releases')
+    .select('html')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error || !data) return res.status(404).type('text/plain').send('');
+  return res.type('text/html').send(data.html);
+});
+
 /** GET /api/portal — admin: current metadata (walay full html) */
 const getMeta = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin
@@ -109,4 +123,4 @@ async function doPublish(res, html, notes, userId) {
   return ok(res, { version: newVersion, checksum, message: `Portal published as v${newVersion}` });
 }
 
-module.exports = { version, latest, getMeta, publish, publishRaw };
+module.exports = { version, latest, latestRaw, getMeta, publish, publishRaw };
