@@ -16,6 +16,11 @@ const { notFound, errorHandler } = require('./middleware/error');
 const { supabaseAdmin } = require('./config/supabase');
 
 const app = express();
+
+// Trust proxy — KINAHANGLAN para sa Railway (naa sa likod sa proxy).
+// Para sa rate limiting + accurate client IP detection (X-Forwarded-For).
+// 1 = trust ang unang proxy (Railway edge). Dili 'true' kay insecure (mahimong i-spoof).
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // --- security & parsing ---
