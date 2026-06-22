@@ -1,6 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
+const { coinGuard } = require('../middleware/coinGuard');
 
 const { authenticate, authorize, deviceAuth } = require('../middleware/auth');
 const auth = require('../controllers/auth.controller');
@@ -50,8 +51,8 @@ router.post('/auth/register', authenticate, authorize('admin'), auth.register);
 router.get('/auth/me', authenticate, auth.me);
 router.patch('/auth/profile', authenticate, auth.updateProfile);
 
-router.post('/coin/insert', coinLimiter, deviceAuth, coin.insertCoin);
-router.post('/coin/portal-insert', coinLimiter, deviceAuth, coin.portalInsert);
+router.post('/coin/insert', coinLimiter, deviceAuth, coinGuard, coin.insertCoin);
+router.post('/coin/portal-insert', coinLimiter, deviceAuth, coinGuard, coin.portalInsert);
 router.post('/coin/arm', coinLimiter, coin.armDevice);
 router.get('/coin/session/:mac', coin.getSession);
 router.get('/coin/history/:mac', coin.history);
