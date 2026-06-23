@@ -54,6 +54,7 @@ router.patch('/auth/profile', authenticate, auth.updateProfile);
 router.post('/coin/insert', coinLimiter, deviceAuth, coinGuard, coin.insertCoin);
 router.post('/coin/portal-insert', coinLimiter, deviceAuth, coinGuard, coin.portalInsert);
 router.post('/coin/arm', coinLimiter, coin.armDevice);
+router.post('/coin/connect', coinLimiter, coin.requestConnect);
 router.get('/coin/session/:mac', coin.getSession);
 router.get('/coin/history/:mac', coin.history);
 router.post('/coin/session/pause', deviceAuth, coin.pauseSession);

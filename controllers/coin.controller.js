@@ -211,11 +211,11 @@ const resumeSession = asyncHandler(async (req, res) => {
     return ok(res, { resumed: false, message: 'Session expired (3-day validity reached)' });
   }
 
-  // Resume: set new end_time
+  // Resume: set new end_time + auto-connect (connect_requested = true)
   const newEndTime = new Date(Date.now() + remaining * 1000).toISOString();
   const { error: updateErr } = await supabaseAdmin
     .from('internet_sessions')
-    .update({ status: 'active', end_time: newEndTime })
+    .update({ status: 'active', end_time: newEndTime, connect_requested: true })
     .eq('id', data.id);
 
   if (updateErr) return fail(res, updateErr.message, 400);
@@ -275,4 +275,18 @@ const history = asyncHandler(async (req, res) => {
   return ok(res, { sessions: sessions || [], coins: coins || [] });
 });
 
-module.exports = { insertCoin, getSession, history, portalInsert, armDevice, pauseSession, resumeSession };
+/** POST /api/coin/connect — customer tapped "Connect Now" or countdown expired.
+ *  Sets connect_requested=true so spawn-enforce.sh will auth this client.
+ *  Browser-callable (portal), so NO deviceAuth. */
+const requestConnect = asyncHandler(async (req, res) => {
+  const { client_mac } = req.body || {};
+  if (!client_mac) return fail(res, 'client_mac required', 400);
+
+  const { data, error } = await supabaseAdmin.rpc('request_connect', {
+    p_client_mac: client_mac,
+  });
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { session: data, connect_requested: true });
+});
+
+module.exports = { insertCoin, getSession, history, portalInsert, armDevice, pauseSession, resumeSession, requestConnect };
