@@ -113,9 +113,10 @@ const getSession = asyncHandler(async (req, res) => {
 
   let remaining = 0;
   if (data.status === 'active' && data.end_time) {
-    // Check validity deadline first (first_paused_at + N days) — expire BISAN naa pay remaining
+    // Validity deadline: GIKAN SA MANUAL PAUSE LANG (manual_paused_at).
+    // Kung walay manual pause, normal session ra (base sa end_time).
     const VALIDITY_MS = await getValidityMs();
-    if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
+    if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
       remaining = 0;
@@ -127,9 +128,9 @@ const getSession = asyncHandler(async (req, res) => {
       }
     }
   } else if (data.status === 'paused') {
-    // Check validity from first pause (configurable)
+    // Validity check: manual pause lang
     const VALIDITY_MS = await getValidityMs();
-    if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
+    if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
       remaining = 0;
@@ -167,17 +168,22 @@ const pauseSession = asyncHandler(async (req, res) => {
     return ok(res, { paused: false, message: 'Session expired' });
   }
 
-  // Check validity from first pause (configurable)
+  // Check validity from MANUAL pause lang (kung wala pa na-manual-pause, dili mag-expire)
   const VALIDITY_MS = await getValidityMs();
-  const firstPaused = data.first_paused_at ? new Date(data.first_paused_at).getTime() : Date.now();
-  if (Date.now() - firstPaused > VALIDITY_MS) {
+  if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
-    return ok(res, { paused: false, message: 'Session expired (3-day validity reached)' });
+    return ok(res, { paused: false, message: 'Session expired (validity reached)' });
   }
 
-  // Pause: save remaining, clear end_time, set first_paused_at if not set
+  // Pause: save remaining, clear end_time.
+  // manual_paused_at i-set LANG kung manual pause (gikan sa portal button),
+  // DILI sa auto-pause (WiFi disconnect). Kini ang basehan sa validity.
   const pauseUpdate = { status: 'paused', remaining_seconds: remaining, end_time: null };
   if (!data.first_paused_at) pauseUpdate.first_paused_at = new Date().toISOString();
+  // Manual pause flag: set manual_paused_at kung wala pa
+  if (req.body && req.body.manual === true && !data.manual_paused_at) {
+    pauseUpdate.manual_paused_at = new Date().toISOString();
+  }
 
   const { error: updateErr } = await supabaseAdmin
     .from('internet_sessions')
@@ -212,11 +218,11 @@ const resumeSession = asyncHandler(async (req, res) => {
     return ok(res, { resumed: false, message: 'Session expired' });
   }
 
-  // Check validity from first pause (configurable)
+  // Check validity from MANUAL pause lang
   const VALIDITY_MS = await getValidityMs();
-  if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
+  if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
-    return ok(res, { resumed: false, message: 'Session expired (3-day validity reached)' });
+    return ok(res, { resumed: false, message: 'Session expired (validity reached)' });
   }
 
   // Resume: set new end_time + auto-connect (connect_requested = true)
