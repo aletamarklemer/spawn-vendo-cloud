@@ -4,15 +4,27 @@ const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler } = require('../utils/helpers');
 
 // Fetch pause validity in milliseconds from settings (default 3 days)
+// CACHED para dili mag-DB-query kada tawag (portal nag-poll matag 1.5-3s).
+// Cache TTL: 60 segundo — kung mag-change ang validity, ma-apply sulod sa 1 min.
+let _validityCache = { ms: null, at: 0 };
 async function getValidityMs() {
+  const now = Date.now();
+  // Gamita ang cache kung bag-o pa (sulod sa 60s)
+  if (_validityCache.ms !== null && (now - _validityCache.at) < 60000) {
+    return _validityCache.ms;
+  }
   try {
     const { data } = await supabaseAdmin
       .from('settings').select('pause_validity_days')
       .eq('is_active', true).order('updated_at', { ascending: false })
       .limit(1).maybeSingle();
     const days = (data && data.pause_validity_days) || 3;
-    return days * 24 * 60 * 60 * 1000;
+    const ms = days * 24 * 60 * 60 * 1000;
+    _validityCache = { ms, at: now };  // i-save sa cache
+    return ms;
   } catch (e) {
+    // Kung naa cache (bisan luma), gamita; kung wala, default 3 days
+    if (_validityCache.ms !== null) return _validityCache.ms;
     return 3 * 24 * 60 * 60 * 1000;
   }
 }
