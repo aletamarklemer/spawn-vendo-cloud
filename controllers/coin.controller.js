@@ -113,10 +113,18 @@ const getSession = asyncHandler(async (req, res) => {
 
   let remaining = 0;
   if (data.status === 'active' && data.end_time) {
-    remaining = Math.max(0, Math.floor((new Date(data.end_time) - Date.now()) / 1000));
-    if (remaining === 0) {
+    // Check validity deadline first (first_paused_at + N days) — expire BISAN naa pay remaining
+    const VALIDITY_MS = await getValidityMs();
+    if (data.first_paused_at && (Date.now() - new Date(data.first_paused_at).getTime() > VALIDITY_MS)) {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
+      remaining = 0;
+    } else {
+      remaining = Math.max(0, Math.floor((new Date(data.end_time) - Date.now()) / 1000));
+      if (remaining === 0) {
+        await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
+        data.status = 'expired';
+      }
     }
   } else if (data.status === 'paused') {
     // Check validity from first pause (configurable)
