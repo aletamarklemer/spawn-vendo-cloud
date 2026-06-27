@@ -1,278 +1,114 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spawn Internet — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
-        integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF"
-        crossorigin="anonymous"></script>
-<style>
-.btn-danger{background:#ff453a;color:#fff;border:none}
-.btn-danger:hover{background:#d93025}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:28px;min-width:340px;max-width:480px;width:100%;box-shadow:var(--shadow)}
-.modal h3{margin:0 0 18px}
-.modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
-.pw-wrap{position:relative}
-.pw-wrap input{padding-right:44px}
-.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:16px}
-.search-bar{margin-bottom:14px}
-.search-bar input{max-width:320px}
-.tbl-actions{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-</style>
-</head>
-<body>
-<div class="shell">
-  <aside class="sidebar">
-    <div class="brand"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAA8ADwDASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAAAAECAwUGBAf/xAAzEAACAQMCBQEFBwUBAAAAAAABAgMABBEFEgYhMUFRExQiI2GhFTJScYGx0WJjcpGSwf/EABgBAAMBAQAAAAAAAAAAAAAAAAABAgME/8QAJBEAAgIBAwIHAAAAAAAAAAAAAAECAxEEEjFxwRMhIjIzkaH/2gAMAwEAAhEDEQA/APSqKKKQBTWkRThnUH5mqHWOIrS1mNrHJJJKvJ1hAyD4yf8AzNVP23COb6dcqPJk/laxtlcvjjnq8C8Wle6X4bUEEZBBHypaxaa+33NMtp/WYgDcd3f8IHOtZZXSXcJZSN6HbIoOQrY5itK97jmaw/slW1yliDydFFFFUWFRXMohtpZmziNGY468hmpaR1V0ZHAZWGCD3FMDzeKe89FZRdW+lW8g3JliJJB+I4Bdvz5DxT0upQfh8ULn+tplH1FN1PTk0/UZTfwSXdxPK3oxqxVdgOFJxzPgAdMUhtJAMvwwwXyhmB/c13b4LjsaQ0LlFPvgne6uHQi44htzGeoSVmJ/RV51dcIXKyT3MNqrm2jQEyOMF3z1x2GO381nI7ZGb4XD85b+5LIVH58h+9a/hiylht2ubj0gZQBHHEAEjUeMeT35/mam2cdjSE9IqvU+euS8oooriICop7iC3UNcTRxBjgF3C5PjnUtZ3iixluJYJ7e0uJpo43RCiRSJzx7ro/Y46jpTQMtL1bC4kSKa4iS4AIiIkCyLuGPd78xWbm4VeOdli1aJWC7yHyrBfJwenzqR+Hr3Ub259qS3tY5ra3R2WAOQwU7hGc+7g98ePFINM1Y6v9syWcZ33BR4ixMvs5GzaR93GBv65ocU+TWrU2VeUWddjw5brLEdQ1BrwsN0cRf3GHnBJLD6VoI5oHIWKWNiBnCsDyzjt2zyrFro+tWy+1Q27Pc6Xi2sl3D4sXvAt/pl/wCK6zoF7aXlvLp67ZbGwjSJycJK+5i6N/lnr2ODRtSJnbOx5katHSRA8bK6sMhlOQadVbw7by2nD9jb3EZjljhCsh6qfHKrKggKZKhkidAxUspAYdRkdafRSArzprsZ917MVmj2BSThDgDcOfy+tJNpjyNc7buREmVFUDOY9uOnPvj61Y0UwKxtLmbfjUJxvh9PHYHaBu69eRP610wWfpTJK0rMywiPGTg8+uM11UUAFFFFID//2Q==" style="width:36px;height:36px;border-radius:50%;object-fit:cover;box-shadow:0 0 12px rgba(94,92,230,.5)"><div><b>SPAWN</b><small>ADMIN</small></div></div>
-    <div class="navlink active" data-sec="dashboard" onclick="nav('dashboard')"><span class="dot"></span>Dashboard</div>
-    <div class="navlink" data-sec="devices" onclick="nav('devices')"><span class="dot"></span>Devices</div>
-    <div class="navlink" data-sec="transactions" onclick="nav('transactions')"><span class="dot"></span>Transactions</div>
-    <div class="navlink" data-sec="sessions" onclick="nav('sessions')"><span class="dot"></span>Sessions</div>
-    <div class="navlink" data-sec="vouchers" onclick="nav('vouchers')"><span class="dot"></span>Vouchers</div>
-    <div class="navlink" data-sec="users" onclick="nav('users')"><span class="dot"></span>Users</div>
-    <div class="navlink" data-sec="settings" onclick="nav('settings')"><span class="dot"></span>Rates</div>
-    <div class="navlink" data-sec="audit" onclick="nav('audit')"><span class="dot"></span>Audit Log</div>
-    <div class="spacer"></div>
-    <div class="navlink" onclick="logout()"><span class="dot"></span>Sign out</div>
-  </aside>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Spawn Internet</title><style>
+:root{--bg:#070709;--panel:#14141c;--panel-2:#1b1b26;--line:#272735;--txt:#eef0f6;--muted:#9aa0b4;--muted-2:#6b7088;--r1:#ff2d55;--r2:#ff9500;--r3:#ffd60a;--r4:#34c759;--r5:#00c7be;--r6:#0a84ff;--r7:#5e5ce6;--r8:#bf5af2;--ok:#34c759;--bad:#ff453a;--grad:linear-gradient(90deg,var(--r1),var(--r2),var(--r3),var(--r4),var(--r5),var(--r6),var(--r7),var(--r8));--shadow:0 10px 40px rgba(0,0,0,.5)}
+*{box-sizing:border-box}body{margin:0;background:#070709;color:var(--txt);font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
+.portal{width:100%;max-width:430px}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.grad-bar{height:4px;background:var(--grad);border-radius:99px;margin:0 0 4px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font-weight:600;padding:12px 20px;border-radius:12px;font-size:14px;font-family:inherit;color:#fff;width:100%}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--muted);font-size:13px;padding:9px 16px}
+.btn-ghost:hover{border-color:var(--r6);color:var(--r6)}
+.logo-wrap{text-align:center;margin-bottom:10px}
+.globe-lg{width:56px;height:56px;border-radius:50%;margin:0 auto 10px;background:conic-gradient(var(--r1),var(--r4),var(--r6),var(--r8),var(--r1));animation:spin 8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wordmark{font-size:24px;font-weight:700;letter-spacing:.04em}
+.wordmark small{display:block;font-size:11px;letter-spacing:.5em;color:var(--r6);margin-top:2px}
+.timer{font-size:48px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.timer.live{text-shadow:0 0 24px rgba(52,199,89,.4)}
+.sl{text-align:center;color:var(--muted);margin-bottom:16px;font-size:14px}.sl b{color:var(--ok)}
+.grad-bar{height:4px;background:var(--grad);border-radius:99px;margin:0 0 16px}
+.pricing-wrap{margin:16px 0 4px}
+.pricing-title{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);text-align:center;margin-bottom:10px}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px}
+.price-card{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
+.price-coin{font-size:20px;font-weight:700;color:var(--r3);line-height:1}
+.price-label{font-size:10px;color:var(--muted-2);margin-top:2px}
+.price-mins{font-size:13px;font-weight:600;color:var(--ok);margin-top:4px}
+.admin-link{margin-top:14px;text-align:center}
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.t{background:var(--panel-2);border:1px solid var(--line);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);font-size:13px;animation:si .25s ease}
+.t.ok{border-left:4px solid var(--ok)}.t.err{border-left:4px solid var(--bad)}
+@keyframes si{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+.sm{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--muted)}
+.info-box{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px;font-size:13px;color:var(--muted);text-align:center;line-height:1.6}
+.info-box b{color:var(--txt)}
+</style></head><body>
+<div id="toast"></div>
+<div class="portal"><div class="card">
+<div class="logo-wrap"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAsICAoIBwsKCQoNDAsNERwSEQ8PESIZGhQcKSQrKigkJyctMkA3LTA9MCcnOEw5PUNFSElIKzZPVU5GVEBHSEX/2wBDAQwNDREPESESEiFFLicuRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUX/wAARCABIAEgDASIAAhEBAxEB/8QAGgABAAIDAQAAAAAAAAAAAAAAAAUGAQIDB//EADUQAAIBAwIFAgMGBQUAAAAAAAECAwAEEQUSBhMhMVFBcRRhkRYiMjSBsRUjJVJicnOCofD/xAAZAQADAQEBAAAAAAAAAAAAAAAAAQIEAwX/xAAkEQACAgECBgMBAAAAAAAAAAAAAQIDEQQSEyExQVFhcYGhsf/aAAwDAQACEQMRAD8A9XpSlIYpQnAJ8eKgr7WVRyjXttaAejyjf+oGcVytt4a5Jt+ENJPq0vknqxVWXUYHOU1i2J+cxH7iurcSw6fHmW7huySAI4n3Nj1Oe3bzXCrU2TntlW17CfDjHdvTLJStIJkuII5ojmORQynyDW9bCUKUpQApSlAFU4xvJV5dqbwWNoV3Sy9S0h9EUDqfJ9Ooyapon0OLoIb+f/JpEiz+gB/epjjOCKDX3vtTEktvy0S2gRtvMOMtk+ig98dSSKibbVtRnX+maLaiIduTY836sc5rdXVHam+f4Z5USsbf9OiT6HIOsOoxf6ZUf9wK6LLosJ3JDe3JHZZnVE/Xb1NcZdV1GL87oNo3zksGQ/UYrEOs3UjhbHQ7NJT2Mdq0jD2DEiuqph1x+kPSP0XPhW/mlkkW6O03WZIEAwMKACQPRewHtVnqicK2919ozPqkrPetCx5ZYFo16DLY6L4C/tV7rHqElPkaowcIpMUpSuAxSlYd1jRndgqqMlmOABQMheI9Cj1dbadoxK9mzSCE9pRj8B9yF/8AGqKv8Z1GAXN1qQs4CxRObMYlyO4VF8du1emJqVjLbvcR3ls8CfikWVSq+5zgVGX2j6TxGvMinRnQkc22kVsE+cZFXvklhGrTXQreJd+5SootUj/K8RQN8hfMv/TYraU6qy7b3X41jPQgXhkJ/wCKZJqW+xmnvHzl1tDBv2bwEI3f253Yz8qm9J4b0nSbsBGE16q7xzWBZR2yF9PekrJ+EbLNRQlmLz9G3DGhxaTZmTa/Pn6u0gw2PQY9POO/mpyuMd7ayuqR3MLs+7aqyAltvfHnHr4rdJo5WdY5Edo22uFYEqfB8Gk228s8uc3OW5m9KUpEiojiq3gu+HLyG6M6wuF3NbxmRx94HO0dx5HjNS9ZpiPMJ5JLnhriCGC1gniCQbb22sWt+ed4+6Ux1I8jzUpe6dqWjxXmpJDZQ3t1Atjb22nRsFLs3R2Jx1HX2q0Xs2rLLJ8HCjqrR7N/TcuCXGc9OoAB9M0Q6mWidiADabnj2L0mwOmc+c/TvVZJwUi10W7tbbUdBlsHtIr61E1r/MEoFxEBk7h0BYgH9DXI3Wo4PGQtp/iDJ8L8PtO7l8rbnH+71q5LPrptLFlhHNLH4kMoGBlfT2LdvH12luNdVr0JboVVJGtnAGWO4BQRnvjJ+eR4oyGCrz8NXEd1w/ZWsrwXdpp8sqTgfdWfcrHd8iSwI8Gpngua4uX1u4u7V7WaW9y8TDswjUHB9RkHrUzCdQeWyLMViMbGdTGM7hjHtnJ+lSNJsaRilKVJRmlKUCMUpSgBSlKAFKUoAzSlKAP/2Q==" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 14px;display:block;box-shadow:0 0 40px rgba(94,92,230,.4)"><div class="wordmark grad-text">SPAWN<small>INTERNET</small></div></div>
+<div id="timer" class="timer">00:00:00</div>
+<div id="sl" class="sl">Insert a coin to get online</div>
+<div class="grad-bar"></div>
 
-  <main class="main">
-    <div class="topbar"><h1 class="grad-text">Admin Console</h1><div style="display:flex;align-items:center;gap:10px"><span class="pill" id="whoami">…</span><button class="btn btn-ghost btn-sm" onclick="openEditProfile()" title="Edit my profile">✏️ Edit Profile</button></div></div>
-
-    <!-- DASHBOARD -->
-    <section data-section="dashboard">
-      <div class="grid stats">
-        <div class="card stat accent-1"><div class="label">Revenue Today</div><div class="value" id="rev-today">₱0</div></div>
-        <div class="card stat accent-2"><div class="label">This Week</div><div class="value" id="rev-week">₱0</div></div>
-        <div class="card stat accent-3"><div class="label">This Month</div><div class="value" id="rev-month">₱0</div></div>
-        <div class="card stat accent-4"><div class="label">Active Sessions</div><div class="value" id="active-sessions">0</div></div>
-      </div>
-      <div class="grid stats" style="margin-top:18px">
-        <div class="card stat"><div class="label">Devices Online</div><div class="value" id="dev-online">0/0</div></div>
-        <div class="card stat"><div class="label">Transactions Today</div><div class="value" id="tx-today">0</div></div>
-      </div>
-      <div class="card" style="margin-top:18px">
-        <div class="row" style="margin-bottom:14px"><h3 style="margin:0">Revenue</h3>
-          <div class="right row">
-            <button class="btn btn-sm range-btn btn-primary" data-range="daily" onclick="drawRevenue('daily')">Daily</button>
-            <button class="btn btn-sm range-btn btn-ghost" data-range="weekly" onclick="drawRevenue('weekly')">Weekly</button>
-            <button class="btn btn-sm range-btn btn-ghost" data-range="monthly" onclick="drawRevenue('monthly')">Monthly</button>
-          </div></div>
-        <canvas id="revChart" height="90"></canvas>
-      </div>
-    </section>
-
-    <!-- DEVICES -->
-    <section data-section="devices" class="hidden">
-      <div class="card" style="margin-bottom:18px"><h3 style="margin-top:0">Add Vendo Device</h3>
-        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-          <div><label>Name</label><input id="d_name"></div>
-          <div><label>MAC Address</label><input id="d_mac" placeholder="AA:BB:CC:DD:EE:FF"></div>
-          <div><label>Location</label><input id="d_loc"></div>
-          <div><label>Area</label><input id="d_area"></div>
-          <div><label>Download (Mbps)</label><input id="d_dl" type="number" min="0" value="5" placeholder="0 = unlimited"></div>
-          <div><label>Upload (Mbps)</label><input id="d_ul" type="number" min="0" value="5" placeholder="0 = unlimited"></div>
-        </div>
-        <button class="btn btn-primary" style="margin-top:14px" onclick="addDevice()">Add device</button>
-      </div>
-      <div class="card">
-        <div class="tbl-actions">
-          <button class="btn btn-danger btn-sm" onclick="deleteAllDevices()">🗑 Delete All</button>
-        </div>
-        <table><thead><tr><th>Device</th><th>Location</th><th>Speed</th><th>Status</th><th>Last online</th><th></th></tr></thead><tbody id="devTable"></tbody></table>
-      </div>
-    </section>
-
-    <!-- TRANSACTIONS -->
-    <section data-section="transactions" class="hidden">
-      <!-- Income summary cards -->
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px">
-        <div class="card stat"><div class="label">Total Income (All-Time)</div><div class="value" id="inc-total">₱0</div></div>
-        <div class="card stat"><div class="label">Today</div><div class="value" id="inc-today">₱0</div></div>
-        <div class="card stat"><div class="label">This Week</div><div class="value" id="inc-week">₱0</div></div>
-        <div class="card stat"><div class="label">This Month</div><div class="value" id="inc-month">₱0</div></div>
-        <div class="card stat"><div class="label">Total Coins</div><div class="value" id="inc-count">0</div></div>
-      </div>
-
-      <!-- Per-vendo income breakdown -->
-      <div class="card" style="margin-bottom:16px">
-        <h3 style="margin:0 0 12px">💰 Income per Vendo</h3>
-        <table><thead><tr><th>Vendo</th><th>Total</th><th>Today</th><th>This Week</th><th>This Month</th><th>Coins</th></tr></thead><tbody id="vendoIncomeTable"></tbody></table>
-      </div>
-
-      <div class="card">
-        <h3 style="margin:0 0 12px">📋 Transaction History</h3>
-        <div class="tbl-actions">
-          <input class="search-bar" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:240px;margin-right:8px">
-          <select id="tx-device-filter" onchange="filterTx()" style="max-width:180px"><option value="">All Vendo</option></select>
-          <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
-        </div>
-        <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th><th></th></tr></thead><tbody id="txTable"></tbody></table>
-      </div>
-    </section>
-
-    <!-- SESSIONS -->
-    <section data-section="sessions" class="hidden">
-      <div class="card">
-        <div class="tbl-actions">
-          <input class="search-bar" id="sess-search" placeholder="Search MAC, phone, device…" oninput="filterSessions()" style="max-width:240px;margin-right:8px">
-          <select id="sess-device-filter" onchange="filterSessions()" style="max-width:180px;margin-right:8px"><option value="">All Vendo</option></select>
-          <button class="btn btn-danger btn-sm" onclick="deleteAllSessions()">🗑 Delete All Expired</button>
-        </div>
-        <table><thead><tr><th>Client MAC</th><th>Phone</th><th>Device</th><th>Status</th><th>Remaining</th><th>End Time</th><th>Validity Until</th><th></th></tr></thead><tbody id="sessTable"></tbody></table>
-      </div>
-    </section>
-
-    <!-- VOUCHERS -->
-    <section data-section="vouchers" class="hidden">
-      <div class="card" style="margin-bottom:18px"><h3 style="margin-top:0">Generate Vouchers</h3>
-        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
-          <div>
-            <label>Duration</label>
-            <input id="v_duration" type="number" placeholder="e.g. 1" min="1" value="1" oninput="updateVoucherPreview()">
-          </div>
-          <div>
-            <label>Unit</label>
-            <select id="v_unit" onchange="updateVoucherPreview()">
-              <option value="minutes">Minutes</option>
-              <option value="hours" selected>Hours</option>
-              <option value="days">Days</option>
-            </select>
-          </div>
-          <div>
-            <label>How many</label>
-            <input id="v_count" type="number" value="1" min="1">
-          </div>
-          <div>
-            <label>Download (Mbps)</label>
-            <input id="v_dl" type="number" min="0" value="2" placeholder="0 = unlimited">
-          </div>
-          <div>
-            <label>Upload (Mbps)</label>
-            <input id="v_ul" type="number" min="0" value="2" placeholder="0 = unlimited">
-          </div>
-        </div>
-        <p style="color:var(--muted);font-size:13px;margin-top:10px">= <b id="v_preview">60 minutes</b> per voucher</p>
-        <button class="btn btn-primary" style="margin-top:10px" onclick="genVouchers()">Generate</button>
-      </div>
-      <div class="card">
-        <div class="tbl-actions">
-          <button class="btn btn-danger btn-sm" onclick="deleteAllVouchers()">🗑 Delete All Voided</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteAllVouchersForce()">🗑 Delete ALL</button>
-        </div>
-        <table><thead><tr><th>Code</th><th>Duration</th><th>Status</th><th>Created</th><th></th></tr></thead><tbody id="vchTable"></tbody></table>
-      </div>
-    </section>
-
-    <!-- COLLECTIONS -->
-
-    <!-- USERS -->
-    <section data-section="users" class="hidden">
-      <div class="card">
-        <table><thead><tr><th>User</th><th>Role</th><th>Password</th><th>Status</th><th></th></tr></thead><tbody id="usrTable"></tbody></table>
-      </div>
-    </section>
-
-    <!-- SETTINGS -->
-    <section data-section="settings" class="hidden">
-      <div class="card" style="max-width:560px"><h3 style="margin-top:0">Pricing Tiers</h3>
-        <p style="color:var(--muted);font-size:13px">Set a specific price → duration. Matching is <b>exact</b>: the inserted amount must equal a tier amount, or the coin is rejected.</p>
-        <table style="width:100%;margin-bottom:10px">
-          <thead><tr>
-            <th style="text-align:left">Price (₱)</th>
-            <th style="text-align:left">Duration</th>
-            <th style="text-align:left">Unit</th>
-            <th></th>
-          </tr></thead>
-          <tbody id="tierRows"></tbody>
-        </table>
-        <button class="btn btn-ghost btn-sm" onclick="addTierRow()">+ Add tier</button>
-        <button class="btn btn-primary" onclick="saveTiers()" style="margin-left:8px">Save tiers</button>
-        <p id="tierEmptyNote" style="color:var(--muted);font-size:12px;margin-top:10px">No tiers set — the system uses the linear rate below as a fallback.</p>
-      </div>
-
-      <div class="card" style="max-width:420px;margin-top:16px"><h3 style="margin-top:0">Session Settings</h3>
-        <div class="field"><label>Pause/Resume validity (days)</label><input id="s_validity" type="number" min="1" value="3" placeholder="3"></div>
-        <p style="color:var(--muted);font-size:13px;margin-top:-4px">Paused sessions expire after this many days from first pause.</p>
-        <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
-      </div>
-    </section>
-
-    <!-- AUDIT -->
-    <section data-section="audit" class="hidden">
-      <div class="card">
-        <div class="tbl-actions">
-          <button class="btn btn-danger btn-sm" onclick="deleteAllAudit()">🗑 Delete All Logs</button>
-        </div>
-        <table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead><tbody id="audTable"></tbody></table>
-      </div>
-    </section>
-  </main>
-</div>
-
-<!-- Change Password Modal -->
-<div id="pwModal" class="modal-overlay hidden">
-  <div class="modal">
-    <h3>Change Password</h3>
-    <input type="hidden" id="pw_uid">
-    <div class="field">
-      <label>New Password</label>
-      <div class="pw-wrap">
-        <input id="pw_new" type="password" placeholder="Min 8 characters">
-        <button class="pw-toggle" onclick="togglePw('pw_new',this)" type="button">👁</button>
-      </div>
-    </div>
-    <div class="actions">
-      <button class="btn btn-ghost btn-sm" onclick="closePwModal()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="savePw()">Save</button>
-    </div>
+<!-- PRICING -->
+<div class="pricing-wrap">
+  <div class="pricing-title">Pricing</div>
+  <div class="pricing-grid" id="pricingGrid">
+    <div class="price-card"><div class="price-coin">&#8369;1</div><div class="price-label">per coin</div><div class="price-mins" id="p1">10m</div></div>
+    <div class="price-card"><div class="price-coin">&#8369;5</div><div class="price-label">per coin</div><div class="price-mins" id="p5">50m</div></div>
+    <div class="price-card"><div class="price-coin">&#8369;10</div><div class="price-label">per coin</div><div class="price-mins" id="p10">1hr 40m</div></div>
+    <div class="price-card"><div class="price-coin">&#8369;25</div><div class="price-label">per coin</div><div class="price-mins" id="p25">4hr 10m</div></div>
   </div>
 </div>
 
-<!-- Edit Profile Modal -->
-<div id="editProfileModal" class="modal-overlay hidden">
-  <div class="modal">
-    <h3>✏️ Edit My Profile</h3>
-    <div class="field"><label>Full Name</label><input id="ep_name" type="text" placeholder="Your full name"></div>
-    <div class="field"><label>Email</label><input id="ep_email" type="email" placeholder="your@email.com"></div>
-    <div class="actions">
-      <button class="btn btn-ghost btn-sm" onclick="closeEditProfile()">Cancel</button>
-      <button class="btn btn-primary btn-sm" id="epSaveBtn" onclick="saveProfile()">Save</button>
-    </div>
-  </div>
+<!-- INFO -->
+<div class="info-box">
+  <b>How to connect:</b><br>
+  Insert coin sa vendo machine &bull; Internet access automatic
 </div>
 
-<script src="/js/api.js"></script>
-<script src="/js/admin.js"></script>
+<div class="sm"><span id="ml">Loading&#x2026;</span><span id="sy">Synced just now</span></div>
+<div class="admin-link">
+  <a href="/login.html"><button class="btn btn-ghost" style="width:100%;margin-top:8px">&#x1F510; Admin Login</button></a>
+</div>
+</div><p style="text-align:center;color:var(--muted-2);font-size:11px;margin-top:14px">Spawn Internetan &middot; Dipolog City</p></div>
+
 <script>
-function togglePw(id,btn){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';btn.textContent=i.type==='password'?'👁':'🙈';}
-function closePwModal(){document.getElementById('pwModal').classList.add('hidden');}
-function openPwModal(uid){document.getElementById('pw_uid').value=uid;document.getElementById('pw_new').value='';document.getElementById('pwModal').classList.remove('hidden');}
-async function savePw(){
-  const uid=document.getElementById('pw_uid').value;
-  const pw=document.getElementById('pw_new').value.trim();
-  if(!pw||pw.length<8) return toast('Password must be at least 8 characters','err');
-  try{await API.patch('/admin/users/'+uid+'/password',{password:pw});toast('Password updated');closePwModal();}catch(e){toast(e.message,'err');}
+const RY='https://spawn-vendo-cloud-production-4f63.up.railway.app';
+const P=new URLSearchParams(location.search);
+const CI=P.get('clientip')||'';
+let CM=sessionStorage.getItem('sm')||'';
+document.getElementById('ml').textContent=CI?'IP: '+CI:(CM?'MAC: '+CM.replace('MAC:',''):'');
+function hms(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return[h,m,x].map(function(v){return String(v).padStart(2,'0');}).join(':');}
+function minsLabel(m){return m>=60?Math.floor(m/60)+'hr'+(m%60?' '+m%60+'m':''):m+'m';}
+function toast(m,t){t=t||'ok';var h=document.getElementById('toast');var e=document.createElement('div');e.className='t '+t;e.textContent=m;h.appendChild(e);setTimeout(function(){e.remove();},3200);}
+async function api(mth,path,body){var r=await fetch(RY+'/api'+path,{method:mth,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});var j=await r.json().catch(function(){return{};});if(!r.ok||j.success===false)throw new Error(j.error||'HTTP '+r.status);return j.data;}
+function durLbl(sec){
+  sec=Math.max(0,Math.floor(sec));
+  if(sec>=86400&&sec%86400===0){var d=sec/86400;return d+(d>1?'days':'day');}
+  var h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  if(h>0)return h+'hr'+(m?' '+m+'m':'');
+  return m+'m';
 }
-</script>
-<script>
-function updateVoucherPreview(){
-  const d=parseInt(document.getElementById('v_duration').value)||0;
-  const u=document.getElementById('v_unit').value;
-  let mins=d;
-  if(u==='hours')mins=d*60;
-  else if(u==='days')mins=d*60*24;
-  let label='';
-  if(mins>=1440&&mins%1440===0)label=(mins/1440)+' day'+(mins/1440>1?'s':'');
-  else if(mins>=60&&mins%60===0)label=(mins/60)+' hour'+(mins/60>1?'s':'');
-  else label=mins+' minutes';
-  const el=document.getElementById('v_preview');
-  if(el)el.textContent=label+' per voucher';
+async function loadPricing(){
+  try{
+    var d=await api('GET','/pricing');
+    var grid=document.getElementById('pricingGrid');
+    if(!grid)return;
+    if(d.tiers&&d.tiers.length){
+      grid.innerHTML=d.tiers.map(function(t){
+        return '<div class="price-card"><div class="price-coin">&#8369;'+Number(t.amount)+'</div><div class="price-label">per coin</div><div class="price-mins">'+durLbl(t.seconds)+'</div></div>';
+      }).join('');
+    }else{
+      grid.innerHTML='<div style="grid-column:1/-1;color:var(--muted-2);font-size:13px;text-align:center">No pricing set yet.</div>';
+    }
+  }catch(e){}
 }
-</script>
-</body>
-</html>
+loadPricing();
+var rem=0,tick=null;
+function rT(){var t=document.getElementById('timer');t.textContent=hms(rem);t.classList.toggle('live',rem>0);document.getElementById('sl').innerHTML=rem>0?'You are <b>online</b>':'Insert a coin to get online';}
+function sT(){clearInterval(tick);tick=setInterval(function(){if(rem>0){rem--;rT();}},1000);}
+var ls=Date.now();
+function mS(){ls=Date.now();}
+setInterval(function(){var s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
+async function poll(){
+  if(!CM)return;
+  try{
+    var d=await api('GET','/coin/session/'+encodeURIComponent(CM));
+    var sv=d.remaining_seconds||0;
+    if(Math.abs(sv-rem)>2)rem=sv;
+    rT();mS();
+  }catch(e){}
+}
+setInterval(poll,5000);
+rT();sT();poll();
+</script></body></html>
