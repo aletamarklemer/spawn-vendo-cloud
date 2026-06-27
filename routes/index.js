@@ -97,6 +97,7 @@ router.get('/admin/revenue', authenticate, authorize('admin'), admin.revenueSeri
 
 // transactions
 router.get('/admin/transactions', authenticate, authorize('admin', 'operator'), admin.transactions);
+router.get('/admin/vendo-income', authenticate, authorize('admin', 'operator'), admin.vendoIncome);
 router.delete('/admin/transactions', authenticate, authorize('admin'), admin.deleteAllTransactions);
 router.delete('/admin/transactions/:id', authenticate, authorize('admin'), admin.deleteTransaction);
 

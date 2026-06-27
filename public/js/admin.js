@@ -160,6 +160,21 @@ async function loadTransactions() {
     populateDeviceFilter('tx-device-filter', transactions);
     filterTx();
   } catch(e) {}
+  // Per-vendo income summary
+  try {
+    const { vendos, totals } = await API.get('/admin/vendo-income');
+    document.getElementById('inc-total').textContent = peso(totals.total);
+    document.getElementById('inc-today').textContent = peso(totals.today);
+    document.getElementById('inc-week').textContent  = peso(totals.week);
+    document.getElementById('inc-month').textContent = peso(totals.month);
+    document.getElementById('inc-count').textContent = totals.count;
+    document.getElementById('vendoIncomeTable').innerHTML = vendos.map(v => `
+      <tr><td><b>${v.device_name}</b></td>
+      <td><b style="color:var(--accent,#0a84ff)">${peso(v.total)}</b></td>
+      <td>${peso(v.today)}</td><td>${peso(v.week)}</td><td>${peso(v.month)}</td>
+      <td>${v.count}</td></tr>`).join('')
+      || '<tr><td colspan="6" style="color:var(--muted)">No income yet.</td></tr>';
+  } catch(e) {}
 }
 function renderTx(list) {
   document.getElementById('txTable').innerHTML = list.map(t => `

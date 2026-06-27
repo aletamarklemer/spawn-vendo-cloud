@@ -45,19 +45,43 @@ const revenueSeries = asyncHandler(async (req, res) => {
     .select('amount, created_at').gte('created_at', sinceISO(days));
   if (error) return fail(res, error.message, 400);
 
-  const bucket = {};
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Para sa weekly: i-group base sa Monday sa maong semana, dayon human-readable label
+  const mondayOf = (dt) => {
+    const x = new Date(dt);
+    const day = (x.getDay() + 6) % 7; // Monday=0
+    x.setDate(x.getDate() - day);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  };
+  const bucket = {};      // key -> { value, sortKey, label }
   for (const r of data) {
     const d = new Date(r.created_at);
-    let key;
-    if (range === 'monthly') key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    else if (range === 'weekly') {
-      const onejan = new Date(d.getFullYear(), 0, 1);
-      const wk = Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-      key = `${d.getFullYear()}-W${String(wk).padStart(2, '0')}`;
-    } else key = d.toISOString().slice(0, 10);
-    bucket[key] = (bucket[key] || 0) + Number(r.amount || 0);
+    let key, label, sortKey;
+    if (range === 'monthly') {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      label = `${MON[d.getMonth()]} ${d.getFullYear()}`;       // "Jun 2026"
+      sortKey = key;
+    } else if (range === 'weekly') {
+      const mon = mondayOf(d);
+      const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+      key = mon.toISOString().slice(0, 10);
+      // "Jun 16–22" o kung lahi ang bulan: "Jun 30 – Jul 6"
+      label = (mon.getMonth() === sun.getMonth())
+        ? `${MON[mon.getMonth()]} ${mon.getDate()}–${sun.getDate()}`
+        : `${MON[mon.getMonth()]} ${mon.getDate()} – ${MON[sun.getMonth()]} ${sun.getDate()}`;
+      sortKey = key;
+    } else {
+      key = d.toISOString().slice(0, 10);
+      label = `${MON[d.getMonth()]} ${d.getDate()}`;            // "Jun 22"
+      sortKey = key;
+    }
+    if (!bucket[key]) bucket[key] = { value: 0, sortKey, label };
+    bucket[key].value += Number(r.amount || 0);
   }
-  const series = Object.entries(bucket).sort().map(([label, value]) => ({ label, value }));
+  const series = Object.values(bucket)
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+    .map(({ label, value }) => ({ label, value }));
   return ok(res, { range, series });
 });
 
@@ -67,6 +91,45 @@ const transactions = asyncHandler(async (req, res) => {
     .select('*, vendo_devices(device_name)').order('created_at', { ascending: false }).limit(500);
   if (error) return fail(res, error.message, 400);
   return ok(res, { transactions: data });
+});
+
+/** GET /api/admin/vendo-income — per-vendo total amount + income breakdown */
+const vendoIncome = asyncHandler(async (req, res) => {
+  // Kuhaa tanan transactions + device names
+  const { data, error } = await supabaseAdmin.from('coin_transactions')
+    .select('amount, device_id, created_at, vendo_devices(device_name)');
+  if (error) return fail(res, error.message, 400);
+
+  const now = Date.now();
+  const DAY = 86400000;
+  const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+  const weekAgo = now - 7 * DAY;
+  const monthAgo = now - 30 * DAY;
+
+  // Group per vendo (device_id)
+  const map = {};
+  let grandTotal = 0, grandToday = 0, grandWeek = 0, grandMonth = 0, grandCount = 0;
+  for (const r of data) {
+    const id = r.device_id || 'unknown';
+    const name = r.vendo_devices?.device_name || 'Unknown Vendo';
+    const amt = Number(r.amount || 0);
+    const t = new Date(r.created_at).getTime();
+    if (!map[id]) map[id] = { device_id: id, device_name: name, total: 0, today: 0, week: 0, month: 0, count: 0 };
+    map[id].total += amt;
+    map[id].count += 1;
+    if (t >= startToday.getTime()) map[id].today += amt;
+    if (t >= weekAgo) map[id].week += amt;
+    if (t >= monthAgo) map[id].month += amt;
+    grandTotal += amt; grandCount += 1;
+    if (t >= startToday.getTime()) grandToday += amt;
+    if (t >= weekAgo) grandWeek += amt;
+    if (t >= monthAgo) grandMonth += amt;
+  }
+  const vendos = Object.values(map).sort((a, b) => b.total - a.total);
+  return ok(res, {
+    vendos,
+    totals: { total: grandTotal, today: grandToday, week: grandWeek, month: grandMonth, count: grandCount },
+  });
 });
 
 /** DELETE /api/admin/transactions/:id */
@@ -268,7 +331,7 @@ const deleteAllAudit = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  stats, revenueSeries, transactions,
+  stats, revenueSeries, transactions, vendoIncome,
   deleteTransaction, deleteAllTransactions,
   listSessions, deleteSession, deleteExpiredSessions,
   getSettings, updateSettings, getPublicPricing,
