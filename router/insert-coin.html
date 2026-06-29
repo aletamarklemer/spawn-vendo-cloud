@@ -73,19 +73,9 @@ function hms(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floo
 function toast(m,t){t=t||'ok';var h=document.getElementById('toast');var e=document.createElement('div');e.className='t '+t;e.textContent=m;h.appendChild(e);setTimeout(function(){e.remove();},3200);}
 async function api(mth,path,body){var r=await fetch(RY+'/api'+path,{method:mth,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});var j=await r.json().catch(function(){return {};});if(!r.ok||j.success===false)throw new Error(j.error||'HTTP '+r.status);return j.data;}
 function connect(){
-  // GUARD: kung PAUSED ang session, dili mo-connect — kinahanglan mag-Resume usa.
-  // (Pugngan ang pag-bypass sa pause via openNDS authaction redirect.)
-  if(SPAUSED){toast('Resume your time first to go online','err');document.getElementById('sl').innerHTML='Paused \u2014 tap <b>Resume Time</b>';return;}
-  document.getElementById('sl').innerHTML='Connecting <b>online...</b>';
-  // Set connect intent sa backend (enforce mag-auth na karon). Para sa
-  // IP-fallback users (walay AA), kini ra ang mag-trigger sa internet.
-  try{ if(CM){ api('POST','/coin/connect',{client_mac:CM}); } }catch(e){}
-  if(!AA){
-    // IP-fallback: walay openNDS authaction — enforce na ang mag-connect (≤3s)
-    document.getElementById('sl').innerHTML='You are <b>online</b>';
-    return;
-  }
+  if(!AA){toast('You are online!','ok');document.getElementById('sl').innerHTML='You are <b>online</b>';return;}
   var u=AA+(AA.includes('?')?'&':'?')+'tok='+encodeURIComponent(TK)+'&redir='+encodeURIComponent(RD);
+  document.getElementById('sl').innerHTML='Connecting <b>online...</b>';
   setTimeout(function(){window.location.href=u;},800);
 }
 var rem=0,tick=null;
@@ -97,10 +87,10 @@ function flash(x){var c=document.getElementById('cr');c.textContent=x;c.classLis
 var cl=0,ct=null,cda=false,ss=0;
 function rC(){document.getElementById('cdn').textContent=cl;}
 function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').textContent='Waiting for coin...';document.getElementById('cdc2').textContent='';var _ov=document.querySelector('#ov .cdc');var _pw=document.getElementById('pw');_pw.style.display='block';_ov.appendChild(_pw);document.getElementById('ov').classList.add('show');rCC();sFP();}
-function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(function(){cl--;rC();if(cl<=0){if(rem>0){fC();}else{cancelCoin();}}},1000);}
+function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(function(){cl--;rC();if(cl<=0)cancelCoin();},1000);}
 function onCD(g){if(!cda)return;playCoinSound();drop();flash('+'+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
 function fC(){if(!cda)return;if(rem<=0){toast('Insert a coin first!','err');return;}document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
-function cancelCoin(){document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');try{api('POST','/coin/disarm',{device_id:DID,client_mac:CM});}catch(e){}toast('Cancelled','err');}
+function cancelCoin(){document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');toast('Cancelled','err');}
 document.getElementById('db').onclick=fC;
 document.getElementById('cb').onclick=cancelCoin;
 /* ===== Voucher redeem ===== */
@@ -138,20 +128,17 @@ document.getElementById('vsub').onclick=async function(){
   }
 };
 var ak=null,bsy=false;
-/* Auto-disarm kung mo-close/leave ang page samtang nag-waiting ug coin.
-   Gamit sendBeacon para reliable bisan mo-close na ang page. */
-window.addEventListener('pagehide',function(){if(cda&&DID&&CM){try{var u=RY+'/api/coin/disarm';var bd=JSON.stringify({device_id:DID,client_mac:CM});if(navigator.sendBeacon){navigator.sendBeacon(u,new Blob([bd],{type:'application/json'}));}}catch(e){}}});
 async function arm(){try{if(!window.__hostName){try{var hr=await fetch('http://10.0.0.1:3000/cgi-bin/whoami?_='+Date.now());var hd=await hr.json();if(hd.hostname){window.__hostName=hd.hostname;buildPhoneInfo();}}catch(e){}}await api('POST','/coin/arm',{device_id:DID,client_mac:CM,seconds:90,device_info:window.__phoneInfo||''});return true;}catch(e){toast(e.message||'Error','err');return false;}}
 document.getElementById('ib').onclick=async function(){
   if(bsy||cda)return;bsy=true;
   var b=document.getElementById('ib');b.disabled=true;b.textContent='Preparing...';
   var ok=await arm();bsy=false;b.disabled=false;b.textContent='Insert Coin';
-  if(!ok)return;oC();clearInterval(ak);ak=setInterval(function(){if(!cda){clearInterval(ak);ak=null;return;}arm();},60000);
+  if(!ok)return;oC();clearInterval(ak);ak=setInterval(arm,60000);
 };
 var ls=Date.now();
 function mS(){ls=Date.now();}
 setInterval(function(){var s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
-async function poll(){try{var d=await api('GET','/coin/session/'+encodeURIComponent(CM));var sv=d.remaining_seconds||0;var bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();var g=rem-bf;if(cda&&g>2)onCD(g);var st=(d.session&&d.session.status)||'none';var prevSt=window.__lastSt;window.__lastSt=st;if(prevSt&&prevSt!==st){var ci=new Image();ci.src='http://connectivitycheck.gstatic.com/generate_204?_='+Date.now();if(typeof sFP==='function')sFP();}SPAUSED=(st==='paused');if(st==='expired'||st==='none'){rem=0;clearInterval(tick);tick=null;rT();}if(typeof updatePRButtons==='function')updatePRButtons(st);}catch(e){}}
+async function poll(){try{var d=await api('GET','/coin/session/'+encodeURIComponent(CM));var sv=d.remaining_seconds||0;var bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();var g=rem-bf;if(cda&&g>2)onCD(g);var st=(d.session&&d.session.status)||'none';var prevSt=window.__lastSt;window.__lastSt=st;if(prevSt&&prevSt!==st){var ci=new Image();ci.src='http://connectivitycheck.gstatic.com/generate_204?_='+Date.now();if(typeof sFP==='function')sFP();}SPAUSED=(st==='paused');if(typeof updatePRButtons==='function')updatePRButtons(st);}catch(e){}}
 var pt=setInterval(poll,3000),ft=null;
 function sFP(){if(ft)return;ft=setInterval(poll,1500);}
 function sTP(){clearInterval(ft);ft=null;}
@@ -167,7 +154,7 @@ async function doPause(){
   toast('Paused','ok');
   b.disabled=true;
   try{
-    await api('POST','/coin/session/pause-client',{client_mac:CM,manual:true});
+    await api('POST','/coin/session/pause-client',{client_mac:CM});
     sFP();
   }catch(e){SPAUSED=false;rT();if(typeof updatePRButtons==='function')updatePRButtons('active');toast(e.message||'Error','err');}
   b.disabled=false;b.innerHTML='&#x23F8; Pause Time';
