@@ -84,6 +84,21 @@ const armDevice = asyncHandler(async (req, res) => {
   return ok(res, { arm: data });
 });
 
+/** POST /api/coin/disarm  (no auth — captive portal client)
+ *  Instant cancel sa arming. Gi-call sa portal kung mag-tap Cancel o
+ *  mo-close sa coin-waiting. Para dili modawat ug coin human ma-cancel.
+ */
+const disarmDevice = asyncHandler(async (req, res) => {
+  const { device_id, client_mac } = req.body || {};
+  if (!device_id) return fail(res, 'device_id required', 400);
+  const { error } = await supabaseAdmin.rpc('disarm_device', {
+    p_device_id: device_id,
+    p_client_mac: client_mac || null,
+  });
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { disarmed: true });
+});
+
 const getSession = asyncHandler(async (req, res) => {
   const { mac } = req.params;
 
@@ -315,4 +330,4 @@ const requestConnect = asyncHandler(async (req, res) => {
   return ok(res, { session: data, connect_requested: true });
 });
 
-module.exports = { insertCoin, getSession, history, portalInsert, armDevice, pauseSession, resumeSession, requestConnect };
+module.exports = { insertCoin, getSession, history, portalInsert, armDevice, disarmDevice, pauseSession, resumeSession, requestConnect };
