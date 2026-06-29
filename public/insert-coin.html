@@ -100,7 +100,7 @@ function oC(){if(cda)return;cda=true;ss=rem;document.getElementById('cdc1').text
 function rCC(){cl=CDS;rC();clearInterval(ct);ct=setInterval(function(){cl--;rC();if(cl<=0){if(rem>0){fC();}else{cancelCoin();}}},1000);}
 function onCD(g){if(!cda)return;playCoinSound();drop();flash('+'+hms(g));document.getElementById('cdc1').textContent='+ '+hms(g)+' credited';document.getElementById('cdc2').textContent='Total: '+hms(Math.max(0,rem-ss));rCC();}
 function fC(){if(!cda)return;if(rem<=0){toast('Insert a coin first!','err');return;}document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');sTP();connect();}
-function cancelCoin(){document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');toast('Cancelled','err');}
+function cancelCoin(){document.getElementById('pw').style.display='none';cda=false;clearInterval(ct);clearInterval(ak);ak=null;document.getElementById('ov').classList.remove('show');try{api('POST','/coin/disarm',{device_id:DID,client_mac:CM});}catch(e){}toast('Cancelled','err');}
 document.getElementById('db').onclick=fC;
 document.getElementById('cb').onclick=cancelCoin;
 /* ===== Voucher redeem ===== */
@@ -138,19 +138,22 @@ document.getElementById('vsub').onclick=async function(){
   }
 };
 var ak=null,bsy=false;
+/* Auto-disarm kung mo-close/leave ang page samtang nag-waiting ug coin. */
+window.addEventListener('pagehide',function(){if(cda&&DID&&CM){try{var u=RY+'/api/coin/disarm';var bd=JSON.stringify({device_id:DID,client_mac:CM});if(navigator.sendBeacon){navigator.sendBeacon(u,new Blob([bd],{type:'application/json'}));}}catch(e){}}});
 async function arm(){try{if(!window.__hostName){try{var hr=await fetch('http://10.0.0.1:3000/cgi-bin/whoami?_='+Date.now());var hd=await hr.json();if(hd.hostname){window.__hostName=hd.hostname;buildPhoneInfo();}}catch(e){}}await api('POST','/coin/arm',{device_id:DID,client_mac:CM,seconds:90,device_info:window.__phoneInfo||''});return true;}catch(e){toast(e.message||'Error','err');return false;}}
 document.getElementById('ib').onclick=async function(){
   if(bsy||cda)return;bsy=true;
   var b=document.getElementById('ib');b.disabled=true;b.textContent='Preparing...';
   var ok=await arm();bsy=false;b.disabled=false;b.textContent='Insert Coin';
-  if(!ok)return;oC();clearInterval(ak);ak=setInterval(arm,60000);
+  if(!ok)return;oC();clearInterval(ak);ak=setInterval(function(){if(!cda){clearInterval(ak);ak=null;return;}arm();},60000);
 };
 var ls=Date.now();
 function mS(){ls=Date.now();}
 setInterval(function(){var s=Math.floor((Date.now()-ls)/1000);document.getElementById('sy').textContent=s<5?'Synced just now':'Synced '+s+'s ago';},1000);
 async function poll(){try{var d=await api('GET','/coin/session/'+encodeURIComponent(CM));var sv=d.remaining_seconds||0;var bf=rem;if(Math.abs(sv-rem)>2)rem=sv;rT();mS();var g=rem-bf;if(cda&&g>2)onCD(g);var st=(d.session&&d.session.status)||'none';var prevSt=window.__lastSt;window.__lastSt=st;if(prevSt&&prevSt!==st){var ci=new Image();ci.src='http://connectivitycheck.gstatic.com/generate_204?_='+Date.now();if(typeof sFP==='function')sFP();}SPAUSED=(st==='paused');if(st==='expired'||st==='none'){rem=0;clearInterval(tick);tick=null;rT();}if(typeof updatePRButtons==='function')updatePRButtons(st);}catch(e){}}
-var pt=setInterval(poll,3000),ft=null;
-function sFP(){if(ft)return;ft=setInterval(poll,1500);}
+var pt=setInterval(poll,2700+Math.floor(Math.random()*600)),ft=null;
+function nudgeOS(){try{var u=['http://connectivitycheck.gstatic.com/generate_204','http://www.google.com/generate_204','http://captive.apple.com/hotspot-detect.html'];for(var i=0;i<u.length;i++){var x=new Image();x.src=u[i]+'?_='+Date.now()+Math.random();}}catch(e){}}
+function sFP(){poll();if(ft)return;var n=0;ft=setInterval(function(){poll();if(++n>=12){sTP();}},1000);}
 function sTP(){clearInterval(ft);ft=null;}
 function durLbl(s){s=Number(s)||0;if(s>=86400){var d=Math.round(s/86400);return d+(d>1?' days':' day');}if(s>=3600){var h=s/3600;h=(h%1===0)?h:h.toFixed(1);return h+(h>1?' hrs':' hr');}var m=Math.round(s/60);return m+' min';}
 async function loadRates(){try{var d=await fetch(RY+'/api/pricing').then(function(r){return r.json();}).then(function(j){return j.data;}).catch(function(){return null;});if(!d)return;var grid=document.getElementById('pricingGrid');if(grid&&d.tiers&&d.tiers.length){grid.innerHTML=d.tiers.map(function(t){return '<div class="price-card"><div class="price-coin">\u20B1'+Number(t.amount)+'</div><div class="price-label">per coin</div><div class="price-mins">'+durLbl(t.seconds)+'</div></div>';}).join('');sessionStorage.setItem('tiers',JSON.stringify(d.tiers));return;}if(grid&&d.pricing){var pph=d.pricing.minutes_rate/d.pricing.peso_rate;[1,5,10,25].forEach(function(p){var el=document.getElementById('p'+p);if(el)el.textContent=durLbl(Math.round(p*pph)*60);});}}catch(e){}}
@@ -165,7 +168,7 @@ async function doPause(){
   b.disabled=true;
   try{
     await api('POST','/coin/session/pause-client',{client_mac:CM,manual:true});
-    sFP();
+    sFP();setTimeout(nudgeOS,500);setTimeout(nudgeOS,1500);setTimeout(nudgeOS,2500);
   }catch(e){SPAUSED=false;rT();if(typeof updatePRButtons==='function')updatePRButtons('active');toast(e.message||'Error','err');}
   b.disabled=false;b.innerHTML='&#x23F8; Pause Time';
 }
@@ -178,7 +181,7 @@ async function doResume(){
   b.disabled=true;
   try{
     await api('POST','/coin/session/resume-client',{client_mac:CM});
-    sFP();
+    sFP();setTimeout(nudgeOS,800);setTimeout(nudgeOS,1800);setTimeout(nudgeOS,2800);
   }catch(e){SPAUSED=true;rT();if(typeof updatePRButtons==='function')updatePRButtons('paused');toast(e.message||'Error','err');}
   b.disabled=false;b.innerHTML='&#x25B6; Resume Time';
 }
