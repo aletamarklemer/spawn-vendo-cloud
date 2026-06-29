@@ -108,8 +108,23 @@ const getSpeed = asyncHandler(async (req, res) => {
   });
 });
 
+/** GET /api/devices/armed?device_id=xxx  (device auth)
+ *  Gigamit sa NodeMCU firmware (inhibit wire). Mo-return kung naay
+ *  armed, non-expired client sa device. Kung true → i-enable ang coin
+ *  slot. Kung false → i-reject/iluwa ang coin (walay client naghulat).
+ */
+const armed = asyncHandler(async (req, res) => {
+  const { device_id } = req.query || {};
+  if (!device_id) return fail(res, 'device_id required', 400);
+  const { data, error } = await supabaseAdmin.rpc('is_device_armed', {
+    p_device_id: device_id,
+  });
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { armed: data === true });
+});
+
 module.exports = {
-  getSpeed,
+  getSpeed, armed,
   list, create, update, heartbeat, remove,
   listMaintenance, createMaintenance, resolveMaintenance,
 };

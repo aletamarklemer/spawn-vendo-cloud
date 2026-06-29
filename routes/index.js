@@ -61,7 +61,7 @@ router.post('/coin/session/pause', deviceAuth, coin.pauseSession);
 router.post('/coin/session/resume', deviceAuth, coin.resumeSession);
 // NOTE: kining duha gitawag sa portal (browser) — DILI mahimong deviceAuth kay
 // ang browser walay DEVICE_KEY. Kung WALA NAY pause/resume buttons sa imong
-// working portal (automatic na via spawn-enforce.sh), i-DELETE na ni nga 2 ka lines.
+// working portal (automatic na via spawn-enforce.sh)
 // Kung gigamit pa: gibilin nga walay deviceAuth (browser-callable).
 router.post('/coin/session/pause-client', coin.pauseSession);
 router.post('/coin/session/resume-client', coin.resumeSession);
@@ -85,6 +85,7 @@ router.patch('/devices/:id', authenticate, authorize('admin', 'technician'), dev
 router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);
 router.post('/devices/heartbeat', deviceAuth, device.heartbeat);
 router.get('/devices/speed', deviceAuth, device.getSpeed);
+router.get('/devices/armed', deviceAuth, device.armed);
 
 // maintenance
 router.get('/maintenance', authenticate, authorize('admin', 'technician'), device.listMaintenance);
