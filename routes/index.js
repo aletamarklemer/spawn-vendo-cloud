@@ -17,6 +17,9 @@ const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30 });
 const coinLimiter  = rateLimit({ windowMs: 60 * 1000, max: 120 });
+// Strict limiter para sa voucher redeem — anti brute-force sa voucher codes.
+// Lehitimong customer 1-2 ra ka try; 10/min per IP mo-pugong sa code guessing.
+const redeemLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
 
 router.get('/config', (req, res) =>
   res.json({ success: true, data: { supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON_KEY } }));
@@ -64,8 +67,9 @@ router.post('/coin/session/resume', deviceAuth, coin.resumeSession);
 // ang browser walay DEVICE_KEY. Kung WALA NAY pause/resume buttons sa imong
 // working portal (automatic na via spawn-enforce.sh), i-DELETE na ni nga 2 ka lines.
 // Kung gigamit pa: gibilin nga walay deviceAuth (browser-callable).
-router.post('/coin/session/pause-client', coin.pauseSession);
-router.post('/coin/session/resume-client', coin.resumeSession);
+// coinLimiter gidugang: public endpoint ni (browser-callable) — anti spam/abuse.
+router.post('/coin/session/pause-client', coinLimiter, coin.pauseSession);
+router.post('/coin/session/resume-client', coinLimiter, coin.resumeSession);
 
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
@@ -73,7 +77,7 @@ router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
 // vouchers — specific routes BEFORE :id param
 router.post('/vouchers/generate', authenticate, authorize('admin'), voucher.generate);
 router.post('/vouchers/void', authenticate, authorize('admin'), voucher.voidVoucher);
-router.post('/vouchers/redeem', voucher.redeem);
+router.post('/vouchers/redeem', redeemLimiter, voucher.redeem);
 router.delete('/vouchers/voided', authenticate, authorize('admin'), voucher.deleteVoidedVouchers);
 router.delete('/vouchers/all', authenticate, authorize('admin'), voucher.deleteAllVouchers);
 router.get('/vouchers', authenticate, authorize('admin'), voucher.list);
