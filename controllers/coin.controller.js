@@ -127,10 +127,15 @@ const armDevice = asyncHandler(async (req, res) => {
       return fail(res, `BANNED:${secsLeft}`, 429);
     }
 
-    // Idle reset: kung dugay na ang last tap, sugod balik sa counter
+    // Idle reset O post-ban reset: kung dugay na ang last tap, O kung naay
+    // ban nga EXPIRED na, sugod balik sa counter (0). Kini ang nag-ayo sa
+    // "dili mo-enable balik" bug — human mo-expire ang ban, limpyo ang counter.
     let count = (track && track.tap_count) || 0;
-    if (track && track.last_tap_at &&
-        (nowMs - new Date(track.last_tap_at).getTime()) > ABUSE_IDLE_RESET_MS) {
+    const idleExpired = track && track.last_tap_at &&
+        (nowMs - new Date(track.last_tap_at).getTime()) > ABUSE_IDLE_RESET_MS;
+    const banExpired = track && track.banned_until &&
+        new Date(track.banned_until).getTime() <= nowMs;
+    if (idleExpired || banExpired) {
       count = 0;
     }
     count = count + 1;
