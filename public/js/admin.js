@@ -271,18 +271,24 @@ function fmtVoucherDuration(mins) {
   if (mins >= 60 && mins % 60 === 0) return (mins / 60) + ' hour' + (mins / 60 > 1 ? 's' : '');
   return mins + ' min';
 }
+function fmtVoucherSpeed(dl, ul) {
+  dl = Number(dl) || 0; ul = Number(ul) || 0;
+  if (dl === 0 && ul === 0) return 'No limit';
+  return `${dl}/${ul} Mbps`;
+}
 async function loadVouchers() {
   const { vouchers } = await API.get('/vouchers');
   document.getElementById('vchTable').innerHTML = vouchers.map(v => `
     <tr><td style="font-family:ui-monospace,monospace">${v.code}</td>
     <td>${fmtVoucherDuration(v.minutes)}</td>
+    <td>${fmtVoucherSpeed(v.download_mbps, v.upload_mbps)}</td>
     <td><span class="badge ${v.status === 'unused' ? 'active' : v.status === 'used' ? 'expired' : 'offline'}">${v.status}</span></td>
     <td>${fmtDate(v.created_at)}</td>
     <td style="display:flex;gap:6px">
       ${v.status === 'unused' ? `<button class="btn btn-ghost btn-sm" onclick="voidVch('${v.id}')">Void</button>` : ''}
       <button class="btn btn-danger btn-sm" onclick="delVoucher('${v.id}')">Delete</button>
     </td></tr>`).join('')
-    || '<tr><td colspan="5" style="color:var(--muted)">No vouchers.</td></tr>';
+    || '<tr><td colspan="6" style="color:var(--muted)">No vouchers.</td></tr>';
 }
 async function genVouchers() {
   const duration = parseInt(val('v_duration'), 10) || 0;
