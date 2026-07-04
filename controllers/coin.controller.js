@@ -30,6 +30,43 @@ async function getValidityMs() {
 }
 
 
+// Abuse-protection config (threshold + ban seconds) from settings.
+// CACHED 60s para dili mag-DB-query kada arm (portal mo-tap = mo-arm).
+let _abuseCfgCache = { threshold: null, banSeconds: null, at: 0 };
+async function getAbuseConfig() {
+  const now = Date.now();
+  if (_abuseCfgCache.threshold !== null && (now - _abuseCfgCache.at) < 60000) {
+    return _abuseCfgCache;
+  }
+  try {
+    const { data } = await supabaseAdmin
+      .from('settings').select('coin_abuse_threshold, coin_ban_seconds')
+      .eq('is_active', true).order('updated_at', { ascending: false })
+      .limit(1).maybeSingle();
+    const threshold = (data && data.coin_abuse_threshold) || 5;
+    const banSeconds = (data && data.coin_ban_seconds) || 60;
+    _abuseCfgCache = { threshold, banSeconds, at: now };
+    return _abuseCfgCache;
+  } catch (e) {
+    if (_abuseCfgCache.threshold !== null) return _abuseCfgCache;
+    return { threshold: 5, banSeconds: 60, at: now };
+  }
+}
+
+// Idle window: kung mo-hunong og tap ang user og ganiini ka-dugay, i-reset
+// ang counter (para dili ma-ban ang tawo nga nag-tap 5x sa tibuok adlaw).
+const ABUSE_IDLE_RESET_MS = 3 * 60 * 1000; // 3 minutes
+
+// Reset abuse counter para sa client (gitawag kung successful ang coin insert).
+async function resetAbuseCounter(client_mac) {
+  if (!client_mac) return;
+  try {
+    await supabaseAdmin.from('coin_abuse_tracking')
+      .update({ tap_count: 0, banned_until: null, updated_at: new Date().toISOString() })
+      .eq('client_mac', client_mac);
+  } catch (e) { /* non-fatal */ }
+}
+
 const insertCoin = asyncHandler(async (req, res) => {
   const { device_id, client_mac, amount, txn_ref } = req.body || {};
   if (amount == null) return fail(res, 'amount required', 400);
@@ -67,12 +104,56 @@ const insertCoin = asyncHandler(async (req, res) => {
       .update({ status: 'online', last_online: new Date().toISOString() })
       .eq('id', device_id);
   }
+  // Successful coin insert = dili abuse. Reset ang counter.
+  if (client_mac) await resetAbuseCounter(client_mac);
   return ok(res, { session: data });
 });
 
 const armDevice = asyncHandler(async (req, res) => {
   const { device_id, client_mac, seconds, device_info } = req.body || {};
   if (!device_id || !client_mac) return fail(res, 'device_id and client_mac required', 400);
+
+  // ---- Insert-coin button abuse protection ----
+  // Kung mo-tap og sobra sa threshold nga walay coin, i-ban sulod sa ban_seconds.
+  const { threshold, banSeconds } = await getAbuseConfig();
+  const nowMs = Date.now();
+  try {
+    const { data: track } = await supabaseAdmin.from('coin_abuse_tracking')
+      .select('*').eq('device_id', device_id).eq('client_mac', client_mac).maybeSingle();
+
+    // Naka-ban pa ba?
+    if (track && track.banned_until && new Date(track.banned_until).getTime() > nowMs) {
+      const secsLeft = Math.ceil((new Date(track.banned_until).getTime() - nowMs) / 1000);
+      return fail(res, `BANNED:${secsLeft}`, 429);
+    }
+
+    // Idle reset: kung dugay na ang last tap, sugod balik sa counter
+    let count = (track && track.tap_count) || 0;
+    if (track && track.last_tap_at &&
+        (nowMs - new Date(track.last_tap_at).getTime()) > ABUSE_IDLE_RESET_MS) {
+      count = 0;
+    }
+    count = count + 1;
+
+    // Sobra na sa threshold? I-ban.
+    if (count >= threshold) {
+      const bannedUntil = new Date(nowMs + banSeconds * 1000).toISOString();
+      await supabaseAdmin.from('coin_abuse_tracking').upsert({
+        device_id, client_mac, tap_count: count, last_tap_at: new Date().toISOString(),
+        banned_until: bannedUntil, updated_at: new Date().toISOString(),
+      }, { onConflict: 'device_id,client_mac' });
+      return fail(res, `BANNED:${banSeconds}`, 429);
+    }
+
+    // Wala pa maabot ang threshold — i-record ang tap
+    await supabaseAdmin.from('coin_abuse_tracking').upsert({
+      device_id, client_mac, tap_count: count, last_tap_at: new Date().toISOString(),
+      banned_until: null, updated_at: new Date().toISOString(),
+    }, { onConflict: 'device_id,client_mac' });
+  } catch (e) {
+    // Non-fatal: kung mafail ang tracking, padayon gihapon ang arm (fail-open,
+    // para dili maguba ang coin flow kung naay DB hiccup)
+  }
 
   const { data, error } = await supabaseAdmin.rpc('arm_device', {
     p_device_id: device_id,

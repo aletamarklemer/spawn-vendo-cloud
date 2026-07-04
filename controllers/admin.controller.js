@@ -181,6 +181,12 @@ const updateSettings = asyncHandler(async (req, res) => {
   let pause_validity_days = parseInt(req.body?.pause_validity_days, 10);
   if (!pause_validity_days || pause_validity_days < 1) pause_validity_days = 3;
 
+  // Insert-coin abuse protection config
+  let coin_abuse_threshold = parseInt(req.body?.coin_abuse_threshold, 10);
+  if (!coin_abuse_threshold || coin_abuse_threshold < 1) coin_abuse_threshold = 5;
+  let coin_ban_seconds = parseInt(req.body?.coin_ban_seconds, 10);
+  if (!coin_ban_seconds || coin_ban_seconds < 1) coin_ban_seconds = 60;
+
   // Pricing is driven by pricing_tiers; settings only carries session config.
   // Carry over the legacy rate columns (NOT NULL) from the current active row.
   const { data: current } = await supabaseAdmin.from('settings')
@@ -191,9 +197,10 @@ const updateSettings = asyncHandler(async (req, res) => {
 
   await supabaseAdmin.from('settings').update({ is_active: false }).eq('is_active', true);
   const { data, error } = await supabaseAdmin.from('settings')
-    .insert({ peso_rate, minutes_rate, pause_validity_days, is_active: true }).select().single();
+    .insert({ peso_rate, minutes_rate, pause_validity_days,
+              coin_abuse_threshold, coin_ban_seconds, is_active: true }).select().single();
   if (error) return fail(res, error.message, 400);
-  await audit.log('settings.update', req.user.sub, { pause_validity_days });
+  await audit.log('settings.update', req.user.sub, { pause_validity_days, coin_abuse_threshold, coin_ban_seconds });
   return ok(res, { settings: data });
 });
 

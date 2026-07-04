@@ -367,10 +367,20 @@ async function loadSettings() {
   if (settings && document.getElementById('s_validity')) {
     document.getElementById('s_validity').value = settings.pause_validity_days || 3;
   }
+  if (settings && document.getElementById('s_abuse_threshold')) {
+    document.getElementById('s_abuse_threshold').value = settings.coin_abuse_threshold || 5;
+  }
+  if (settings && document.getElementById('s_ban_seconds')) {
+    document.getElementById('s_ban_seconds').value = settings.coin_ban_seconds || 60;
+  }
   loadTiers();
 }
 async function saveSettings() {
-  try { await API.put('/admin/settings', { pause_validity_days: parseInt(val('s_validity'), 10) || 3 });
+  try { await API.put('/admin/settings', {
+      pause_validity_days: parseInt(val('s_validity'), 10) || 3,
+      coin_abuse_threshold: parseInt(val('s_abuse_threshold'), 10) || 5,
+      coin_ban_seconds: parseInt(val('s_ban_seconds'), 10) || 60,
+    });
     toast('Settings saved'); } catch (e) { toast(e.message, 'err'); }
 }
 

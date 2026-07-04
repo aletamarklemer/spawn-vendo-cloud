@@ -198,6 +198,10 @@
       <div class="card" style="max-width:420px;margin-top:16px"><h3 style="margin-top:0">Session Settings</h3>
         <div class="field"><label>Pause/Resume validity (days)</label><input id="s_validity" type="number" min="1" value="3" placeholder="3"></div>
         <p style="color:var(--muted);font-size:13px;margin-top:-4px">Paused sessions expire after this many days from first pause.</p>
+        <div class="field" style="margin-top:14px"><label>Insert-Coin abuse: max taps before ban</label><input id="s_abuse_threshold" type="number" min="1" value="5" placeholder="5"></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-4px">Number of "Insert Coin" taps (without inserting a coin) before the button is temporarily disabled.</p>
+        <div class="field" style="margin-top:14px"><label>Insert-Coin ban duration (seconds)</label><input id="s_ban_seconds" type="number" min="1" value="60" placeholder="60"></div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-4px">How long the Insert Coin button stays disabled after abuse is detected.</p>
         <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
       </div>
     </section>
