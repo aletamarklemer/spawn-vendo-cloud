@@ -139,6 +139,20 @@ const deleteTransaction = asyncHandler(async (req, res) => {
   return ok(res, { deleted: true });
 });
 
+/** DELETE /api/admin/transactions/device/:deviceId — delete all transactions of ONE device */
+const deleteDeviceTransactions = asyncHandler(async (req, res) => {
+  const { deviceId } = req.params;
+  if (!deviceId) return fail(res, 'deviceId required', 400);
+  // Count una para sa response + audit (transparency kung pila ang na-delete)
+  const { count } = await supabaseAdmin.from('coin_transactions')
+    .select('id', { count: 'exact', head: true }).eq('device_id', deviceId);
+  const { error } = await supabaseAdmin.from('coin_transactions')
+    .delete().eq('device_id', deviceId);
+  if (error) return fail(res, error.message, 400);
+  await audit.log('transactions.delete_device', req.user.sub, { device_id: deviceId, deleted_count: count || 0 });
+  return ok(res, { deleted: true, count: count || 0 });
+});
+
 /** DELETE /api/admin/transactions — delete all */
 const deleteAllTransactions = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('coin_transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -339,7 +353,7 @@ const deleteAllAudit = asyncHandler(async (req, res) => {
 
 module.exports = {
   stats, revenueSeries, transactions, vendoIncome,
-  deleteTransaction, deleteAllTransactions,
+  deleteTransaction, deleteAllTransactions, deleteDeviceTransactions,
   listSessions, deleteSession, deleteExpiredSessions,
   getSettings, updateSettings, getPublicPricing,
   getPricingTiers, savePricingTiers,

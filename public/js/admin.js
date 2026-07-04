@@ -200,6 +200,19 @@ async function deleteAllTx() {
   if (!confirm('Delete ALL transactions? This cannot be undone!')) return;
   try { await API.del('/admin/transactions'); toast('All transactions deleted'); loadTransactions(); } catch (e) { toast(e.message, 'err'); }
 }
+async function deleteDeviceTx() {
+  const sel = document.getElementById('tx-device-filter');
+  const dev = (sel || {}).value || '';
+  if (!dev) { toast('Select a vendo in the device filter first', 'err'); return; }
+  const devName = sel.options[sel.selectedIndex].text;
+  const cnt = ALL_TX.filter(t => t.device_id === dev).length;
+  if (!confirm(`Delete ALL ${cnt} transaction(s) of "${devName}"? This cannot be undone!`)) return;
+  try {
+    const d = await API.del('/admin/transactions/device/' + dev);
+    toast(`Deleted ${d.count} transaction(s) of ${devName}`);
+    loadTransactions();
+  } catch (e) { toast(e.message, 'err'); }
+}
 
 /* ---------- Sessions ---------- */
 let SESS_VALIDITY_DAYS = 3;
