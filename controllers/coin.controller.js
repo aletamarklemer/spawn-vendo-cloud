@@ -252,7 +252,16 @@ const getSession = asyncHandler(async (req, res) => {
     }
   }
 
-  return ok(res, { session: data, remaining_seconds: remaining });
+  // Pause-validity info para sa portal display: kanus-a ra taman ang time
+  // human sa MANUAL pause (clock = manual_paused_at + pause_validity_days).
+  const VMS = await getValidityMs();
+  const validity_days = Math.round(VMS / 86400000);
+  let pause_valid_until = null;
+  if (data.manual_paused_at && (data.status === 'active' || data.status === 'paused')) {
+    pause_valid_until = new Date(new Date(data.manual_paused_at).getTime() + VMS).toISOString();
+  }
+
+  return ok(res, { session: data, remaining_seconds: remaining, pause_valid_until, validity_days });
 });
 
 /** POST /api/coin/session/pause  (device auth) */
