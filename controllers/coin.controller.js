@@ -358,10 +358,15 @@ const resumeSession = asyncHandler(async (req, res) => {
   return ok(res, { resumed: true, remaining_seconds: remaining });
 });
 
-// Accepted amounts come from the active pricing tiers.
-async function getAcceptedAmounts() {
+// Accepted amounts: PER-DEVICE tiers kung naa (full override), else GLOBAL (device_id null).
+async function getAcceptedAmounts(device_id) {
+  if (device_id) {
+    const { data: dev } = await supabaseAdmin.from('pricing_tiers')
+      .select('amount').eq('is_active', true).eq('device_id', device_id);
+    if (dev && dev.length) return dev.map((r) => Number(r.amount));
+  }
   const { data } = await supabaseAdmin.from('pricing_tiers')
-    .select('amount').eq('is_active', true);
+    .select('amount').eq('is_active', true).is('device_id', null);
   return (data || []).map((r) => Number(r.amount));
 }
 
@@ -370,7 +375,7 @@ const portalInsert = asyncHandler(async (req, res) => {
   if (!client_mac) return fail(res, 'client_mac required', 400);
 
   const amt = Number(amount);
-  const accepted = await getAcceptedAmounts();
+  const accepted = await getAcceptedAmounts(device_id);
   if (!accepted.length) {
     return fail(res, 'No pricing tiers configured. Please set rates in the admin panel.', 400);
   }

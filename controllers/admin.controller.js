@@ -221,19 +221,26 @@ const updateSettings = asyncHandler(async (req, res) => {
 // ---- pricing tiers ----
 const UNIT_SECONDS = { minute: 60, hour: 3600, day: 86400 };
 
-/** GET /api/admin/pricing-tiers */
+/** GET /api/admin/pricing-tiers?device_id=<uuid|empty>
+ *  Walay device_id = GLOBAL default tiers. Naay device_id = kana nga device ra. */
 const getPricingTiers = asyncHandler(async (req, res) => {
-  const { data, error } = await supabaseAdmin.from('pricing_tiers')
-    .select('*').eq('is_active', true)
+  const device_id = req.query?.device_id || null;
+  let q = supabaseAdmin.from('pricing_tiers')
+    .select('*').eq('is_active', true);
+  q = device_id ? q.eq('device_id', device_id) : q.is('device_id', null);
+  const { data, error } = await q
     .order('sort_order', { ascending: true }).order('amount', { ascending: true });
   if (error) return fail(res, error.message, 400);
-  return ok(res, { tiers: data || [] });
+  return ok(res, { tiers: data || [], device_id });
 });
 
-/** PUT /api/admin/pricing-tiers — replace the whole active tier set */
+/** PUT /api/admin/pricing-tiers — replace the tier set (global O per-device).
+ *  body.device_id = null/absent -> GLOBAL default set; uuid -> kana nga device ra.
+ *  Per-device EMPTY set = balik sa global default para sa device. */
 const savePricingTiers = asyncHandler(async (req, res) => {
   const incoming = Array.isArray(req.body?.tiers) ? req.body.tiers : null;
   if (!incoming) return fail(res, 'tiers array required', 400);
+  const device_id = req.body?.device_id || null;
 
   const rows = [];
   const seenAmounts = new Set();
@@ -254,12 +261,14 @@ const savePricingTiers = asyncHandler(async (req, res) => {
       seconds: duration_value * UNIT_SECONDS[duration_unit],
       is_active: true,
       sort_order: i,
+      device_id,
     });
   }
 
-  // Replace: drop existing active tiers, then insert the new set.
-  const { error: delErr } = await supabaseAdmin.from('pricing_tiers')
-    .delete().eq('is_active', true);
+  // Replace: drop existing active tiers SA SAMANG SCOPE ra (global o device), then insert.
+  let delQ = supabaseAdmin.from('pricing_tiers').delete().eq('is_active', true);
+  delQ = device_id ? delQ.eq('device_id', device_id) : delQ.is('device_id', null);
+  const { error: delErr } = await delQ;
   if (delErr) return fail(res, delErr.message, 400);
 
   let inserted = [];
@@ -268,7 +277,7 @@ const savePricingTiers = asyncHandler(async (req, res) => {
     if (error) return fail(res, error.message, 400);
     inserted = data;
   }
-  await audit.log('pricing_tiers.update', req.user.sub, { count: rows.length });
+  await audit.log('pricing_tiers.update', req.user.sub, { count: rows.length, device_id });
   return ok(res, { tiers: inserted });
 });
 
@@ -325,14 +334,23 @@ const getUserPassword = asyncHandler(async (req, res) => {
   return ok(res, { password: plain || '(unavailable — please reset password)' });
 });
 
-/** GET /api/pricing — public, no auth. Returns the active pricing tiers. */
+/** GET /api/pricing?device_id= — public, no auth. FULL-OVERRIDE resolve:
+ *  kung ang device naay kaugalingong tiers, IYAHA RA; kung wala, global default. */
 const getPublicPricing = asyncHandler(async (req, res) => {
+  const device_id = req.query?.device_id || null;
+  const sel = 'amount, duration_value, duration_unit, seconds';
+  if (device_id) {
+    const { data: dev, error: e1 } = await supabaseAdmin.from('pricing_tiers')
+      .select(sel).eq('is_active', true).eq('device_id', device_id)
+      .order('sort_order', { ascending: true }).order('amount', { ascending: true });
+    if (e1) return fail(res, e1.message, 400);
+    if (dev && dev.length) return ok(res, { tiers: dev, scope: 'device' });
+  }
   const { data, error } = await supabaseAdmin.from('pricing_tiers')
-    .select('amount, duration_value, duration_unit, seconds')
-    .eq('is_active', true)
+    .select(sel).eq('is_active', true).is('device_id', null)
     .order('sort_order', { ascending: true }).order('amount', { ascending: true });
   if (error) return fail(res, error.message, 400);
-  return ok(res, { tiers: data || [] });
+  return ok(res, { tiers: data || [], scope: 'global' });
 });
 
 /** GET /api/admin/audit */

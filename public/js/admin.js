@@ -426,21 +426,46 @@ function updateTierNote() {
   const note = document.getElementById('tierEmptyNote');
   if (note) note.style.display = has ? 'none' : '';
 }
+async function fillTierDeviceSel() {
+  const sel = document.getElementById('tierDevice');
+  if (!sel || sel.dataset.loaded) return;
+  try {
+    const { devices } = await API.get('/devices');
+    (devices || []).forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id; o.textContent = (d.device_name || d.id.slice(0, 8)) + (d.ssid ? ' (' + d.ssid + ')' : '');
+      sel.appendChild(o);
+    });
+    sel.dataset.loaded = '1';
+  } catch (e) { /* devices list optional; global editing still works */ }
+}
 async function loadTiers() {
-  const { tiers } = await API.get('/admin/pricing-tiers');
+  await fillTierDeviceSel();
+  const sel = document.getElementById('tierDevice');
+  const devId = sel && sel.value ? sel.value : '';
+  const { tiers } = await API.get('/admin/pricing-tiers' + (devId ? ('?device_id=' + devId) : ''));
   const body = document.getElementById('tierRows');
   if (!body) return;
   body.innerHTML = '';
   (tiers || []).forEach(addTierRow);
   updateTierNote();
+  const note = document.getElementById('tierScopeNote');
+  if (note) note.textContent = devId
+    ? 'Per-device rates: kung naay tiers dinhi, KINI RA ang gamiton ani nga vendo. Kung blanko, mo-gamit siya sa Global Default.'
+    : 'Global Default: gamiton sa TANAN vendo nga walay kaugalingong per-device tiers.';
 }
 async function saveTiers() {
+  const sel = document.getElementById('tierDevice');
+  const devId = sel && sel.value ? sel.value : null;
   const rows = [...document.querySelectorAll('#tierRows tr')].map(tr => ({
     amount: tr.querySelector('.t-amt').value,
     duration_value: tr.querySelector('.t-val').value,
     duration_unit: tr.querySelector('.t-unit').value,
   }));
-  try { await API.put('/admin/pricing-tiers', { tiers: rows }); toast('Pricing tiers saved'); }
+  try {
+    await API.put('/admin/pricing-tiers', { tiers: rows, device_id: devId });
+    toast(devId ? 'Per-device rates saved' : 'Global pricing tiers saved');
+  }
   catch (e) { toast(e.message, 'err'); }
 }
 
