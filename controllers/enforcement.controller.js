@@ -41,8 +41,25 @@ async function getDeviceSsidMap() {
   }
 }
 
+// ============================================================
+// ROUTER HEALTH heartbeat — kada poll sa enforce, i-marka nga buhi
+// ang ROUTER. Throttled 60s per device (in-memory) + fire-and-forget
+// para ZERO dugang latency sa hot path ug gaan sa DB bisan 800 vendos.
+// ============================================================
+const _routerSeen = {};
+function markRouterSeen(device_id) {
+  const now = Date.now();
+  if (!device_id || (now - (_routerSeen[device_id] || 0)) < 60000) return;
+  _routerSeen[device_id] = now;
+  supabaseAdmin.from('vendo_devices')
+    .update({ router_last_seen: new Date().toISOString() })
+    .eq('id', device_id)
+    .then(() => {}, () => {});
+}
+
 const allowedClients = asyncHandler(async (req, res) => {
   const { device_id } = req.query || {};
+  markRouterSeen(device_id);
 
   const { data, error } = await supabaseAdmin.rpc('list_allowed_clients');
   if (error) return fail(res, error.message, 400);

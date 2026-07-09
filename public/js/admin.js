@@ -82,7 +82,8 @@ async function loadDevices() {
       <tr><td><b>${d.device_name}</b><br><small style="color:var(--muted)">${d.mac_address}</small></td>
       <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
       <td>${speedTxt}</td>
-      <td><span class="badge ${d.status}">${d.status}</span></td>
+      <td><span class="badge ${d.router_online ? 'online' : 'offline'}">&#128246; Router: ${d.router_online ? 'Online' : 'Offline'}</span><br>
+          <span class="badge ${d.node_online ? 'online' : 'offline'}" style="margin-top:4px;display:inline-block">&#129689; Node: ${d.node_online ? 'Online' : 'Offline'}</span></td>
       <td>${fmtDate(d.last_online)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editDevice('${d.id}')">✏️ Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>
