@@ -3,6 +3,7 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler } = require('../utils/helpers');
 const audit = require('../services/audit.service');
+const liveness = require('../utils/liveness');
 
 const OFFLINE_AFTER_MS = 5 * 60 * 1000; // 5 min without heartbeat => offline
 
@@ -15,12 +16,11 @@ const list = asyncHandler(async (req, res) => {
 
   // Derive offline status from last_online for the UI.
   const now = Date.now();
-  const ROUTER_OFFLINE_MS = 3 * 60 * 1000;  // router polls kada 1-2s; 3 min nga hilom = down
-  const NODE_OFFLINE_MS = 5 * 60 * 1000;    // node polls armed/heartbeat; 5 min nga hilom = down
   const devices = (data || []).map((d) => {
     const stale = !d.last_online || (now - new Date(d.last_online).getTime()) > OFFLINE_AFTER_MS;
-    const router_online = !!d.router_last_seen && (now - new Date(d.router_last_seen).getTime()) < ROUTER_OFFLINE_MS;
-    const node_online = !!d.node_last_seen && (now - new Date(d.node_last_seen).getTime()) < NODE_OFFLINE_MS;
+    // Live badges gikan sa IN-MEMORY liveness (instant online, ~60-90s offline, zero DB cost)
+    const router_online = liveness.routerOnline(d.id);
+    const node_online = liveness.nodeOnline(d.id);
     return { ...d, status: d.status === 'maintenance' ? 'maintenance' : (stale ? 'offline' : 'online'), router_online, node_online };
   });
   return ok(res, { devices });
@@ -117,23 +117,10 @@ const getSpeed = asyncHandler(async (req, res) => {
  *  armed, non-expired client sa device. Kung true → i-enable ang coin
  *  slot. Kung false → i-reject/iluwa ang coin (walay client naghulat).
  */
-// NODE HEALTH heartbeat — ang /devices/armed kay ang NodeMCU ra ang tig-tawag
-// (inhibit-wire poll), so kada tawag = buhi ang node. Throttled 60s per device.
-const _nodeSeen = {};
-function markNodeSeen(device_id) {
-  const now = Date.now();
-  if (!device_id || (now - (_nodeSeen[device_id] || 0)) < 60000) return;
-  _nodeSeen[device_id] = now;
-  supabaseAdmin.from('vendo_devices')
-    .update({ node_last_seen: new Date().toISOString() })
-    .eq('id', device_id)
-    .then(() => {}, () => {});
-}
-
 const armed = asyncHandler(async (req, res) => {
   const { device_id } = req.query || {};
   if (!device_id) return fail(res, 'device_id required', 400);
-  markNodeSeen(device_id);
+  liveness.markNode(device_id);  // node health pulse (in-memory, scale-safe)
   const { data, error } = await supabaseAdmin.rpc('is_device_armed', {
     p_device_id: device_id,
   });
