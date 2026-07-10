@@ -83,16 +83,33 @@ async function loadDevices() {
       <td>${d.location || '—'}${d.area ? ' · ' + d.area : ''}</td>
       <td>${speedTxt}</td>
       <td><span class="badge ${d.router_online ? 'online' : 'offline'}">&#128246; Router: ${d.router_online ? 'Online' : 'Offline'}</span><br>
-          ${!d.router_online
-            ? '<span class="badge maintenance" style="margin-top:4px;display:inline-block">&#129689; Node: &#9888;&#65039; Unknown (router down)</span>'
-            : `<span class="badge ${d.node_online ? 'online' : 'offline'}" style="margin-top:4px;display:inline-block">&#129689; Node: ${d.node_online ? 'Online' : 'Offline'}</span>`}</td>
+          ${d.has_node === false
+            ? '<span class="badge" style="margin-top:4px;display:inline-block;color:var(--muted);border:1px solid var(--line);background:transparent">&#129689; No coin slot (extender)</span>'
+            : (!d.router_online
+              ? '<span class="badge maintenance" style="margin-top:4px;display:inline-block">&#129689; Node: &#9888;&#65039; Unknown (router down)</span>'
+              : `<span class="badge ${d.node_online ? 'online' : 'offline'}" style="margin-top:4px;display:inline-block">&#129689; Node: ${d.node_online ? 'Online' : 'Offline'}</span>`)}</td>
       <td>${fmtDate(d.last_online)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editDevice('${d.id}')">✏️ Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleNode('${d.id}',${d.has_node === false ? 'false' : 'true'})">&#129689; ${d.has_node === false ? 'Extender' : 'Vendo'}</button>
           <button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`;
     }).join('')
       || '<tr><td colspan="7" style="color:var(--muted)">No devices yet.</td></tr>';
   } catch(e) {}
+}
+/** Toggle: naay coin slot (Vendo) o wala (Extender ra). Editable anytime —
+ *  depende sa customer request kung butangan ug NodeMCU ang unit o dili. */
+async function toggleNode(id, hasNode) {
+  const toExtender = hasNode; // current true -> becoming extender (false)
+  const msg = toExtender
+    ? 'Himoon nga EXTENDER (walay coin slot)?\n\nAng Node badge mahimong "No coin slot" — dili na mag-alarma nga offline.'
+    : 'Himoon nga VENDO (naay coin slot/NodeMCU)?\n\nAng Node health monitoring ma-active balik para ani nga device.';
+  if (!confirm(msg)) return;
+  try {
+    await API.patch('/devices/' + id, { has_node: !hasNode ? true : false });
+    toast(toExtender ? 'Set as Extender (no coin slot)' : 'Set as Vendo (with coin slot)');
+    loadDevices();
+  } catch (e) { toast(e.message, 'err'); }
 }
 async function addDevice() {
   const body = {
