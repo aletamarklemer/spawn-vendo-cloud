@@ -87,7 +87,10 @@ async function loadDevices() {
             ? '<span class="badge" style="margin-top:4px;display:inline-block;color:var(--muted);border:1px solid var(--line);background:transparent">&#129689; No coin slot (extender)</span>'
             : (!d.router_online
               ? '<span class="badge maintenance" style="margin-top:4px;display:inline-block">&#129689; Node: &#9888;&#65039; Unknown (router down)</span>'
-              : `<span class="badge ${d.node_online ? 'online' : 'offline'}" style="margin-top:4px;display:inline-block">&#129689; Node: ${d.node_online ? 'Online' : 'Offline'}</span>`)}</td>
+              : `<span class="badge ${d.node_online ? 'online' : 'offline'}" style="margin-top:4px;display:inline-block">&#129689; Node: ${d.node_online ? 'Online' : 'Offline'}</span>`)}${
+          d.router_online && d.clients_connected != null
+            ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">&#128101; ${d.clients_connected} connected &middot; ${d.clients_online} online</div>`
+            : ''}</td>
       <td>${fmtDate(d.last_online)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editDevice('${d.id}')">✏️ Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>

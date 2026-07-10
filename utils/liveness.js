@@ -11,6 +11,7 @@ const { supabaseAdmin } = require('../config/supabase');
 
 const routerSeen = new Map();
 const nodeSeen = new Map();
+const clientStats = new Map();  // per-device {c: connected, a: authenticated, at: ts} gikan sa enforce v17 polls
 const dbLast = new Map();
 const DB_PERSIST_MS = 5 * 60 * 1000;
 
@@ -30,8 +31,21 @@ function mark(map, col, device_id) {
     .then(() => {}, () => {});
 }
 
+function markClients(id, c, a) {
+  if (!id) return;
+  const ci = parseInt(c, 10), ai = parseInt(a, 10);
+  if (Number.isNaN(ci)) return;  // old enforce (walay counts) = walay record
+  clientStats.set(id, { c: ci, a: Number.isNaN(ai) ? 0 : ai, at: Date.now() });
+}
+
 module.exports = {
   markRouter: (id) => mark(routerSeen, 'router_last_seen', id),
+  markClients,
+  clients: (id) => {
+    const s = clientStats.get(id);
+    if (!s || (Date.now() - s.at) > 60 * 1000) return null;  // stale = unknown
+    return { connected: s.c, online: s.a };
+  },
   markNode: (id) => mark(nodeSeen, 'node_last_seen', id),
   routerOnline: (id) => (Date.now() - (routerSeen.get(id) || 0)) < ROUTER_ONLINE_MS,
   nodeOnline: (id) => (Date.now() - (nodeSeen.get(id) || 0)) < NODE_ONLINE_MS,

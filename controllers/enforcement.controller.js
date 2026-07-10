@@ -43,8 +43,9 @@ async function getDeviceSsidMap() {
 }
 
 const allowedClients = asyncHandler(async (req, res) => {
-  const { device_id } = req.query || {};
+  const { device_id, c, a } = req.query || {};
   liveness.markRouter(device_id);  // router health pulse (in-memory, scale-safe)
+  liveness.markClients(device_id, c, a);  // client counts gikan sa enforce v17 (optional params)
 
   const { data, error } = await supabaseAdmin.rpc('list_allowed_clients');
   if (error) return fail(res, error.message, 400);

@@ -21,7 +21,9 @@ const list = asyncHandler(async (req, res) => {
     // Live badges gikan sa IN-MEMORY liveness (instant online, ~60-90s offline, zero DB cost)
     const router_online = liveness.routerOnline(d.id);
     const node_online = liveness.nodeOnline(d.id);
-    return { ...d, status: d.status === 'maintenance' ? 'maintenance' : (stale ? 'offline' : 'online'), router_online, node_online };
+    const cs = liveness.clients(d.id);  // null = unknown (old enforce o offline)
+    return { ...d, status: d.status === 'maintenance' ? 'maintenance' : (stale ? 'offline' : 'online'), router_online, node_online,
+      clients_connected: cs ? cs.connected : null, clients_online: cs ? cs.online : null };
   });
   return ok(res, { devices });
 });
