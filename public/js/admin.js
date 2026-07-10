@@ -104,12 +104,12 @@ async function loadDevices() {
 async function editRoam(id) {
   const dev = (ALL_DEVICES || []).find(d => d.id === id);
   if (!dev) { toast('Device not found', 'err'); return; }
-  const v = prompt('Roam group / SSID\n(parehas nga value sa duha ka device = session roaming)\nBlanko = walay roaming:', dev.ssid || '');
+  const v = prompt('Roam group / SSID\n(devices with the SAME value share sessions = roaming)\nLeave blank = no roaming:', dev.ssid || '');
   if (v === null) return;
   const val = v.trim() || null;
   try {
     await API.patch('/devices/' + id, { ssid: val });
-    toast(val ? ('Roam group: ' + val + ' — i-match pud ang broadcast WiFi name!') : 'Roaming removed (standalone)');
+    toast(val ? ('Roam group: ' + val + ' — remember to match the broadcast WiFi name too!') : 'Roaming removed (standalone)');
     loadDevices();
   } catch (e) { toast(e.message, 'err'); }
 }
@@ -118,8 +118,8 @@ async function editRoam(id) {
 async function toggleNode(id, hasNode) {
   const toExtender = hasNode; // current true -> becoming extender (false)
   const msg = toExtender
-    ? 'Himoon nga EXTENDER (walay coin slot)?\n\nAng Node badge mahimong "No coin slot" — dili na mag-alarma nga offline.'
-    : 'Himoon nga VENDO (naay coin slot/NodeMCU)?\n\nAng Node health monitoring ma-active balik para ani nga device.';
+    ? 'Set this device as an EXTENDER (no coin slot)?\n\nThe Node badge will show "No coin slot" instead of a false offline alarm.'
+    : 'Set this device as a VENDO (with coin slot/NodeMCU)?\n\nNode health monitoring will be active again for this device.';
   if (!confirm(msg)) return;
   try {
     await API.patch('/devices/' + id, { has_node: !hasNode ? true : false });
@@ -487,8 +487,8 @@ async function loadTiers() {
   updateTierNote();
   const note = document.getElementById('tierScopeNote');
   if (note) note.textContent = devId
-    ? 'Per-device rates: kung naay tiers dinhi, KINI RA ang gamiton ani nga vendo. Kung blanko, mo-gamit siya sa Global Default.'
-    : 'Global Default: gamiton sa TANAN vendo nga walay kaugalingong per-device tiers.';
+    ? 'Per-device rates: if tiers are set here, ONLY these apply to this vendo. If empty, it falls back to the Global Default.'
+    : 'Global Default: used by ALL vendos that have no per-device tiers of their own.';
 }
 async function saveTiers() {
   const sel = document.getElementById('tierDevice');
