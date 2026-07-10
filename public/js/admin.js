@@ -92,10 +92,26 @@ async function loadDevices() {
       <td><button class="btn btn-ghost btn-sm" onclick="editDevice('${d.id}')">✏️ Edit</button>
           <button class="btn btn-ghost btn-sm" onclick="editDeviceSpeed('${d.id}',${dl},${ul})">⚡ Speed</button>
           <button class="btn btn-ghost btn-sm" onclick="toggleNode('${d.id}',${d.has_node === false ? 'false' : 'true'})">&#129689; ${d.has_node === false ? 'Extender' : 'Vendo'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="editRoam('${d.id}')">&#128246; ${d.ssid ? d.ssid : 'No roam'}</button>
           <button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`;
     }).join('')
       || '<tr><td colspan="7" style="color:var(--muted)">No devices yet.</td></tr>';
   } catch(e) {}
+}
+/** Roam group (ssid): parehas nga value = magka-share ug sessions (roaming).
+ *  Blanko = walay roaming. PAHINUMDOM: ang broadcast WiFi name sa router
+ *  i-parehas pud, ug parehas nga rates sulod sa usa ka group. */
+async function editRoam(id) {
+  const dev = (ALL_DEVICES || []).find(d => d.id === id);
+  if (!dev) { toast('Device not found', 'err'); return; }
+  const v = prompt('Roam group / SSID\n(parehas nga value sa duha ka device = session roaming)\nBlanko = walay roaming:', dev.ssid || '');
+  if (v === null) return;
+  const val = v.trim() || null;
+  try {
+    await API.patch('/devices/' + id, { ssid: val });
+    toast(val ? ('Roam group: ' + val + ' — i-match pud ang broadcast WiFi name!') : 'Roaming removed (standalone)');
+    loadDevices();
+  } catch (e) { toast(e.message, 'err'); }
 }
 /** Toggle: naay coin slot (Vendo) o wala (Extender ra). Editable anytime —
  *  depende sa customer request kung butangan ug NodeMCU ang unit o dili. */
