@@ -108,7 +108,7 @@ function renderDevices(list) {
               ? '<span class="badge maintenance" style="margin-top:4px;display:inline-block">&#129689; Node: &#9888;&#65039; Unknown (router down)</span>'
               : `<span class="badge ${d.node_online ? 'online' : 'offline'}" style="margin-top:4px;display:inline-block">&#129689; Node: ${d.node_online ? 'Online' : 'Offline'}</span>`)}${
           d.router_online && d.clients_connected != null
-            ? `<div style="font-size:11px;color:var(--r5);margin-top:4px;cursor:pointer;text-decoration:underline" onclick="openClientsModal('${d.id}','${(d.device_name||'').replace(/'/g,'')}')" title="Tan-awa kinsa ang naka-online">&#128101; ${d.clients_connected} connected &middot; ${d.clients_online} online</div>`
+            ? `<div style="font-size:11px;color:var(--r5);margin-top:4px;cursor:pointer;text-decoration:underline" onclick="openClientsModal('${d.id}','${(d.device_name||'').replace(/'/g,'')}')" title="See who is online">&#128101; ${d.clients_connected} connected &middot; ${d.clients_online} online</div>`
             : ''}</td>
       <td>${fmtDate(d.last_online)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="editDevice('${d.id}')">✏️ Edit</button>
@@ -628,7 +628,7 @@ boot();
 /* ---------- WHO'S ONLINE modal (real-time clients per router) ---------- */
 let __clIv = null;
 function openClientsModal(devId, devName) {
-  document.getElementById('cl_title').textContent = 'Naka-online sa: ' + (devName || 'Device');
+  document.getElementById('cl_title').textContent = 'Online on: ' + (devName || 'Device');
   document.getElementById('clientsModal').classList.remove('hidden');
   loadClientsList(devId);
   if (__clIv) clearInterval(__clIv);
@@ -642,18 +642,18 @@ async function loadClientsList(devId) {
   try {
     const d = await API.get('/devices/' + devId + '/clients');
     const tb = document.getElementById('clTable');
-    if (!d.fresh) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Walay real-time data (offline ang router or wala pa ma-update ang enforce)</td></tr>'; return; }
-    if (!d.clients.length) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Walay naka-connect karon</td></tr>'; return; }
+    if (!d.fresh) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No real-time data (router offline or enforce not updated yet)</td></tr>'; return; }
+    if (!d.clients.length) { tb.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No one connected right now</td></tr>'; return; }
     tb.innerHTML = d.clients.map((c) => `
       <tr>
         <td style="font-family:monospace;font-size:12px">${c.mac}</td>
         <td>${c.phone || '<span style="color:var(--muted)">—</span>'}</td>
         <td>${c.online
-              ? '<span class="badge online">&#127760; Online (nag-browse)</span>'
-              : '<span class="badge maintenance">&#128268; Connected ra (wala nag-browse)</span>'}</td>
+              ? '<span class="badge online">&#127760; Online (browsing)</span>'
+              : '<span class="badge maintenance">&#128268; Connected only (not browsing)</span>'}</td>
         <td>${c.remaining_seconds != null
               ? hmsAdm(c.remaining_seconds) + (c.session_status === 'paused' ? ' <small style="color:var(--muted)">(paused)</small>' : '')
-              : '<span style="color:var(--muted)">walay session</span>'}</td>
+              : '<span style="color:var(--muted)">no session</span>'}</td>
       </tr>`).join('');
     labelTableCells();
   } catch (e) { /* transient — sunod refresh */ }
