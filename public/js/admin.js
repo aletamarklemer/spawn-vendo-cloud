@@ -602,3 +602,27 @@ async function saveProfile() {
 
 const val = (id) => document.getElementById(id).value.trim();
 boot();
+
+/* MOBILE: auto-add data-label sa kada <td> gikan sa header row (para sa card-style
+   table sa phone). Idempotent, walay epekto sa desktop (CSS @media ra mogamit). */
+function labelTableCells(root) {
+  const scope = root || document;
+  scope.querySelectorAll('table').forEach((tbl) => {
+    const heads = [...tbl.querySelectorAll('thead th')].map((h) => h.textContent.trim());
+    if (!heads.length) return;
+    tbl.querySelectorAll('tbody tr').forEach((tr) => {
+      [...tr.children].forEach((td, i) => {
+        if (heads[i] && !td.hasAttribute('data-label')) td.setAttribute('data-label', heads[i]);
+      });
+    });
+  });
+}
+// Auto-run human sa bisan unsang table render (MutationObserver = walay kinahanglan tawgon kada function)
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    const obs = new MutationObserver(() => labelTableCells());
+    document.querySelectorAll('tbody').forEach((tb) =>
+      obs.observe(tb, { childList: true }));
+    labelTableCells();
+  });
+}
