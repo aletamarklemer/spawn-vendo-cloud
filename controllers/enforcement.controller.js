@@ -42,6 +42,28 @@ async function getDeviceSsidMap() {
   }
 }
 
+/* INSTANT UPDATE SIGNAL: cached portal version (pv) + scripts signature (sv).
+   Gi-piggyback sa /allowed response (~30 bytes) para ang enforce v19 maka-detect
+   ug bag-ong release sulod sa segundos (imbes maghulat sa cron). 60s cache =
+   1 DB query/min bisan 800 ka vendo ang nag-poll kada 1-3s. */
+const crypto = require('crypto');
+let _sig = { at: 0, pv: 0, sv: '' };
+async function updateSignal() {
+  const now = Date.now();
+  if (now - _sig.at < 60 * 1000) return _sig;
+  try {
+    const [p, s] = await Promise.all([
+      supabaseAdmin.from('portal_releases').select('version').eq('id', 1).maybeSingle(),
+      supabaseAdmin.from('script_releases').select('name, version'),
+    ]);
+    const pv = (p.data && p.data.version) || 0;
+    const joined = (s.data || []).map((x) => `${x.name}:${x.version}`).sort().join(',');
+    const sv = crypto.createHash('md5').update(joined).digest('hex').slice(0, 12);
+    _sig = { at: now, pv, sv };
+  } catch (e) { _sig.at = now; } // keep old values on error (graceful)
+  return _sig;
+}
+
 const allowedClients = asyncHandler(async (req, res) => {
   const { device_id, c, a } = req.query || {};
   liveness.markRouter(device_id);  // router health pulse (in-memory, scale-safe)
@@ -95,7 +117,9 @@ const allowedClients = asyncHandler(async (req, res) => {
     }
   });
 
+  const sig = await updateSignal();
   return ok(res, {
+    pv: sig.pv, sv: sig.sv,  // instant update signal (portal ver + scripts signature)
     macs: activeClients.map((c) => c.client_mac),   // only active MACs
     paused_macs: pausedClients.map((c) => c.client_mac), // paused MACs separate
     clients: [...activeClients, ...pausedClients],
