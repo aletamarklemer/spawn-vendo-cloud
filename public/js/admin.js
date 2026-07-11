@@ -1,5 +1,6 @@
 /* public/js/admin.js — admin dashboard controller */
 let CHART = null;
+let CHART_DRAWING = false;  // guard batok concurrent/stacked draws (flaky WAN)
 let REV_RANGE = 'daily';  // remember last-selected revenue range para auto-redraw
 let ALL_TX = [];
 let ALL_SESS = [];
@@ -54,28 +55,37 @@ async function loadDashboard() {
     document.getElementById('tx-today').textContent = s.transactions.today;
     // Draw revenue chart if not yet drawn (fresh load, nav back, or app reopen).
     // Guarded by !CHART so the 5s auto-refresh doesn't redraw/flicker every tick.
-    if (!CHART) drawRevenue(REV_RANGE);
+    if (!CHART && !CHART_DRAWING) drawRevenue(REV_RANGE);
   } catch(e) {}
 }
 
 async function drawRevenue(range) {
+  if (CHART_DRAWING) return;   // usa ra ka draw sa usa ka higayon (pugngi ang stacking sa hinay nga WAN)
+  CHART_DRAWING = true;
   REV_RANGE = range;  // remember para ma-redraw sa dashboard re-entry
-  const d = await API.get('/admin/revenue?range=' + range);
   document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.range === range));
   document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('btn-ghost', b.dataset.range !== range));
-  const ctx = document.getElementById('revChart');
-  if (CHART) CHART.destroy();
-  CHART = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: d.series.map(x => x.label), datasets: [{
-      label: 'Revenue (₱)', data: d.series.map(x => x.value),
-      backgroundColor: 'rgba(10,132,255,.6)', borderRadius: 6,
-    }]},
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
-                y: { ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },
-  });
+  try {
+    const d = await API.get('/admin/revenue?range=' + range);
+    const ctx = document.getElementById('revChart');
+    if (!ctx) return;   // section wala pa sa DOM
+    if (CHART) { CHART.destroy(); CHART = null; }
+    CHART = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: d.series.map(x => x.label), datasets: [{
+        label: 'Revenue (₱)', data: d.series.map(x => x.value),
+        backgroundColor: 'rgba(10,132,255,.6)', borderRadius: 6,
+      }]},
+      options: { responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
+                  y: { ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },
+    });
+  } catch (e) {
+    // WAN fail — ayaw i-leave nga stuck; mo-retry ra sa sunod nga dashboard load
+  } finally {
+    CHART_DRAWING = false;
+  }
 }
 
 /* ---------- Devices ---------- */
