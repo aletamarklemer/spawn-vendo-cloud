@@ -71,11 +71,8 @@ async function drawRevenue(range) {
 
 /* ---------- Devices ---------- */
 let ALL_DEVICES = [];
-async function loadDevices() {
-  try {
-    const { devices } = await API.get('/devices');
-    ALL_DEVICES = devices;
-    document.getElementById('devTable').innerHTML = devices.map(d => {
+function renderDevices(list) {
+    document.getElementById('devTable').innerHTML = (list||[]).map(d => {
       const dl = d.download_mbps || 0, ul = d.upload_mbps || 0;
       const speedTxt = (dl === 0 && ul === 0) ? '<span style="color:var(--muted)">Unlimited</span>' : `↓${dl||'∞'} ↑${ul||'∞'} Mbps`;
       return `
@@ -99,6 +96,26 @@ async function loadDevices() {
           <button class="btn btn-danger btn-sm" onclick="delDevice('${d.id}')">Delete</button></td></tr>`;
     }).join('')
       || '<tr><td colspan="7" style="color:var(--muted)">No devices yet.</td></tr>';
+}
+/** Real-time filter sa Devices tab */
+function filterDevices() {
+  const q = (document.getElementById('dev-search')||{value:''}).value.toLowerCase().trim();
+  if (!q) return renderDevices(ALL_DEVICES);
+  renderDevices((ALL_DEVICES||[]).filter(d =>
+    ((d.device_name||'').toLowerCase().includes(q)) ||
+    ((d.mac_address||'').toLowerCase().includes(q)) ||
+    ((d.location||'').toLowerCase().includes(q)) ||
+    ((d.area||'').toLowerCase().includes(q)) ||
+    ((d.ssid||'').toLowerCase().includes(q)) ||
+    ((d.status||'').toLowerCase().includes(q)) ||
+    ((d.id||'').toLowerCase().includes(q))
+  ));
+}
+async function loadDevices() {
+  try {
+    const { devices } = await API.get('/devices');
+    ALL_DEVICES = devices;
+    renderDevices(devices);
   } catch(e) {}
 }
 /** Roam group (ssid): parehas nga value = magka-share ug sessions (roaming).
@@ -417,6 +434,35 @@ async function toggleShowPw(uid) {
     input.value = '••••••••';
     input.type = 'password';
   }
+}
+
+/* ---------- Change Password Modal ---------- */
+function openPwModal(uid) {
+  document.getElementById('pw_uid').value = uid;
+  document.getElementById('pw_new').value = '';
+  const inp = document.getElementById('pw_new');
+  if (inp) inp.type = 'password';
+  document.getElementById('pwModal').classList.remove('hidden');
+  if (inp) setTimeout(() => inp.focus(), 50);
+}
+function closePwModal() {
+  document.getElementById('pwModal').classList.add('hidden');
+}
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+async function savePw() {
+  const uid = document.getElementById('pw_uid').value;
+  const pw = document.getElementById('pw_new').value;
+  if (!pw || pw.length < 8) return toast('Password must be at least 8 characters', 'err');
+  try {
+    await API.patch('/admin/users/' + uid + '/password', { password: pw });
+    toast('Password changed');
+    closePwModal();
+    loadUsers();
+  } catch (e) { toast(e.message, 'err'); }
 }
 
 /* ---------- Settings ---------- */

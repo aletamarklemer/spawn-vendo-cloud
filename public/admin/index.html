@@ -81,6 +81,7 @@
       </div>
       <div class="card">
         <div class="tbl-actions">
+          <input class="search-bar" id="dev-search" placeholder="Search name, location, SSID, status…" oninput="filterDevices()" style="max-width:280px;margin-right:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteAllDevices()">🗑 Delete All</button>
         </div>
         <table><thead><tr><th>Device</th><th>Location</th><th>Speed</th><th>Status</th><th>Last online</th><th></th></tr></thead><tbody id="devTable"></tbody></table>
