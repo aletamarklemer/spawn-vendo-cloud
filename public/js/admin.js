@@ -1,5 +1,6 @@
 /* public/js/admin.js — admin dashboard controller */
 let CHART = null;
+let REV_RANGE = 'daily';  // remember last-selected revenue range para auto-redraw
 let ALL_TX = [];
 let ALL_SESS = [];
 let ALL_USERS = [];
@@ -15,6 +16,9 @@ async function boot() {
 function nav(section) {
   // Clear previous auto-refresh
   if (AUTO_REFRESH) { clearInterval(AUTO_REFRESH); AUTO_REFRESH = null; }
+  // Destroy revenue chart when leaving dashboard — redrawn fresh on return
+  // (fixes: chart disappears after nav away / app reopen, needing manual re-select)
+  if (section !== 'dashboard' && CHART) { CHART.destroy(); CHART = null; }
 
   document.querySelectorAll('.navlink').forEach(n => n.classList.toggle('active', n.dataset.sec === section));
   document.querySelectorAll('[data-section]').forEach(s => s.classList.toggle('hidden', s.dataset.section !== section));
@@ -48,10 +52,14 @@ async function loadDashboard() {
     document.getElementById('active-sessions').textContent = s.active_sessions;
     document.getElementById('dev-online').textContent = `${s.devices.online}/${s.devices.total}`;
     document.getElementById('tx-today').textContent = s.transactions.today;
+    // Draw revenue chart if not yet drawn (fresh load, nav back, or app reopen).
+    // Guarded by !CHART so the 5s auto-refresh doesn't redraw/flicker every tick.
+    if (!CHART) drawRevenue(REV_RANGE);
   } catch(e) {}
 }
 
 async function drawRevenue(range) {
+  REV_RANGE = range;  // remember para ma-redraw sa dashboard re-entry
   const d = await API.get('/admin/revenue?range=' + range);
   document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.range === range));
   document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('btn-ghost', b.dataset.range !== range));
