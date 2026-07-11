@@ -63,7 +63,8 @@ async function drawRevenue(range) {
       label: 'Revenue (₱)', data: d.series.map(x => x.value),
       backgroundColor: 'rgba(10,132,255,.6)', borderRadius: 6,
     }]},
-    options: { plugins: { legend: { display: false } },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
       scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
                 y: { ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },
   });

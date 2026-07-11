@@ -144,7 +144,8 @@ label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
   /* Modals: full-width-ish */
   .modal{min-width:auto;width:92vw;padding:20px}
 
-  /* Charts: dili mag-overflow */
-  canvas{max-width:100%!important;height:auto!important}
+  /* Charts: pugngi ang overflow pero AYAW hilabti ang height (Chart.js ang
+     nag-manage; height:auto = mo-collapse sa 0 = mawala ang graph) */
+  canvas{max-width:100%!important}
 }
 .hidden{display:none!important}
