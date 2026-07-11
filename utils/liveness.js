@@ -31,11 +31,15 @@ function mark(map, col, device_id) {
     .then(() => {}, () => {});
 }
 
-function markClients(id, c, a) {
+function markClients(id, c, a, m, o) {
   if (!id) return;
   const ci = parseInt(c, 10), ai = parseInt(a, 10);
   if (Number.isNaN(ci)) return;  // old enforce (walay counts) = walay record
-  clientStats.set(id, { c: ci, a: Number.isNaN(ai) ? 0 : ai, at: Date.now() });
+  // v20: m/o = comma-separated MAC lists (real-time associated / online).
+  // Optional — old enforce walay m/o = empty arrays, counts ra gihapon.
+  const macs = (m ? String(m).split(',') : []).map((x) => x.trim().toUpperCase()).filter(Boolean);
+  const online = (o ? String(o).split(',') : []).map((x) => x.trim().toUpperCase()).filter(Boolean);
+  clientStats.set(id, { c: ci, a: Number.isNaN(ai) ? 0 : ai, macs, online, at: Date.now() });
 }
 
 module.exports = {
@@ -45,6 +49,11 @@ module.exports = {
     const s = clientStats.get(id);
     if (!s || (Date.now() - s.at) > 60 * 1000) return null;  // stale = unknown
     return { connected: s.c, online: s.a };
+  },
+  clientList: (id) => {
+    const s = clientStats.get(id);
+    if (!s || (Date.now() - s.at) > 60 * 1000) return null;  // stale = unknown
+    return { macs: s.macs || [], online: s.online || [] };
   },
   markNode: (id) => mark(nodeSeen, 'node_last_seen', id),
   routerOnline: (id) => (Date.now() - (routerSeen.get(id) || 0)) < ROUTER_ONLINE_MS,

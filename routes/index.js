@@ -85,6 +85,7 @@ router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteV
 
 // devices
 router.get('/devices', authenticate, authorize('admin', 'technician', 'operator'), device.list);
+router.get('/devices/:id/clients', authenticate, authorize('admin', 'technician', 'operator'), device.clients);
 router.post('/devices', authenticate, authorize('admin'), device.create);
 router.patch('/devices/:id', authenticate, authorize('admin', 'technician'), device.update);
 router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);

@@ -130,8 +130,52 @@ const armed = asyncHandler(async (req, res) => {
   return ok(res, { armed: data === true });
 });
 
+/** GET /api/devices/:id/clients (admin/tech/oper) — KINSA ANG NAKA-ONLINE karon
+ *  sa maong router: real-time MAC list gikan sa enforce v20 (iw station dump),
+ *  gi-enrich sa sessions (phone info, status, remaining). null lists = old
+ *  enforce pa or offline ang router. */
+const clients = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const lst = liveness.clientList(id);
+  if (!lst) return ok(res, { fresh: false, clients: [] });  // unknown/stale/old-enforce
+
+  const macs = lst.macs || [];
+  if (!macs.length) return ok(res, { fresh: true, clients: [] });
+
+  // Sessions lookup: ang sessions naka-store as 'MAC:AA:BB:...' uppercase
+  const keys = macs.map((m) => 'MAC:' + m.toUpperCase());
+  const { data: rows } = await supabaseAdmin
+    .from('internet_sessions')
+    .select('client_mac, device_info, status, end_time, remaining_seconds, created_at')
+    .in('client_mac', keys)
+    .order('created_at', { ascending: false });
+
+  const byMac = {};
+  (rows || []).forEach((r) => { if (!byMac[r.client_mac]) byMac[r.client_mac] = r; });
+
+  const onlineSet = new Set((lst.online || []).map((m) => m.toUpperCase()));
+  const out = macs.map((m) => {
+    const key = 'MAC:' + m.toUpperCase();
+    const s = byMac[key];
+    let remaining = null;
+    if (s && s.status === 'active' && s.end_time) {
+      remaining = Math.max(0, Math.floor((new Date(s.end_time) - Date.now()) / 1000));
+    } else if (s && s.status === 'paused') {
+      remaining = s.remaining_seconds || 0;
+    }
+    return {
+      mac: m.toUpperCase(),
+      online: onlineSet.has(m.toUpperCase()),        // authenticated + associated = nag-browse
+      phone: (s && s.device_info) || null,           // gikan sa portal buildPhoneInfo
+      session_status: (s && s.status) || null,       // active/paused/expired/null
+      remaining_seconds: remaining,
+    };
+  });
+  return ok(res, { fresh: true, clients: out });
+});
+
 module.exports = {
   getSpeed, armed,
   list, create, update, heartbeat, remove,
-  listMaintenance, createMaintenance, resolveMaintenance,
+  listMaintenance, createMaintenance, resolveMaintenance, clients,
 };
