@@ -76,7 +76,10 @@ async function drawRevenue(range) {
         label: 'Revenue (₱)', data: d.series.map(x => x.value),
         backgroundColor: 'rgba(10,132,255,.6)', borderRadius: 6,
       }]},
-      options: { responsive: true, maintainAspectRatio: false, animation: false,
+      options: { responsive: true, maintainAspectRatio: false,
+        animation: { duration: 600, easing: 'easeOutQuart' },  // smooth pero paspas
+        animations: { y: { from: 0 } },  // bars mo-grow gikan sa 0 = nindot nga entrance
+        transitions: { active: { animation: { duration: 200 } } },
         plugins: { legend: { display: false } },
         scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
                   y: { ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },

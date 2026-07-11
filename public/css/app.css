@@ -149,3 +149,25 @@ label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
   canvas{max-width:100%!important}
 }
 .hidden{display:none!important}
+
+/* ============ SMOOTHNESS & RESPONSIVENESS POLISH ============ */
+/* Tap/press feedback — buttons mo-"press" pag-click (mobile + desktop) */
+.btn:active{transform:scale(.96)}
+.navlink:active{transform:scale(.97)}
+/* Smooth nga hover sa cards + table rows */
+.card{transition:box-shadow .2s ease,border-color .2s ease}
+tr{transition:background .12s ease}
+/* Section fade-in pag-nav (gaan, walay layout shift) */
+section[data-section]:not(.hidden){animation:secFade .22s ease}
+@keyframes secFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* Smooth scrolling sa tibuok app */
+html{scroll-behavior:smooth}
+/* Badges + stats: gaan nga transition */
+.badge,.pill{transition:.15s ease}
+.grid.stats .card:active{transform:scale(.98)}
+/* Tap highlight off (mobile) para limpyo ang tap */
+*{-webkit-tap-highlight-color:transparent}
+/* Momentum scroll sa mobile (smooth nga swipe sa tables/lists) */
+body{-webkit-overflow-scrolling:touch}
+/* Range buttons + search: smooth focus */
+input:focus,.search-bar:focus{outline:none;border-color:var(--r5);transition:border-color .15s ease}
