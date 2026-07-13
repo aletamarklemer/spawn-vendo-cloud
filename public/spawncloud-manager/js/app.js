@@ -126,8 +126,52 @@ async function openDevice(id) {
     ${CURRENT.ssid ? `<span class="stat-pill"><span class="lbl">Roam</span> <b>${esc(CURRENT.ssid)}</b></span>` : ''}
     ${CURRENT.clients_connected != null ? `<span class="stat-pill"><span class="lbl">Clients</span> <b>${CURRENT.clients_connected}</b></span>` : ''}
   `;
+  // v2 (Phase 2): SSID editor
+  const si = document.getElementById('ssid-input');
+  si.value = CURRENT.ssid || '';
+  si.dataset.orig = CURRENT.ssid || '';
+  document.getElementById('ssid-roam').textContent = CURRENT.ssid ? 'ROAM GROUP KEY' : 'NOT SET';
+  document.getElementById('ssid-warn').style.display = 'none';
+  document.getElementById('btn-save-ssid').disabled = true;
+
   show('screen-detail');
   loadRates(id);
+}
+
+/* ---------------- SSID (Phase 2) ---------------- */
+function ssidChanged() {
+  const si = document.getElementById('ssid-input');
+  const changed = si.value.trim() !== (si.dataset.orig || '');
+  document.getElementById('btn-save-ssid').disabled = !changed;
+  document.getElementById('ssid-warn').style.display = changed ? 'flex' : 'none';
+}
+
+async function saveSsid() {
+  if (!CURRENT) return;
+  const si = document.getElementById('ssid-input');
+  const name = si.value.trim();
+  if (!name) { toast('WiFi name cannot be empty', 'err'); return; }
+  if (name.length > 32) { toast('Max 32 characters', 'err'); return; }
+  if (!/^[A-Za-z0-9 ._-]+$/.test(name)) { toast('Letters, numbers, space, dot, dash, underscore only', 'err'); return; }
+  if (!confirm('Change WiFi name to "' + name + '"?\n\nUsers on this vendo will briefly disconnect and must rejoin the new network.')) return;
+
+  const btn = document.getElementById('btn-save-ssid');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await API.patch('/devices/' + CURRENT.id, { ssid: name });
+    CURRENT.ssid = name;
+    si.dataset.orig = name;
+    document.getElementById('ssid-roam').textContent = 'ROAM GROUP KEY';
+    document.getElementById('ssid-warn').style.display = 'none';
+    toast('WiFi name saved — the router applies it within seconds', 'ok');
+    const d = DEVICES.find((x) => x.id === CURRENT.id);
+    if (d) d.ssid = name;
+  } catch (e) {
+    toast(e.message || 'Could not save WiFi name', 'err');
+    btn.disabled = false;
+  } finally {
+    btn.textContent = 'Save WiFi name';
+  }
 }
 
 async function loadRates(deviceId) {

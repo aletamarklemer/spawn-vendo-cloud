@@ -73,9 +73,11 @@ const allowedClients = asyncHandler(async (req, res) => {
   if (error) return fail(res, error.message, 400);
 
   let rows = data || [];
+  let targetSsid = '';  // v25: ang device's DB ssid = target broadcast (SSID sync)
   if (device_id) {
     const ssidMap = await getDeviceSsidMap();
     const reqSsid = ssidMap[device_id];
+    targetSsid = reqSsid || '';
     if (reqSsid) {
       // ROAMING: i-apil ang sessions sa TANAN devices nga parehas ug ssid
       // (lakip na ang requesting device mismo)
@@ -120,6 +122,7 @@ const allowedClients = asyncHandler(async (req, res) => {
   const sig = await updateSignal();
   return ok(res, {
     pv: sig.pv, sv: sig.sv,  // instant update signal (portal ver + scripts signature)
+    ss: targetSsid,          // v25: target broadcast SSID (enforce syncs uci kung lahi)
     macs: activeClients.map((c) => c.client_mac),   // only active MACs
     paused_macs: pausedClients.map((c) => c.client_mac), // paused MACs separate
     clients: [...activeClients, ...pausedClients],
