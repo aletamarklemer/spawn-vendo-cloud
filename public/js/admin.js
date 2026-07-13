@@ -316,8 +316,11 @@ function renderSessions(list) {
   const validityDays = SESS_VALIDITY_DAYS;
   document.getElementById('sessTable').innerHTML = list.map(s => {
     let validityTxt = '—';
-    if (s.first_paused_at) {
-      const exp = new Date(new Date(s.first_paused_at).getTime() + validityDays * 86400000);
+    // SAME as portal/backend: validity clock = manual_paused_at + pause_validity_days,
+    // shown only while active/paused. (first_paused_at = legacy, NOT the real clock;
+    // add_credits resets manual_paused_at on payment = fresh validity, portal-matched.)
+    if (s.manual_paused_at && (s.status === 'active' || s.status === 'paused')) {
+      const exp = new Date(new Date(s.manual_paused_at).getTime() + validityDays * 86400000);
       const expired = Date.now() > exp.getTime();
       validityTxt = `<span style="color:${expired ? 'var(--bad)' : 'var(--ok)'}">${fmtDate(exp.toISOString())}${expired ? ' (expired)' : ''}</span>`;
     }
