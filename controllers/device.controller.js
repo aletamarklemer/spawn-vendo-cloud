@@ -155,6 +155,84 @@ const wireless = asyncHandler(async (req, res) => {
   return ok(res, { fresh: true, networks });
 });
 
+/** POST /api/devices/:id/wifi-command (admin) — queue ug WiFi write action.
+ *  SAFETY GUARDS (server-side, dili ma-bypass sa app):
+ *   - validated section/ssid/band/hidden (strict regex)
+ *   - DILI ma-hide/ma-delete ang KATAPUSANG visible network (customer lockout!)
+ *   - usa ra ka pending command kada device (klaro nga sequencing) */
+const postWifiCommand = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { action, params } = req.body || {};
+  const p = params || {};
+  if (!['set_hidden', 'add_iface', 'del_iface'].includes(action)) return fail(res, 'invalid action', 400);
+  if (!/^[a-z][a-z0-9_]{1,15}$/.test(String(p.section || ''))) return fail(res, 'invalid section name', 400);
+  if (action === 'add_iface') {
+    if (!/^[A-Za-z0-9 ._-]{1,32}$/.test(String(p.ssid || ''))) return fail(res, 'invalid ssid', 400);
+    if (!['radio0', 'radio1', 'both'].includes(p.band)) return fail(res, 'invalid band', 400);
+  }
+  if (action === 'set_hidden' && typeof p.hidden !== 'boolean') return fail(res, 'hidden must be boolean', 400);
+
+  // Usa ra ka pending kada device
+  const { data: pend } = await supabaseAdmin.from('wifi_commands')
+    .select('id').eq('device_id', id).eq('status', 'pending').limit(1);
+  if (pend && pend.length) return fail(res, 'May pending command pa - wait for it to apply first', 409);
+
+  // LOCKOUT GUARD: kung hide or delete, i-check ang latest snapshot
+  if (action === 'del_iface' || (action === 'set_hidden' && p.hidden === true)) {
+    const hex = liveness.wirelessList(id);
+    if (!hex) return fail(res, 'Router wireless snapshot unavailable - cannot verify safety (device offline?)', 409);
+    const raw = Buffer.from(hex, 'hex').toString('utf8');
+    const nets = raw.split('|').filter(Boolean).map((r) => {
+      const [section, , , hidden, disabled] = r.split('~');
+      return { section, visible: hidden !== '1' && disabled !== '1' };
+    });
+    const target = nets.find((n) => n.section === p.section);
+    if (!target) return fail(res, 'Section not found on router', 400);
+    const visibleAfter = nets.filter((n) => n.visible && n.section !== p.section).length;
+    if (target.visible && visibleAfter === 0) {
+      return fail(res, 'BLOCKED: kini ang KATAPUSANG visible network - ma-lockout ang customers!', 400);
+    }
+  }
+
+  const { data, error } = await supabaseAdmin.from('wifi_commands')
+    .insert({ device_id: id, action, params: p, created_by: req.user.id || null })
+    .select().single();
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { command: data, note: 'Router applies within ~10-15s' });
+});
+
+/** POST /api/devices/:id/wifi-command (admin) — {action, params} -> pending queue */
+const wifiCommand = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { action, params } = req.body || {};
+  const ACTIONS = ['set_hidden', 'add_iface', 'del_iface'];
+  if (!ACTIONS.includes(action)) return fail(res, 'invalid action', 400);
+  const p = params || {};
+  // Validation — safety gates
+  if (p.ssid != null && !/^[A-Za-z0-9 ._-]{1,32}$/.test(p.ssid)) return fail(res, 'invalid ssid (letters, numbers, space, . _ - only, max 32)', 400);
+  if (p.section != null && !/^[A-Za-z0-9_]{1,40}$/.test(p.section)) return fail(res, 'invalid section', 400);
+  if (action === 'set_hidden' && !p.section) return fail(res, 'section required', 400);
+  if (action === 'del_iface' && !p.section) return fail(res, 'section required', 400);
+  if (action === 'add_iface' && !p.ssid) return fail(res, 'ssid required', 400);
+  // SAFETY: default_radio* dili ma-delete (customer lockout guard; enforce nag-guard pud)
+  if (action === 'del_iface' && /^default_radio/.test(p.section)) return fail(res, 'cannot delete the main customer network', 400);
+  const { data, error } = await supabaseAdmin.from('wifi_commands')
+    .insert({ device_id: id, action, params: p, created_by: req.user.sub || null })
+    .select().single();
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { command: data });
+});
+
+/** GET /api/devices/:id/wifi-commands — recent commands (status view sa app) */
+const wifiCommands = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { data, error } = await supabaseAdmin.from('wifi_commands')
+    .select('id, action, params, status, created_at, done_at')
+    .eq('device_id', id).order('created_at', { ascending: false }).limit(5);
+  if (error) return fail(res, error.message, 400);
+  return ok(res, { commands: data || [] });
+});
+
 const clients = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const lst = liveness.clientList(id);
@@ -198,5 +276,5 @@ const clients = asyncHandler(async (req, res) => {
 module.exports = {
   getSpeed, armed,
   list, create, update, heartbeat, remove,
-  listMaintenance, createMaintenance, resolveMaintenance, clients, wireless,
+  listMaintenance, createMaintenance, resolveMaintenance, clients, wireless, wifiCommand, wifiCommands, postWifiCommand,
 };

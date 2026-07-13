@@ -93,6 +93,27 @@
 
       <div class="section-head"><h2>WiFi Networks on Router</h2><span class="eyebrow" id="wifi-fresh"></span></div>
       <div class="card" id="wifi-networks"><div class="skeleton" style="height:52px"></div></div>
+      <div class="card" id="wifi-add-card" style="display:none">
+        <div class="field" style="margin-bottom:8px">
+          <label for="add-ssid">New network name (SSID)</label>
+          <input type="text" id="add-ssid" class="input-mono" maxlength="32" placeholder="e.g. Spawn Guest">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <select id="add-band" class="input-mono" style="flex:1">
+            <option value="both">2.4G + 5G</option>
+            <option value="radio0">2.4G only</option>
+            <option value="radio1">5G only</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted,#8b949e)">
+            <input type="checkbox" id="add-hidden"> Hidden
+          </label>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="toggleAddNet(false)">Cancel</button>
+          <button class="btn btn-sm" style="flex:1" onclick="submitAddNet()">Add network</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-block btn-sm" id="btn-add-net" onclick="toggleAddNet(true)" style="margin-top:8px">+ Add WiFi network</button>
 
       <div class="section-head"><h2>Rates</h2><span class="eyebrow" id="rates-source"></span></div>
       <div class="card">

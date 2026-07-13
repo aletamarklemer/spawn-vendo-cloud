@@ -304,3 +304,7 @@ input::placeholder { color: var(--txt-faint); }
 .chip{font-size:10px;letter-spacing:.4px;padding:3px 8px;border-radius:999px;background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25)}
 .chip-warn{background:rgba(251,191,36,.10);color:#fbbf24;border-color:rgba(251,191,36,.3)}
 .empty-note{font-size:12.5px;color:var(--muted,#8b949e);padding:8px 2px}
+
+.net-acts{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.btn-mini{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(45,212,191,.10);color:#2dd4bf;border:1px solid rgba(45,212,191,.25);cursor:pointer}
+.btn-mini-danger{background:rgba(248,81,73,.08);color:#f85149;border-color:rgba(248,81,73,.3)}

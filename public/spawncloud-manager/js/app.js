@@ -153,13 +153,19 @@ async function loadWireless(id) {
       return;
     }
     fr.textContent = 'LIVE';
-    box.innerHTML = d.networks.map(function (n) {
+    WNETS = d.networks;
+    box.innerHTML = d.networks.map(function (n, i) {
       const chips =
         '<span class="chip">' + esc(n.band) + '</span>' +
         (n.hidden ? '<span class="chip chip-warn">HIDDEN</span>' : '') +
         (n.disabled ? '<span class="chip chip-warn">OFF</span>' : '');
-      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C likely node link \u2014 do not rename casually</div>' : '';
-      return '<div class="net-row"><div><div class="net-ssid">' + esc(n.ssid || '(blank)') + '</div>' + hint + '</div><div class="net-chips">' + chips + '</div></div>';
+      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C likely node link \u2014 changes may disconnect the coin slot</div>' : '';
+      const btns =
+        '<button class="btn-mini" onclick="netHide(' + i + ')">' + (n.hidden ? 'Show' : 'Hide') + '</button>' +
+        '<button class="btn-mini btn-mini-danger" onclick="netDel(' + i + ')">Delete</button>';
+      return '<div class="net-row"><div><div class="net-ssid">' + esc(n.ssid || '(blank)') + '</div>' + hint +
+        '<div class="net-hint" style="opacity:.6">' + esc(n.section) + '</div></div>' +
+        '<div><div class="net-chips">' + chips + '</div><div class="net-acts">' + btns + '</div></div></div>';
     }).join('');
   } catch (e) {
     fr.textContent = '';
@@ -168,6 +174,56 @@ async function loadWireless(id) {
 }
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+
+/* ---------------- WiFi write controls (Phase 2.5B) ---------------- */
+let WNETS = [];
+
+async function postWifiCmd(action, params, confirmMsg) {
+  if (!CURRENT) return;
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  try {
+    await API.post('/devices/' + CURRENT.id + '/wifi-command', { action: action, params: params });
+    toast('Command sent \u2014 the router applies it in ~10-15s', 'ok');
+    setTimeout(function () { loadWireless(CURRENT.id); }, 12000);
+    setTimeout(function () { loadWireless(CURRENT.id); }, 20000);
+  } catch (e) {
+    toast(e.message || 'Command failed', 'err');
+  }
+}
+
+function netHide(i) {
+  const n = WNETS[i]; if (!n) return;
+  const toHidden = !n.hidden;
+  let msg = (toHidden ? 'Hide' : 'Show') + ' "' + n.ssid + '" (' + n.band + ')?\n\nWiFi will briefly reload (~5-10s blip for users).';
+  if (n.hidden && !toHidden) msg = 'Show the hidden network "' + n.ssid + '"?\n\nIf this is the node link, exposing it is usually harmless but unnecessary.';
+  postWifiCmd('set_hidden', { section: n.section, hidden: toHidden }, msg);
+}
+
+function netDel(i) {
+  const n = WNETS[i]; if (!n) return;
+  let msg = 'DELETE network "' + n.ssid + '" (' + n.band + ', ' + n.section + ')?\n\nThis removes it from the router. WiFi will reload.';
+  if (n.hidden) msg = '\u26A0\uFE0F WARNING: "' + n.ssid + '" is HIDDEN \u2014 likely the NODE (coin slot) link!\n\nDeleting it will take the coin slot OFFLINE until reconfigured.\n\nDelete anyway?';
+  postWifiCmd('del_iface', { section: n.section }, msg);
+}
+
+function toggleAddNet(show) {
+  document.getElementById('wifi-add-card').style.display = show ? 'block' : 'none';
+  document.getElementById('btn-add-net').style.display = show ? 'none' : 'block';
+  if (show) document.getElementById('add-ssid').focus();
+}
+
+function submitAddNet() {
+  const ssid = document.getElementById('add-ssid').value.trim();
+  const band = document.getElementById('add-band').value;
+  const hidden = document.getElementById('add-hidden').checked;
+  if (!/^[A-Za-z0-9 ._-]{1,32}$/.test(ssid)) { toast('Letters, numbers, space, dot, dash, underscore only (max 32)', 'err'); return; }
+  const section = 'sc_' + ssid.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
+  if (section.length < 4) { toast('Name too short', 'err'); return; }
+  toggleAddNet(false);
+  document.getElementById('add-ssid').value = '';
+  postWifiCmd('add_iface', { section: section, ssid: ssid, band: band, hidden: hidden },
+    'Add ' + (hidden ? 'HIDDEN ' : '') + 'network "' + ssid + '" (' + (band === 'both' ? '2.4G+5G' : band === 'radio0' ? '2.4G' : '5G') + ')?\n\nWiFi will briefly reload.');
+}
 
 /* ---------------- SSID (Phase 2) ---------------- */
 function ssidChanged() {

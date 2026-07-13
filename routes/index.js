@@ -73,6 +73,8 @@ router.post('/coin/session/resume-client', coinLimiter, coin.resumeSession);
 
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
+router.post('/enforcement/wifi-done', deviceAuth, enforcement.wifiDone);
+router.post('/enforcement/wifi-ack', deviceAuth, enforcement.wifiAck);
 
 // vouchers — specific routes BEFORE :id param
 router.post('/vouchers/generate', authenticate, authorize('admin'), voucher.generate);
@@ -87,6 +89,9 @@ router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteV
 router.get('/devices', authenticate, authorize('admin', 'technician', 'operator'), device.list);
 router.get('/devices/:id/clients', authenticate, authorize('admin', 'technician', 'operator'), device.clients);
 router.get('/devices/:id/wireless', authenticate, authorize('admin', 'technician', 'operator'), device.wireless);
+router.post('/devices/:id/wifi-command', authenticate, authorize('admin'), device.wifiCommand);
+router.get('/devices/:id/wifi-commands', authenticate, authorize('admin', 'technician', 'operator'), device.wifiCommands);
+router.post('/devices/:id/wifi-command', authenticate, authorize('admin'), device.postWifiCommand);
 router.post('/devices', authenticate, authorize('admin'), device.create);
 router.patch('/devices/:id', authenticate, authorize('admin', 'technician'), device.update);
 router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);

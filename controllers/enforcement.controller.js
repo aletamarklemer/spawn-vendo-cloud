@@ -64,6 +64,69 @@ async function updateSignal() {
   return _sig;
 }
 
+/* v27: PENDING WIFI COMMANDS cache — ONE query per 10s para sa tibuok fleet
+   (parehas sa updateSignal pattern; 800-scale-safe). Flat-serialized para
+   sayon i-parse sa BusyBox (walay nested JSON sa router side). */
+let _wifiCmd = { at: 0, map: {} };
+async function pendingWifiCommands() {
+  const now = Date.now();
+  if (now - _wifiCmd.at < 10 * 1000) return _wifiCmd.map;
+  try {
+    const { data } = await supabaseAdmin.from('wifi_commands')
+      .select('id, device_id, action, params')
+      .eq('status', 'pending').order('created_at', { ascending: true }).limit(200);
+    const map = {};
+    (data || []).forEach((c) => {
+      if (map[c.device_id]) return;  // usa ra ka command kada device kada round (FIFO)
+      const p = c.params || {};
+      let flat = '';
+      if (c.action === 'set_hidden') flat = `${c.id}~set_hidden~${p.section}~${p.hidden ? 1 : 0}`;
+      else if (c.action === 'add_iface') flat = `${c.id}~add_iface~${p.section}~${p.ssid}~${p.band}~${p.hidden ? 1 : 0}`;
+      else if (c.action === 'del_iface') flat = `${c.id}~del_iface~${p.section}`;
+      if (flat) map[c.device_id] = flat;
+    });
+    _wifiCmd = { at: now, map };
+  } catch (err) { _wifiCmd.at = now; }
+  return _wifiCmd.map;
+}
+function bustWifiCmdCache() { _wifiCmd.at = 0; }
+
+/** POST /api/enforcement/wifi-ack (device auth) body: { id, ok } — router confirms apply */
+const wifiAck = asyncHandler(async (req, res) => {
+  const { id, ok } = req.body || {};
+  if (!id) return fail(res, 'id required', 400);
+  await supabaseAdmin.from('wifi_commands')
+    .update({ status: ok === false ? 'failed' : 'done', done_at: new Date().toISOString() })
+    .eq('id', id).eq('status', 'pending');
+  bustWifiCmdCache();
+  return ok2(res);
+});
+function ok2(res) { return ok(res, { acked: true }); }
+
+/* v27: WiFi command delivery — SCALE-SAFE: usa ka global query kada 15s (ang set
+   sa device_ids nga naay pending), unya per-device fetch RA kung apil (rare). */
+let _wcCache = { at: 0, set: new Set() };
+async function pendingWifiDevices() {
+  if (Date.now() - _wcCache.at < 15 * 1000) return _wcCache.set;
+  try {
+    const { data } = await supabaseAdmin.from('wifi_commands').select('device_id').eq('status', 'pending');
+    _wcCache = { at: Date.now(), set: new Set((data || []).map((r) => r.device_id)) };
+  } catch (err) { _wcCache.at = Date.now(); }
+  return _wcCache.set;
+}
+
+/** POST /api/enforcement/wifi-done (device auth) — ang router mo-report human ma-apply */
+const wifiDone = asyncHandler(async (req, res) => {
+  const { id, ok } = req.body || {};
+  if (!id) return fail(res, 'id required', 400);
+  await supabaseAdmin.from('wifi_commands')
+    .update({ status: ok ? 'done' : 'failed', done_at: new Date().toISOString() })
+    .eq('id', id).eq('status', 'pending');
+  _wcCache.at = 0;  // invalidate cache para dali ma-clear
+  return ok2(res);
+});
+function ok2(res) { return res.json({ success: true }); }
+
 const allowedClients = asyncHandler(async (req, res) => {
   const { device_id, c, a, m, o, w } = req.query || {};
   liveness.markRouter(device_id);  // router health pulse (in-memory, scale-safe)
@@ -120,10 +183,31 @@ const allowedClients = asyncHandler(async (req, res) => {
     }
   });
 
+  // v27: pending WiFi command (flat fields para dali i-parse sa busybox sed)
+  let wcf = {};
+  if (device_id && (await pendingWifiDevices()).has(device_id)) {
+    const { data: cmd } = await supabaseAdmin.from('wifi_commands').select('*')
+      .eq('device_id', device_id).eq('status', 'pending')
+      .order('created_at', { ascending: true }).limit(1).maybeSingle();
+    if (cmd) {
+      const p = cmd.params || {};
+      wcf = {
+        wcid: cmd.id,
+        wca: cmd.action,
+        wcs: p.section || '',
+        wcv: p.ssid || '',
+        wch: p.hidden ? '1' : '0',
+        wcb: String(({ both: 2, radio0: 0, radio1: 1, '0': 0, '1': 1, '2': 2 })[String(p.band)] ?? 2),  // normalize: both/radio0/radio1 or 0/1/2 -> 0=2.4G, 1=5G, 2=both
+      };
+    }
+  }
+
   const sig = await updateSignal();
   return ok(res, {
     pv: sig.pv, sv: sig.sv,  // instant update signal (portal ver + scripts signature)
     ss: targetSsid,          // v25: target broadcast SSID (enforce syncs uci kung lahi)
+    ...wcf,                  // v27: pending wifi command (wcid/wca/wcs/wcv/wch/wcb) kung naa
+    wc: (await pendingWifiCommands())[device_id] || '',  // v27: pending wifi command (flat)
     macs: activeClients.map((c) => c.client_mac),   // only active MACs
     paused_macs: pausedClients.map((c) => c.client_mac), // paused MACs separate
     clients: [...activeClients, ...pausedClients],
@@ -133,4 +217,4 @@ const allowedClients = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { allowedClients };
+module.exports = { wifiDone, allowedClients , wifiAck };
