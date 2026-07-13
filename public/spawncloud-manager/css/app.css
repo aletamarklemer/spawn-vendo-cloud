@@ -294,3 +294,13 @@ input::placeholder { color: var(--txt-faint); }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---- WiFi networks visibility (Phase 2.5A) ---- */
+.net-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line, rgba(255,255,255,.06))}
+.net-row:last-child{border-bottom:none}
+.net-ssid{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text,#e6edf3)}
+.net-hint{font-size:11px;color:var(--muted,#8b949e);margin-top:2px}
+.net-chips{display:flex;gap:6px;flex-shrink:0}
+.chip{font-size:10px;letter-spacing:.4px;padding:3px 8px;border-radius:999px;background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25)}
+.chip-warn{background:rgba(251,191,36,.10);color:#fbbf24;border-color:rgba(251,191,36,.3)}
+.empty-note{font-size:12.5px;color:var(--muted,#8b949e);padding:8px 2px}

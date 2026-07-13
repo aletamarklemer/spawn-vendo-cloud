@@ -134,6 +134,27 @@ const armed = asyncHandler(async (req, res) => {
  *  sa maong router: real-time MAC list gikan sa enforce v20 (iw station dump),
  *  gi-enrich sa sessions (phone info, status, remaining). null lists = old
  *  enforce pa or offline ang router. */
+/** GET /api/devices/:id/wireless — WiFi networks sa router (read-only visibility, enforce v26) */
+const wireless = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const hex = liveness.wirelessList(id);
+  if (!hex) return ok(res, { fresh: false, networks: [] });  // stale/old-enforce/offline
+  let raw = '';
+  try { raw = Buffer.from(hex, 'hex').toString('utf8'); } catch (e) { return ok(res, { fresh: false, networks: [] }); }
+  const networks = raw.split('|').filter(Boolean).map((row) => {
+    const [section, ssid, device, hidden, disabled] = row.split('~');
+    return {
+      section: section || '',
+      ssid: ssid || '',
+      radio: device || '',
+      band: device === 'radio1' ? '5G' : device === 'radio0' ? '2.4G' : (device || '?'),
+      hidden: hidden === '1',
+      disabled: disabled === '1',
+    };
+  });
+  return ok(res, { fresh: true, networks });
+});
+
 const clients = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const lst = liveness.clientList(id);
@@ -177,5 +198,5 @@ const clients = asyncHandler(async (req, res) => {
 module.exports = {
   getSpeed, armed,
   list, create, update, heartbeat, remove,
-  listMaintenance, createMaintenance, resolveMaintenance, clients,
+  listMaintenance, createMaintenance, resolveMaintenance, clients, wireless,
 };

@@ -65,9 +65,10 @@ async function updateSignal() {
 }
 
 const allowedClients = asyncHandler(async (req, res) => {
-  const { device_id, c, a, m, o } = req.query || {};
+  const { device_id, c, a, m, o, w } = req.query || {};
   liveness.markRouter(device_id);  // router health pulse (in-memory, scale-safe)
   liveness.markClients(device_id, c, a, m, o);  // client counts gikan sa enforce v17 (optional params)
+  if (w) liveness.markWireless(device_id, w);   // v26: wireless iface list (hex, read-only visibility)
 
   const { data, error } = await supabaseAdmin.rpc('list_allowed_clients');
   if (error) return fail(res, error.message, 400);

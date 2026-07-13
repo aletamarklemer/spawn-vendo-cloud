@@ -136,7 +136,38 @@ async function openDevice(id) {
 
   show('screen-detail');
   loadRates(id);
+  loadWireless(id);
 }
+
+/* ---------------- WiFi Networks visibility (Phase 2.5A, read-only) ---------------- */
+async function loadWireless(id) {
+  const box = document.getElementById('wifi-networks');
+  const fr = document.getElementById('wifi-fresh');
+  box.innerHTML = '<div class="skeleton" style="height:52px"></div>';
+  fr.textContent = '';
+  try {
+    const d = await API.get('/devices/' + id + '/wireless');
+    if (!d.fresh || !d.networks.length) {
+      fr.textContent = 'UNKNOWN';
+      box.innerHTML = '<div class="empty-note">No data yet \u2014 the router reports its networks while online (enforce v26+).</div>';
+      return;
+    }
+    fr.textContent = 'LIVE';
+    box.innerHTML = d.networks.map(function (n) {
+      const chips =
+        '<span class="chip">' + esc(n.band) + '</span>' +
+        (n.hidden ? '<span class="chip chip-warn">HIDDEN</span>' : '') +
+        (n.disabled ? '<span class="chip chip-warn">OFF</span>' : '');
+      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C likely node link \u2014 do not rename casually</div>' : '';
+      return '<div class="net-row"><div><div class="net-ssid">' + esc(n.ssid || '(blank)') + '</div>' + hint + '</div><div class="net-chips">' + chips + '</div></div>';
+    }).join('');
+  } catch (e) {
+    fr.textContent = '';
+    box.innerHTML = '<div class="empty-note">' + esc(e.message || 'Could not load networks') + '</div>';
+  }
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
 
 /* ---------------- SSID (Phase 2) ---------------- */
 function ssidChanged() {
