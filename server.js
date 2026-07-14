@@ -113,6 +113,9 @@ setInterval(async () => {
   } catch (e) { /* ignore */ }
 }, 60 * 1000);
 
+// --- AUTO-PAUSE / AUTO-RESUME presence sweep (utils/autopause.js) ---
+require('./utils/autopause').start();
+
 app.listen(PORT, () => {
   console.log(`Spawn Vendo System running on http://localhost:${PORT}`);
 });
