@@ -257,8 +257,12 @@ const getSession = asyncHandler(async (req, res) => {
   const VMS = await getValidityMs();
   const validity_days = Math.round(VMS / 86400000);
   let pause_valid_until = null;
-  if (data.manual_paused_at && (data.status === 'active' || data.status === 'paused')) {
-    pause_valid_until = new Date(new Date(data.manual_paused_at).getTime() + VMS).toISOString();
+  // Basis = ang PINAKA-UNA sa manual_paused_at / auto_paused_at (ang sweep mo-expire
+  // kung BISAN ASA sa duha molapas sa validity, so earliest basis = tinuod nga deadline).
+  let vbasis = data.manual_paused_at || null;
+  if (data.auto_paused_at && (!vbasis || new Date(data.auto_paused_at) < new Date(vbasis))) vbasis = data.auto_paused_at;
+  if (vbasis && (data.status === 'active' || data.status === 'paused')) {
+    pause_valid_until = new Date(new Date(vbasis).getTime() + VMS).toISOString();
   }
 
   return ok(res, { session: data, remaining_seconds: remaining, pause_valid_until, validity_days });
