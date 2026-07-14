@@ -182,6 +182,22 @@
     <!-- USERS -->
     <section data-section="users" class="hidden">
       <div class="card">
+        <h3 style="margin-top:0">Add User</h3>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+          <div><label>Full name</label><input id="u_name" placeholder="e.g. Juan Dela Cruz"></div>
+          <div><label>Email</label><input id="u_email" type="email" placeholder="lineman@spawncloud.ph"></div>
+          <div><label>Password</label><input id="u_pass" type="password" placeholder="min. 8 characters"></div>
+          <div><label>Role</label>
+            <select id="u_role" style="width:100%;padding:8px;border-radius:8px">
+              <option value="technician">technician (lineman — field staff)</option>
+              <option value="operator">operator (view/monitor)</option>
+              <option value="admin">admin (full access)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="addUser()">Add user</button>
+      </div>
+      <div class="card">
         <table><thead><tr><th>User</th><th>Role</th><th>Password</th><th>Status</th><th></th></tr></thead><tbody id="usrTable"></tbody></table>
       </div>
     </section>
