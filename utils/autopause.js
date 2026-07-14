@@ -41,7 +41,9 @@ const FRESH_MS     = 8000;        // device report presko kung sulod sa 8s
 const BOOT_HOLD_MS = 60 * 1000;   // walay pause sulod sa unang 60s human sa boot
 const BOOT_AT      = Date.now();
 
-const norm = (m) => String(m || '').trim().toUpperCase().replace(/-/g, ':');
+// DB nag-store og 'MAC:XX:XX:...' prefix; ang vendos nag-report og plain 'XX:XX:...'.
+// I-strip ang prefix para mo-match ang presence (KRITIKAL — kung dili, ma-pause ang connected!).
+const norm = (m) => String(m || '').trim().toUpperCase().replace(/-/g, ':').replace(/^MAC:/, '');
 const absentSince = new Map();    // session_id -> unang nakita nga absent (ms)
 
 let _validityCache = { ms: null, at: 0 };
@@ -119,7 +121,7 @@ async function autoResume(s, now) {
 
 async function handleSession(s, ssidMap, now) {
   const mac = norm(s.client_mac);
-  if (!mac || mac.startsWith('MAC:TEST')) return;   // skip test rows
+  if (!mac || mac.startsWith('TEST')) return;   // skip test rows (prefix na-strip na)
   const members = groupMembers(s.device_id, ssidMap);
   if (!members.length) return;
   const { anyFresh, present } = presence(mac, members, now);
