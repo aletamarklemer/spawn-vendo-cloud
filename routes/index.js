@@ -89,9 +89,8 @@ router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteV
 router.get('/devices', authenticate, authorize('admin', 'technician', 'operator'), device.list);
 router.get('/devices/:id/clients', authenticate, authorize('admin', 'technician', 'operator'), device.clients);
 router.get('/devices/:id/wireless', authenticate, authorize('admin', 'technician', 'operator'), device.wireless);
-router.post('/devices/:id/wifi-command', authenticate, authorize('admin'), device.wifiCommand);
+router.post('/devices/:id/wifi-command', authenticate, authorize('admin', 'technician'), device.wifiCommand);
 router.get('/devices/:id/wifi-commands', authenticate, authorize('admin', 'technician', 'operator'), device.wifiCommands);
-router.post('/devices/:id/wifi-command', authenticate, authorize('admin'), device.postWifiCommand);
 router.post('/devices', authenticate, authorize('admin'), device.create);
 router.patch('/devices/:id', authenticate, authorize('admin', 'technician'), device.update);
 router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);
@@ -125,8 +124,8 @@ router.get('/admin/settings', authenticate, authorize('admin'), admin.getSetting
 router.put('/admin/settings', authenticate, authorize('admin'), admin.updateSettings);
 
 // pricing tiers
-router.get('/admin/pricing-tiers', authenticate, authorize('admin'), admin.getPricingTiers);
-router.put('/admin/pricing-tiers', authenticate, authorize('admin'), admin.savePricingTiers);
+router.get('/admin/pricing-tiers', authenticate, authorize('admin', 'technician'), admin.getPricingTiers);
+router.put('/admin/pricing-tiers', authenticate, authorize('admin', 'technician'), admin.savePricingTiers);
 
 // users
 router.get('/admin/users', authenticate, authorize('admin'), admin.listUsers);
