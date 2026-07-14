@@ -45,7 +45,9 @@ function markClients(id, c, a, m, o) {
   // Optional — old enforce walay m/o = empty arrays, counts ra gihapon.
   const macs = (m ? String(m).split(',') : []).map((x) => x.trim().toUpperCase()).filter(Boolean);
   const online = (o ? String(o).split(',') : []).map((x) => x.trim().toUpperCase()).filter(Boolean);
-  clientStats.set(id, { c: ci, a: Number.isNaN(ai) ? 0 : ai, macs, online, at: Date.now() });
+  // hm = ang enforce ni-report gyud og MAC list (v20+). Ang autopause sweep mo-salig
+  // RA sa devices nga hm=true — old enforce nga walay m= dili maka-false-pause.
+  clientStats.set(id, { c: ci, a: Number.isNaN(ai) ? 0 : ai, macs, online, hm: (m != null), at: Date.now() });
 }
 
 module.exports = {
@@ -67,6 +69,9 @@ module.exports = {
     if (!s || (Date.now() - s.at) > 60 * 1000) return null;  // stale = unknown
     return { macs: s.macs || [], online: s.online || [] };
   },
+  // rawStats: para sa autopause presence sweep (macs + at + hm, walay staleness filter —
+  // ang sweep mismo ang mo-judge sa freshness)
+  rawStats: (id) => clientStats.get(id) || null,
   markNode: (id) => mark(nodeSeen, 'node_last_seen', id),
   routerOnline: (id) => (Date.now() - (routerSeen.get(id) || 0)) < ROUTER_ONLINE_MS,
   nodeOnline: (id) => (Date.now() - (nodeSeen.get(id) || 0)) < NODE_ONLINE_MS,
