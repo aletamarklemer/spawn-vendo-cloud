@@ -8,10 +8,21 @@ function sinceISO(days) {
   return new Date(Date.now() - days * 86400000).toISOString();
 }
 
+// TIMEZONE FIX (Jul 14): ang Railway server = UTC, so ang setHours(0,0,0,0) =
+// UTC midnight = 8:00 AM Manila! Ang mga transaction sa buntag (12AM-8AM MNL)
+// dili maapil sa 'today' ug ang daily chart bars nabahin sa 8AM boundary.
+// Ang tanan 'today'/date-grouping kay Manila-aware na (UTC+8, walay DST sa PH).
+const MNL_OFF = 8 * 3600000;
+function manilaTodayStartISO() {
+  const t = new Date(Date.now() + MNL_OFF);
+  t.setUTCHours(0, 0, 0, 0);
+  return new Date(t.getTime() - MNL_OFF).toISOString();
+}
+function mnl(dt) { return new Date(new Date(dt).getTime() + MNL_OFF); }  // shifted: gamita ang getUTC* accessors
+
 /** GET /api/admin/stats */
 const stats = asyncHandler(async (req, res) => {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const isoToday = today.toISOString();
+  const isoToday = manilaTodayStartISO();  // Manila midnight (timezone fix)
 
   const [tx, devices, sessions] = await Promise.all([
     supabaseAdmin.from('coin_transactions').select('amount, created_at').gte('created_at', sinceISO(31)),
@@ -48,32 +59,32 @@ const revenueSeries = asyncHandler(async (req, res) => {
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   // Para sa weekly: i-group base sa Monday sa maong semana, dayon human-readable label
   const mondayOf = (dt) => {
-    const x = new Date(dt);
-    const day = (x.getDay() + 6) % 7; // Monday=0
-    x.setDate(x.getDate() - day);
-    x.setHours(0, 0, 0, 0);
+    const x = new Date(dt.getTime());
+    const day = (x.getUTCDay() + 6) % 7; // Monday=0 (Manila-shifted frame)
+    x.setUTCDate(x.getUTCDate() - day);
+    x.setUTCHours(0, 0, 0, 0);
     return x;
   };
   const bucket = {};      // key -> { value, sortKey, label }
   for (const r of data) {
-    const d = new Date(r.created_at);
+    const d = mnl(r.created_at);  // Manila-shifted (timezone fix)
     let key, label, sortKey;
     if (range === 'monthly') {
-      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      label = `${MON[d.getMonth()]} ${d.getFullYear()}`;       // "Jun 2026"
+      key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      label = `${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`;       // "Jun 2026"
       sortKey = key;
     } else if (range === 'weekly') {
       const mon = mondayOf(d);
-      const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+      const sun = new Date(mon); sun.setDate(sun.getUTCDate() + 6);
       key = mon.toISOString().slice(0, 10);
       // "Jun 16–22" o kung lahi ang bulan: "Jun 30 – Jul 6"
-      label = (mon.getMonth() === sun.getMonth())
-        ? `${MON[mon.getMonth()]} ${mon.getDate()}–${sun.getDate()}`
-        : `${MON[mon.getMonth()]} ${mon.getDate()} – ${MON[sun.getMonth()]} ${sun.getDate()}`;
+      label = (mon.getUTCMonth() === sun.getUTCMonth())
+        ? `${MON[mon.getUTCMonth()]} ${mon.getUTCDate()}–${sun.getUTCDate()}`
+        : `${MON[mon.getUTCMonth()]} ${mon.getUTCDate()} – ${MON[sun.getUTCMonth()]} ${sun.getUTCDate()}`;
       sortKey = key;
     } else {
       key = d.toISOString().slice(0, 10);
-      label = `${MON[d.getMonth()]} ${d.getDate()}`;            // "Jun 22"
+      label = `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`;            // "Jun 22"
       sortKey = key;
     }
     if (!bucket[key]) bucket[key] = { value: 0, sortKey, label };
@@ -102,7 +113,7 @@ const vendoIncome = asyncHandler(async (req, res) => {
 
   const now = Date.now();
   const DAY = 86400000;
-  const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+  const startToday = new Date(manilaTodayStartISO());  // Manila midnight (timezone fix)
   const weekAgo = now - 7 * DAY;
   const monthAgo = now - 30 * DAY;
 
