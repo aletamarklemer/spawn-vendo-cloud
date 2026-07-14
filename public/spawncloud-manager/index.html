@@ -58,6 +58,7 @@
       <div class="section-head">
         <h2>Vendos</h2>
         <span class="eyebrow" id="device-count"></span>
+        <button class="btn btn-sm" id="btn-wizard" onclick="openWizard()" style="display:none;margin-left:auto">+ New Vendo</button>
       </div>
       <div class="search">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -127,6 +128,117 @@
       <div class="action-bar">
         <button class="btn btn-primary btn-block" id="btn-save-rates" onclick="saveRates()">Save rates</button>
         <button class="btn btn-ghost btn-block btn-sm" style="margin-top:8px" onclick="resetToGlobal()">Reset to global default</button>
+      </div>
+    </section>
+
+
+    <!-- INSTALLER WIZARD (Phase 3, admin-only) -->
+    <section id="screen-wizard" class="screen">
+      <button class="back-link" onclick="closeWizard()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        All vendos
+      </button>
+      <div class="detail-head">
+        <h1>New Vendo Installer</h1>
+        <div class="detail-sub">Register &rarr; Deploy &rarr; Verify &rarr; Ship</div>
+      </div>
+      <div class="wiz-progress" id="wiz-progress">
+        <span class="wdot active">1</span><span class="wline"></span>
+        <span class="wdot">2</span><span class="wline"></span>
+        <span class="wdot">3</span><span class="wline"></span>
+        <span class="wdot">4</span><span class="wline"></span>
+        <span class="wdot">5</span>
+      </div>
+
+      <!-- STEP 1: Register -->
+      <div class="wiz-step" id="wiz-1">
+        <div class="section-head"><h2>1 &middot; Register device</h2></div>
+        <div class="card">
+          <div class="notice notice-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>Get the MAC from the NodeMCU Serial Monitor (first blank flash). For an <b>extender</b> (no coin slot), use the router LAN MAC.</span>
+          </div>
+          <div class="field" style="margin-bottom:8px"><label for="wiz-name">Device name</label>
+            <input type="text" id="wiz-name" placeholder="e.g. SpawnCloud3"></div>
+          <div class="field" style="margin-bottom:8px"><label for="wiz-mac">MAC address</label>
+            <input type="text" id="wiz-mac" class="input-mono" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17"></div>
+          <div class="field" style="margin-bottom:8px"><label for="wiz-loc">Location</label>
+            <input type="text" id="wiz-loc" placeholder="e.g. Saloyan Store"></div>
+          <div class="field" style="margin-bottom:8px"><label for="wiz-area">Area</label>
+            <input type="text" id="wiz-area" placeholder="e.g. Dipolog"></div>
+          <button class="btn btn-primary btn-block" id="wiz-reg-btn" onclick="wizRegister()">Register &amp; get DEVICE_ID</button>
+        </div>
+        <div class="card" id="wiz-did-card" style="display:none">
+          <div class="eyebrow">DEVICE_ID (unique for this vendo)</div>
+          <div class="wiz-did mono" id="wiz-did">&mdash;</div>
+          <button class="btn btn-ghost btn-block btn-sm" onclick="wizCopy('wiz-did')">Copy DEVICE_ID</button>
+        </div>
+        <div class="action-bar"><button class="btn btn-primary btn-block" id="wiz-next-1" onclick="wizStep(2)" disabled>Next: deploy commands</button></div>
+      </div>
+
+      <!-- STEP 2: Command card -->
+      <div class="wiz-step" id="wiz-2" style="display:none">
+        <div class="section-head"><h2>2 &middot; Deploy commands</h2></div>
+        <div class="card">
+          <div class="field" style="margin-bottom:8px"><label for="wiz-ssid">Broadcast WiFi name (SSID)</label>
+            <input type="text" id="wiz-ssid" class="input-mono" maxlength="32" placeholder="e.g. Spawn Hotspot" oninput="wizBuildCmds()"></div>
+          <div class="field" style="margin-bottom:0"><label for="wiz-lan">Router LAN IP</label>
+            <input type="text" id="wiz-lan" class="input-mono" value="10.0.0.1" oninput="wizBuildCmds()"></div>
+        </div>
+        <div class="notice notice-warn" style="margin:10px 0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <span>Prereqs on the new router: OpenWrt flashed + <b>WAN internet working</b> (needed by opkg). Fresh flash LAN is 192.168.1.1.</span>
+        </div>
+        <div class="card"><pre class="wiz-cmd mono" id="wiz-cmds"></pre>
+          <button class="btn btn-ghost btn-block btn-sm" onclick="wizCopy('wiz-cmds')">Copy commands</button></div>
+        <div class="action-bar"><button class="btn btn-primary btn-block" onclick="wizStep(3)">Deployed + rebooted &rarr; verify</button></div>
+      </div>
+
+      <!-- STEP 3: Live verify -->
+      <div class="wiz-step" id="wiz-3" style="display:none">
+        <div class="section-head"><h2>3 &middot; Live verification</h2></div>
+        <div class="card">
+          <div class="wiz-watch" id="wiz-router-watch"><span class="spin"></span> Waiting for the router&rsquo;s first poll&hellip;</div>
+          <div class="net-hint" style="margin-top:8px">After reboot the router polls the cloud every ~2-4s. This usually turns green within 1-3 minutes. Auto-checking every 8s.</div>
+        </div>
+        <div class="action-bar"><button class="btn btn-primary btn-block" id="wiz-next-3" onclick="wizStep(4)" disabled>Next: roam &amp; mode</button></div>
+      </div>
+
+      <!-- STEP 4: Roam + mode -->
+      <div class="wiz-step" id="wiz-4" style="display:none">
+        <div class="section-head"><h2>4 &middot; Roam group &amp; mode</h2></div>
+        <div class="card">
+          <div class="field" style="margin-bottom:8px"><label for="wiz-roam">Roam group (same value = shared sessions; blank = standalone)</label>
+            <input type="text" id="wiz-roam" class="input-mono" maxlength="32" placeholder="e.g. Spawn Hotspot"></div>
+          <button class="btn btn-ghost btn-block btn-sm" id="wiz-roam-btn" onclick="wizSetRoam()">Save roam group</button>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:8px">UNIT MODE</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm" style="flex:1" id="wiz-mode-vendo" onclick="wizSetMode(true)">&#129689; Vendo (coin slot)</button>
+            <button class="btn btn-ghost btn-sm" style="flex:1" id="wiz-mode-ext" onclick="wizSetMode(false)">&#128246; Extender</button>
+          </div>
+          <div class="net-hint" style="margin-top:8px" id="wiz-mode-note">Vendo = flash NodeMCU fw v4 (this DEVICE_ID + shared key) via USB.</div>
+        </div>
+        <div class="action-bar"><button class="btn btn-primary btn-block" onclick="wizStep(5)">Next: final checks</button></div>
+      </div>
+
+      <!-- STEP 5: Node + finish -->
+      <div class="wiz-step" id="wiz-5" style="display:none">
+        <div class="section-head"><h2>5 &middot; Final checks</h2></div>
+        <div class="card" id="wiz-node-card">
+          <div class="wiz-watch" id="wiz-node-watch"><span class="spin"></span> Waiting for NodeMCU heartbeat&hellip;</div>
+          <div class="net-hint" style="margin-top:8px">Flash fw v4 with this DEVICE_ID, power the node, and this turns green on its first heartbeat.</div>
+        </div>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom:8px">BEFORE SHIPPING</div>
+          <label class="wiz-check"><input type="checkbox"> Coin test: portal &rarr; Insert Coin &rarr; drop coin &rarr; online (only ONE device connected!)</label>
+          <label class="wiz-check"><input type="checkbox"> 2&times;P10 batch test = 1 DAY</label>
+          <label class="wiz-check"><input type="checkbox"> Power-cycle test: off &rarr; on &rarr; recovers alone</label>
+          <label class="wiz-check"><input type="checkbox"> Roam test (if in a group)</label>
+          <label class="wiz-check"><input type="checkbox"> Turn OFF the site modem&rsquo;s WiFi</label>
+        </div>
+        <div class="action-bar"><button class="btn btn-primary btn-block" onclick="wizFinish()">Done &mdash; ready to ship &#128640;</button></div>
       </div>
     </section>
 

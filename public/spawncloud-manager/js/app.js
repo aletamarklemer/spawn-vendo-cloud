@@ -61,6 +61,8 @@ function enterApp() {
   document.getElementById('app-frame').style.display = 'block';
   const u = Auth.user || {};
   document.getElementById('role-chip').textContent = u.role || 'staff';
+  var wb = document.getElementById('btn-wizard');
+  if (wb) wb.style.display = (u.role === 'admin') ? '' : 'none';
   loadDevices();
 }
 
@@ -372,3 +374,173 @@ document.addEventListener('keydown', (e) => {
 
 /* Resume session on refresh */
 if (Auth.token && Auth.user) { enterApp(); }
+
+/* ---------------- INSTALLER WIZARD (Phase 3, admin-only) ---------------- */
+let WIZ = { device: null, watchT: null, nodeT: null, hasNode: true };
+
+function openWizard() {
+  if ((Auth.user || {}).role !== 'admin') { toast('Admin only', 'err'); return; }
+  WIZ = { device: null, watchT: null, nodeT: null, hasNode: true };
+  ['wiz-name', 'wiz-mac', 'wiz-loc', 'wiz-area', 'wiz-ssid', 'wiz-roam'].forEach(function (id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('wiz-lan').value = '10.0.0.1';
+  document.getElementById('wiz-did-card').style.display = 'none';
+  document.getElementById('wiz-next-1').disabled = true;
+  document.getElementById('wiz-next-3').disabled = true;
+  document.getElementById('wiz-reg-btn').disabled = false;
+  document.getElementById('wiz-reg-btn').textContent = 'Register & get DEVICE_ID';
+  document.querySelectorAll('#screen-wizard .wiz-check input').forEach(function (c) { c.checked = false; });
+  wizStep(1);
+  show('screen-wizard');
+}
+
+function closeWizard() {
+  wizStopWatchers();
+  loadDevices();
+  showDevices();
+}
+
+function wizStopWatchers() {
+  if (WIZ.watchT) { clearInterval(WIZ.watchT); WIZ.watchT = null; }
+  if (WIZ.nodeT) { clearInterval(WIZ.nodeT); WIZ.nodeT = null; }
+}
+
+function wizStep(n) {
+  for (var i = 1; i <= 5; i++) {
+    var el = document.getElementById('wiz-' + i);
+    if (el) el.style.display = (i === n) ? '' : 'none';
+  }
+  var dots = document.querySelectorAll('#wiz-progress .wdot');
+  dots.forEach(function (d, i) { d.className = 'wdot' + (i < n ? ' active' : ''); });
+  if (n === 2) wizBuildCmds();
+  if (n === 3) wizStartRouterWatch();
+  if (n === 4 && WIZ.device && !document.getElementById('wiz-roam').value) {
+    document.getElementById('wiz-roam').value = document.getElementById('wiz-ssid').value.trim();
+  }
+  if (n === 5) wizStartNodeWatch();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function wizRegister() {
+  var name = document.getElementById('wiz-name').value.trim();
+  var mac = document.getElementById('wiz-mac').value.trim();
+  var loc = document.getElementById('wiz-loc').value.trim();
+  var area = document.getElementById('wiz-area').value.trim();
+  if (!name || !mac) { toast('Device name and MAC are required', 'err'); return; }
+  if (!/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(mac)) { toast('MAC format: AA:BB:CC:DD:EE:FF', 'err'); return; }
+  var btn = document.getElementById('wiz-reg-btn');
+  btn.disabled = true; btn.textContent = 'Registering\u2026';
+  try {
+    var r = await API.post('/devices', { device_name: name, mac_address: mac.toUpperCase(), location: loc, area: area });
+    WIZ.device = r.device;
+    document.getElementById('wiz-did').textContent = WIZ.device.id;
+    document.getElementById('wiz-did-card').style.display = '';
+    document.getElementById('wiz-next-1').disabled = false;
+    btn.textContent = 'Registered \u2713';
+    toast('Device registered!', 'ok');
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Register & get DEVICE_ID';
+    toast(e.message || 'Register failed', 'err');
+  }
+}
+
+function wizBuildCmds() {
+  if (!WIZ.device) return;
+  var ssid = document.getElementById('wiz-ssid').value.trim() || 'SpawnCloud';
+  var lan = document.getElementById('wiz-lan').value.trim() || '10.0.0.1';
+  var c = '# CMD (PC) - fresh flash LAN = 192.168.1.1\n' +
+    'scp -O spawn-golden-v27.tar.gz root@192.168.1.1:/tmp/spawn-golden.tar.gz\n' +
+    'scp -O deploy-vendo-v5.4.sh root@192.168.1.1:/tmp/deploy-vendo.sh\n' +
+    'ssh root@192.168.1.1\n\n' +
+    '# SSH (router)\n' +
+    'sh /tmp/deploy-vendo.sh\n\n' +
+    '# Deploy answers:\n' +
+    '#   DEVICE_ID : ' + WIZ.device.id + '\n' +
+    '#   LAN IP    : ' + lan + '\n' +
+    '#   SSID      : ' + ssid + '\n\n' +
+    'reboot';
+  document.getElementById('wiz-cmds').textContent = c;
+}
+
+function wizCopy(id) {
+  var t = document.getElementById(id).textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(function () { toast('Copied!', 'ok'); }, function () { toast('Copy failed', 'err'); });
+  } else { toast('Copy not available', 'err'); }
+}
+
+function wizStartRouterWatch() {
+  wizStopWatchers();
+  if (!WIZ.device) return;
+  var box = document.getElementById('wiz-router-watch');
+  box.innerHTML = '<span class="spin"></span> Waiting for the router\u2019s first poll\u2026';
+  var check = async function () {
+    try {
+      var r = await API.get('/devices');
+      var d = (r.devices || []).find(function (x) { return x.id === WIZ.device.id; });
+      if (d && d.router_online) {
+        box.innerHTML = '\u2705 <b>Router ONLINE!</b> Deploy verified \u2014 the vendo is polling the cloud.';
+        document.getElementById('wiz-next-3').disabled = false;
+        clearInterval(WIZ.watchT); WIZ.watchT = null;
+      }
+    } catch (e) { /* keep watching */ }
+  };
+  check();
+  WIZ.watchT = setInterval(check, 8000);
+}
+
+async function wizSetRoam() {
+  if (!WIZ.device) return;
+  var v = document.getElementById('wiz-roam').value.trim();
+  var btn = document.getElementById('wiz-roam-btn');
+  btn.disabled = true;
+  try {
+    await API.patch('/devices/' + WIZ.device.id, { ssid: v || null });
+    toast(v ? 'Roam group set: ' + v : 'Standalone (no roam group)', 'ok');
+  } catch (e) { toast(e.message || 'Save failed', 'err'); }
+  btn.disabled = false;
+}
+
+async function wizSetMode(hasNode) {
+  if (!WIZ.device) return;
+  try {
+    await API.patch('/devices/' + WIZ.device.id, { has_node: hasNode });
+    WIZ.hasNode = hasNode;
+    document.getElementById('wiz-mode-vendo').className = 'btn btn-sm' + (hasNode ? '' : ' btn-ghost');
+    document.getElementById('wiz-mode-ext').className = 'btn btn-sm' + (hasNode ? ' btn-ghost' : '');
+    document.getElementById('wiz-mode-note').textContent = hasNode
+      ? 'Vendo = flash NodeMCU fw v4 (this DEVICE_ID + shared key) via USB.'
+      : 'Extender = no NodeMCU, coverage only. Customers coin at another vendo in the group and roam here.';
+    toast(hasNode ? 'Mode: Vendo' : 'Mode: Extender', 'ok');
+  } catch (e) { toast(e.message || 'Save failed', 'err'); }
+}
+
+function wizStartNodeWatch() {
+  if (WIZ.nodeT) { clearInterval(WIZ.nodeT); WIZ.nodeT = null; }
+  var card = document.getElementById('wiz-node-card');
+  var box = document.getElementById('wiz-node-watch');
+  if (!WIZ.hasNode) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  if (!WIZ.device) return;
+  box.innerHTML = '<span class="spin"></span> Waiting for NodeMCU heartbeat\u2026';
+  var check = async function () {
+    try {
+      var r = await API.get('/devices');
+      var d = (r.devices || []).find(function (x) { return x.id === WIZ.device.id; });
+      if (d && d.node_online) {
+        box.innerHTML = '\u2705 <b>Node ONLINE!</b> Coin slot heartbeat received.';
+        clearInterval(WIZ.nodeT); WIZ.nodeT = null;
+      }
+    } catch (e) { /* keep watching */ }
+  };
+  check();
+  WIZ.nodeT = setInterval(check, 8000);
+}
+
+function wizFinish() {
+  wizStopWatchers();
+  toast('Vendo ready to ship! \uD83D\uDE80', 'ok');
+  loadDevices();
+  showDevices();
+}

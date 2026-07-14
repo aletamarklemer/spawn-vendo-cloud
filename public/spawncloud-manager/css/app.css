@@ -7,29 +7,29 @@
    ============================================================ */
 
 :root {
-  /* Canvas — deep infrastructure slate */
-  --bg:        #0d1117;
-  --surface:   #161b22;
-  --surface-2: #1c2230;
-  --raised:    #212938;
+  /* Canvas — clean white + blue */
+  --bg:        #f4f7fb;
+  --surface:   #ffffff;
+  --surface-2: #eef3fa;
+  --raised:    #ffffff;
 
   /* Lines & text */
-  --line:      #2a3140;
-  --line-soft: #222834;
-  --txt:       #e6edf3;
-  --txt-dim:   #9aa5b1;
-  --txt-faint: #6b7480;
+  --line:      #d4dEEA;
+  --line-soft: #e3ebf4;
+  --txt:       #0f2745;
+  --txt-dim:   #4a6180;
+  --txt-faint: #8091a6;
 
-  /* Signal cyan = "connected / live" — the brand's one bold color */
-  --signal:    #2dd4bf;
-  --signal-dim:#14b8a6;
-  --signal-glow: rgba(45, 212, 191, .15);
+  /* Signal blue = "connected / live" — the brand's one bold color */
+  --signal:    #1f6feb;
+  --signal-dim:#1a5fd0;
+  --signal-glow: rgba(31, 111, 235, .15);
 
   /* Status semantics */
-  --ok:    #3fb950;
-  --warn:  #d29922;
-  --down:  #f85149;
-  --info:  #58a6ff;
+  --ok:    #1a9d4a;
+  --warn:  #c88a00;
+  --down:  #e5484d;
+  --info:  #1f6feb;
 
   --radius:    14px;
   --radius-sm: 10px;
@@ -38,8 +38,8 @@
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
   --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --shadow: 0 8px 30px rgba(0,0,0,.4);
-  --shadow-sm: 0 2px 10px rgba(0,0,0,.3);
+  --shadow: 0 8px 30px rgba(31,111,235,.10);
+  --shadow-sm: 0 2px 10px rgba(15,39,69,.08);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -50,7 +50,7 @@ body {
   margin: 0;
   font-family: var(--sans);
   background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(45,212,191,.06), transparent 60%),
+    radial-gradient(1200px 600px at 100% -10%, rgba(31,111,235,.08), transparent 60%),
     var(--bg);
   color: var(--txt);
   -webkit-font-smoothing: antialiased;
@@ -82,7 +82,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
   margin: 0 -16px 8px;
-  background: rgba(13,17,23,.82);
+  background: rgba(255,255,255,.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line-soft);
 }
@@ -91,8 +91,8 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
   width: 30px; height: 30px; border-radius: 9px;
   background: linear-gradient(135deg, var(--signal), var(--signal-dim));
   display: grid; place-items: center;
-  font-family: var(--mono); font-weight: 800; font-size: 16px; color: #04201c;
-  box-shadow: 0 0 0 1px rgba(45,212,191,.3), 0 4px 14px var(--signal-glow);
+  font-family: var(--mono); font-weight: 800; font-size: 16px; color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(31,111,235,.25), 0 4px 14px var(--signal-glow);
 }
 .brand-name { font-weight: 680; font-size: 15.5px; letter-spacing: -.01em; }
 .brand-name small { display:block; font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--txt-faint); text-transform:uppercase; font-weight:500; }
@@ -132,7 +132,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
 .btn:active { transform: scale(.97); }
 .btn-primary {
   background: linear-gradient(135deg, var(--signal), var(--signal-dim));
-  color: #04201c; font-weight: 700;
+  color: #ffffff; font-weight: 700;
   box-shadow: 0 4px 18px var(--signal-glow);
 }
 .btn-primary:hover { filter: brightness(1.06); }
@@ -194,7 +194,7 @@ input::placeholder { color: var(--txt-faint); }
   text-transform: uppercase; padding: 3px 8px; border-radius: 6px;
   background: var(--surface-2); color: var(--txt-dim); border: 1px solid var(--line);
 }
-.device-tag.roam { color: var(--signal); border-color: rgba(45,212,191,.3); }
+.device-tag.roam { color: var(--signal); border-color: rgba(31,111,235,.3); }
 .device-chevron { color: var(--txt-faint); flex-shrink: 0; }
 
 /* ---------- Rates editor ---------- */
@@ -301,10 +301,26 @@ input::placeholder { color: var(--txt-faint); }
 .net-ssid{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text,#e6edf3)}
 .net-hint{font-size:11px;color:var(--muted,#8b949e);margin-top:2px}
 .net-chips{display:flex;gap:6px;flex-shrink:0}
-.chip{font-size:10px;letter-spacing:.4px;padding:3px 8px;border-radius:999px;background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25)}
+.chip{font-size:10px;letter-spacing:.4px;padding:3px 8px;border-radius:999px;background:rgba(31,111,235,.10);color:var(--signal);border:1px solid rgba(31,111,235,.25)}
 .chip-warn{background:rgba(251,191,36,.10);color:#fbbf24;border-color:rgba(251,191,36,.3)}
 .empty-note{font-size:12.5px;color:var(--muted,#8b949e);padding:8px 2px}
 
 .net-acts{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
-.btn-mini{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(45,212,191,.10);color:#2dd4bf;border:1px solid rgba(45,212,191,.25);cursor:pointer}
+.btn-mini{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(31,111,235,.10);color:var(--signal);border:1px solid rgba(31,111,235,.25);cursor:pointer}
 .btn-mini-danger{background:rgba(248,81,73,.08);color:#f85149;border-color:rgba(248,81,73,.3)}
+
+/* ---------------- Installer Wizard (Phase 3) ---------------- */
+.wiz-progress{display:flex;align-items:center;gap:6px;margin:14px 0 18px}
+.wdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;background:var(--card,#161b22);border:1px solid var(--line,#30363d);color:var(--muted,#8b949e)}
+.wdot.active{background:var(--accent,#2f81f7);border-color:var(--accent,#2f81f7);color:#fff}
+.wline{flex:1;height:2px;background:var(--line,#30363d)}
+.wiz-did{font-size:15px;font-weight:700;word-break:break-all;padding:10px 0;letter-spacing:.02em}
+.wiz-cmd{white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.55;margin:0 0 10px;
+  background:rgba(0,0,0,.25);border:1px solid var(--line,#30363d);border-radius:8px;padding:12px}
+.wiz-watch{display:flex;align-items:center;gap:10px;font-size:14px}
+.spin{width:14px;height:14px;border:2px solid var(--line,#30363d);border-top-color:var(--accent,#2f81f7);
+  border-radius:50%;animation:wspin .8s linear infinite;flex:none}
+@keyframes wspin{to{transform:rotate(360deg)}}
+.wiz-check{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;padding:7px 0;color:var(--fg,#e6edf3)}
+.wiz-check input{margin-top:2px;flex:none}

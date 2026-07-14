@@ -45,7 +45,9 @@ const update = asyncHandler(async (req, res) => {
   const body = req.body || {};
   let patch = {};
   if (req.user.role === 'technician') {
-    if (body.status) patch.status = body.status; // tech can only flip status
+    if (body.status) patch.status = body.status;
+    // lineman/technician nag-setup sa WiFi sa field - allow SSID rename (non-empty string ra)
+    if (typeof body.ssid === 'string' && body.ssid.trim()) patch.ssid = body.ssid.trim();
   } else {
     patch = body;
   }
