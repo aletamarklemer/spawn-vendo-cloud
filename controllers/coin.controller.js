@@ -306,6 +306,9 @@ const pauseSession = asyncHandler(async (req, res) => {
   if (req.body && req.body.manual === true && !data.manual_paused_at) {
     pauseUpdate.manual_paused_at = new Date().toISOString();
   }
+  // Manual pause = klaro nga MANUAL ang kasamtangang pause — clear ang auto marker
+  // para DILI kini i-auto-resume sa presence sweep (respeto sa intent sa customer).
+  if (req.body && req.body.manual === true) pauseUpdate.auto_paused_at = null;
 
   const { error: updateErr } = await supabaseAdmin
     .from('internet_sessions')
@@ -351,7 +354,7 @@ const resumeSession = asyncHandler(async (req, res) => {
   const newEndTime = new Date(Date.now() + remaining * 1000).toISOString();
   const { error: updateErr } = await supabaseAdmin
     .from('internet_sessions')
-    .update({ status: 'active', end_time: newEndTime, connect_requested: true })
+    .update({ status: 'active', end_time: newEndTime, connect_requested: true, auto_paused_at: null })
     .eq('id', data.id);
 
   if (updateErr) return fail(res, updateErr.message, 400);
