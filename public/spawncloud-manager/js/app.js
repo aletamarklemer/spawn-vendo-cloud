@@ -60,7 +60,7 @@ function enterApp() {
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('app-frame').style.display = 'block';
   const u = Auth.user || {};
-  document.getElementById('role-chip').textContent = u.role || 'staff';
+  document.getElementById('role-chip').textContent = (u.role === 'technician') ? 'lineman' : (u.role || 'staff');
   var wb = document.getElementById('btn-wizard');
   if (wb) wb.style.display = (u.role === 'admin') ? '' : 'none';
   loadDevices();

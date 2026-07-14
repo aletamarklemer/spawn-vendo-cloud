@@ -81,7 +81,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -.01em; }
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
-  margin: 0 -16px 8px;
+  margin: 0 0 8px;
   background: rgba(255,255,255,.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line-soft);
@@ -324,3 +324,17 @@ input::placeholder { color: var(--txt-faint); }
 @keyframes wspin{to{transform:rotate(360deg)}}
 .wiz-check{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;padding:7px 0;color:var(--fg,#e6edf3)}
 .wiz-check input{margin-top:2px;flex:none}
+/* ---------------- Phase 4: small-phone polish ---------------- */
+.rate-input-group input { min-width: 0; flex: 1; }
+@media (max-width: 340px) {
+  .brand-name { display: none; }  /* icon-only branding sa gagmay kaayo nga phone */
+}
+@media (max-width: 420px) {
+  .rate-row { grid-template-columns: 58px 1fr 64px; gap: 8px; }
+  .rate-coin { font-size: 14px; }
+  .rate-input-group { gap: 4px; }
+  .rate-input-group input { padding: 10px 4px; font-size: 14px; }
+  .rate-input-group select { padding: 0 4px; font-size: 12px; }
+  .stat-pill { font-size: 12px; }
+  .wiz-did { font-size: 13px; }
+}
