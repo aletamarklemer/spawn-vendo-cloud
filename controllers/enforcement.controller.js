@@ -217,4 +217,4 @@ const allowedClients = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { wifiDone, allowedClients , wifiAck };
+module.exports = { wifiDone, allowedClients , wifiAck, getDeviceSsidMap };
