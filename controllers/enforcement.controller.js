@@ -42,6 +42,57 @@ async function getDeviceSsidMap() {
   }
 }
 
+/* ============================================================
+   INSTANT AUTO-CONNECT (resume-pending list `rp`)
+   ------------------------------------------------------------
+   Para ma-INSTANT (2-3s) ang auto-connect sa reconnect, i-apil sa /allowed
+   response ang mga MAC nga AUTO-PAUSED-nga-eligible (rp). Ang enforce v33
+   mo-auth DAYON sa mao ra nga poll (walay 2nd round-trip) inig ka-associate
+   balik sa phone = internet nga walay portal sulod sa ~1-2s.
+
+   Eligible = status 'paused' + auto_paused_at set (AUTO ra, dili manual) +
+   remaining_seconds > 10 + sulod pa sa validity window (auto_paused_at + N days).
+   MANUAL pause = DILI apil (respeto sa intent — manual resume ra gihapon).
+
+   Cached 2s GLOBALLY (tanan groups) para dili per-poll-per-device ang DB hit —
+   scale-safe bisan 800+ vendos. Ang group filter kay JS-side (parehas sa roaming).
+   ============================================================ */
+let _rpValid = { ms: null, at: 0 };
+async function getResumeValidityMs() {
+  const now = Date.now();
+  if (_rpValid.ms !== null && (now - _rpValid.at) < 60000) return _rpValid.ms;
+  try {
+    const { data } = await supabaseAdmin
+      .from('settings').select('pause_validity_days')
+      .eq('is_active', true).order('updated_at', { ascending: false })
+      .limit(1).maybeSingle();
+    const days = (data && data.pause_validity_days) || 3;
+    _rpValid = { ms: days * 24 * 60 * 60 * 1000, at: now };
+  } catch (e) {
+    if (_rpValid.ms === null) _rpValid = { ms: 3 * 24 * 60 * 60 * 1000, at: now };
+  }
+  return _rpValid.ms;
+}
+
+let _rpCache = { at: 0, rows: [] };
+async function getResumePending() {
+  const now = Date.now();
+  if (now - _rpCache.at < 2000) return _rpCache.rows;   // 2s cache = fresh enough para instant
+  try {
+    const validMs = await getResumeValidityMs();
+    const cutoff = new Date(now - validMs).toISOString();
+    const { data } = await supabaseAdmin
+      .from('internet_sessions')
+      .select('client_mac, device_id, remaining_seconds, auto_paused_at')
+      .eq('status', 'paused')
+      .not('auto_paused_at', 'is', null)      // AUTO ra (manual = manual resume)
+      .gt('remaining_seconds', 10)            // naay pulos nga oras
+      .gte('auto_paused_at', cutoff);         // sulod pa sa validity
+    _rpCache = { at: now, rows: data || [] };
+  } catch (e) { _rpCache.at = now; }          // keep old rows on error (graceful)
+  return _rpCache.rows;
+}
+
 /* INSTANT UPDATE SIGNAL: cached portal version (pv) + scripts signature (sv).
    Gi-piggyback sa /allowed response (~30 bytes) para ang enforce v19 maka-detect
    ug bag-ong release sulod sa segundos (imbes maghulat sa cron). 60s cache =
@@ -202,6 +253,22 @@ const allowedClients = asyncHandler(async (req, res) => {
     }
   }
 
+  // INSTANT AUTO-CONNECT (v33): resume-pending MACs para sa requesting device/group.
+  // Auto-paused-nga-eligible ra (rp) — ang enforce mo-auth DAYON sa reconnect.
+  let rp = [];
+  try {
+    const rpRows = await getResumePending();
+    const rpMap = await getDeviceSsidMap();          // cached (60s) — walay extra DB hit
+    const grp = device_id ? rpMap[device_id] : null;
+    const inScope = (rid) => {
+      if (!device_id) return true;                   // walay device filter (dev/test)
+      if (grp) return rpMap[rid] === grp;            // roaming group
+      return rid === device_id;                      // walay group = exact device
+    };
+    rp = rpRows.filter((r) => inScope(r.device_id)).map((r) => norm(r.client_mac));
+    if (rp.length > 50) rp = rp.slice(0, 50);        // cap 50 (parse-safe sa router)
+  } catch (e) { rp = []; }
+
   const sig = await updateSignal();
   return ok(res, {
     pv: sig.pv, sv: sig.sv,  // instant update signal (portal ver + scripts signature)
@@ -210,6 +277,7 @@ const allowedClients = asyncHandler(async (req, res) => {
     wc: (await pendingWifiCommands())[device_id] || '',  // v27: pending wifi command (flat)
     macs: activeClients.map((c) => c.client_mac),   // only active MACs
     paused_macs: pausedClients.map((c) => c.client_mac), // paused MACs separate
+    rp,                      // v33: INSTANT AUTO-CONNECT resume-pending (auto-paused eligible)
     clients: [...activeClients, ...pausedClients],
     speeds,  // per-MAC voucher speed override
     count: activeClients.length,
@@ -217,4 +285,43 @@ const allowedClients = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { wifiDone, allowedClients , wifiAck, getDeviceSsidMap };
+/* POST /api/enforcement/resume (deviceAuth) body: { client_mac, device_id }
+   v33 INSTANT AUTO-CONNECT: gitawag sa spawn-enforce v33 sa MISMO nga gutlo nga
+   ni-associate balik ang phone ug gi-auth na nila LOCALLY. Kini mo-flip sa DB
+   (paused -> active) DAYON para (a) responsive ang admin dashboard, ug (b) ang
+   sunod nga poll mo-return na sa MAC isip 'active' (dili na sa rp).
+   AUTO ra ang i-resume (auto_paused_at set) — respeto sa manual pause.
+   Race-guarded (.eq status paused); idempotent kung na-flip na sa sweep. */
+const resumeClient = asyncHandler(async (req, res) => {
+  const { client_mac } = req.body || {};
+  if (!client_mac) return fail(res, 'client_mac required', 400);
+  // Router nag-send og bare lowercase mac (aa:bb..); ang DB nag-store og 'MAC:AA:BB..'.
+  const bare = String(client_mac).trim().toUpperCase().replace(/-/g, ':').replace(/^MAC:/, '');
+  const stored = 'MAC:' + bare;
+
+  const { data, error } = await supabaseAdmin
+    .from('internet_sessions')
+    .select('id, remaining_seconds, auto_paused_at, first_paused_at')
+    .eq('client_mac', stored).eq('status', 'paused')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (error) return fail(res, error.message, 400);
+  if (!data) return ok(res, { resumed: false, reason: 'no-paused' });
+  if (!data.auto_paused_at) return ok(res, { resumed: false, reason: 'manual' });  // manual = manual resume ra
+
+  const remaining = data.remaining_seconds || 0;
+  if (remaining <= 10) {
+    await supabaseAdmin.from('internet_sessions')
+      .update({ status: 'expired' }).eq('id', data.id).eq('status', 'paused');
+    return ok(res, { resumed: false, reason: 'expired' });
+  }
+  const newEnd = new Date(Date.now() + remaining * 1000).toISOString();
+  const { error: uErr } = await supabaseAdmin
+    .from('internet_sessions')
+    .update({ status: 'active', end_time: newEnd, connect_requested: true, auto_paused_at: null })
+    .eq('id', data.id).eq('status', 'paused');   // race guard (sweep/manual/topup)
+  if (uErr) return fail(res, uErr.message, 400);
+  console.log(`[auto-connect] ${stored} (${remaining}s restored, router-triggered)`);
+  return ok(res, { resumed: true, remaining_seconds: remaining });
+});
+
+module.exports = { wifiDone, allowedClients, wifiAck, resumeClient, getDeviceSsidMap };

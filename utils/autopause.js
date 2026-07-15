@@ -116,7 +116,7 @@ async function autoResume(s, now) {
   };
   const { error } = await supabaseAdmin.from('internet_sessions')
     .update(upd).eq('id', s.id).eq('status', 'paused');  // race guard
-  if (!error) console.log(`[autopause] RESUMED ${s.client_mac} (${remaining}s restored)`);
+  if (!error) console.log(`[auto-connect] ${s.client_mac} (${remaining}s restored, presence-sweep)`);
 }
 
 async function handleSession(s, ssidMap, now) {
