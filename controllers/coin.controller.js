@@ -283,7 +283,30 @@ const pauseSession = asyncHandler(async (req, res) => {
     .limit(1).maybeSingle();
 
   if (error) return fail(res, error.message, 400);
-  if (!data) return ok(res, { paused: false, message: 'No active session' });
+  if (!data) {
+    // v2 FIX (2026-07-16): kung ang session AUTO-PAUSED na (presence flap) pag-pindot
+    // sa manual pause, kaniadto mo-'No active session' ra ug WALAY nahitabo — ang
+    // auto_paused_at nagpabilin = naa sa rp = i-TRUST/auto-connect balik sa enforce
+    // = DILI gyud ma-cut ang customer. Karon: i-CONVERT ang paused session ngadto sa
+    // MANUAL pause (clear auto marker) para ma-block dayon ug manual resume na lang.
+    const { data: pdata, error: perr } = await supabaseAdmin
+      .from('internet_sessions')
+      .select('id, first_paused_at, manual_paused_at')
+      .eq('client_mac', client_mac)
+      .eq('status', 'paused')
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+    if (perr) return fail(res, perr.message, 400);
+    if (!pdata) return ok(res, { paused: false, message: 'No active session' });
+    const conv = { auto_paused_at: null };
+    if (!pdata.manual_paused_at) conv.manual_paused_at = new Date().toISOString();
+    if (!pdata.first_paused_at) conv.first_paused_at = new Date().toISOString();
+    const { error: cerr } = await supabaseAdmin
+      .from('internet_sessions').update(conv)
+      .eq('id', pdata.id).eq('status', 'paused');
+    if (cerr) return fail(res, cerr.message, 400);
+    return ok(res, { paused: true, converted: true, message: 'Auto-pause converted to manual pause' });
+  }
 
   // Calculate remaining seconds from end_time
   const remaining = Math.max(0, Math.floor((new Date(data.end_time) - Date.now()) / 1000));
@@ -307,12 +330,13 @@ const pauseSession = asyncHandler(async (req, res) => {
   const pauseUpdate = { status: 'paused', remaining_seconds: remaining, end_time: null };
   if (!data.first_paused_at) pauseUpdate.first_paused_at = new Date().toISOString();
   // Manual pause flag: set manual_paused_at kung wala pa
-  if (req.body && req.body.manual === true && !data.manual_paused_at) {
+  const isManual = !(req.body && req.body.manual === false);  // v2: endpoint call = manual intent by default
+  if (isManual && !data.manual_paused_at) {
     pauseUpdate.manual_paused_at = new Date().toISOString();
   }
   // Manual pause = klaro nga MANUAL ang kasamtangang pause — clear ang auto marker
   // para DILI kini i-auto-resume sa presence sweep (respeto sa intent sa customer).
-  if (req.body && req.body.manual === true) pauseUpdate.auto_paused_at = null;
+  if (isManual) pauseUpdate.auto_paused_at = null;
 
   const { error: updateErr } = await supabaseAdmin
     .from('internet_sessions')
