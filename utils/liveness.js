@@ -23,15 +23,17 @@ const DB_PERSIST_MS = 5 * 60 * 1000;
 const ROUTER_ONLINE_MS = 120 * 1000; // 60->120s: smooth ang per-device offline flicker
 const NODE_ONLINE_MS = 180 * 1000;   // 90->180s: NodeMCU (mas hinay nga poll) — mas dako nga window
 
-function mark(map, col, device_id) {
+function mark(map, col, device_id, extra) {
   if (!device_id) return;
   const now = Date.now();
   map.set(device_id, now);
   const k = col + ':' + device_id;
   if (now - (dbLast.get(k) || 0) < DB_PERSIST_MS) return;
   dbLast.set(k, now);
+  const upd = { [col]: new Date().toISOString() };
+  if (extra && typeof extra === 'object') Object.assign(upd, extra);  // v36: e.g. { enforce_version }
   supabaseAdmin.from('vendo_devices')
-    .update({ [col]: new Date().toISOString() })
+    .update(upd)
     .eq('id', device_id)
     .then(() => {}, () => {});
 }
@@ -55,7 +57,10 @@ function markClients(id, c, a, m, o) {
 }
 
 module.exports = {
-  markRouter: (id) => mark(routerSeen, 'router_last_seen', id),
+  // v36: ev = enforce script version (gikan sa &ev= sa poll) - persisted kada 5min
+  // sa vendo_devices.enforce_version para makita ang version sa TANAN vendo remotely.
+  markRouter: (id, ev) => mark(routerSeen, 'router_last_seen', id,
+    (ev != null && ev !== '') ? { enforce_version: String(ev).slice(0, 12) } : null),
   markClients,
   markWireless,
   wirelessList(id) {

@@ -179,8 +179,8 @@ const wifiDone = asyncHandler(async (req, res) => {
 function ok2(res) { return res.json({ success: true }); }
 
 const allowedClients = asyncHandler(async (req, res) => {
-  const { device_id, c, a, m, o, w } = req.query || {};
-  liveness.markRouter(device_id);  // router health pulse (in-memory, scale-safe)
+  const { device_id, c, a, m, o, w, ev } = req.query || {};
+  liveness.markRouter(device_id, ev);  // router health pulse + v36 enforce_version (in-memory, scale-safe)
   liveness.markClients(device_id, c, a, m, o);  // client counts gikan sa enforce v17 (optional params)
   if (w) liveness.markWireless(device_id, w);   // v26: wireless iface list (hex, read-only visibility)
 
