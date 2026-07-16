@@ -16,8 +16,12 @@ const wirelessMap = new Map(); // per-device raw hex sa wireless iface list (enf
 const dbLast = new Map();
 const DB_PERSIST_MS = 5 * 60 * 1000;
 
-const ROUTER_ONLINE_MS = 60 * 1000;  // enforce polls kada 1-2s -> 60s nga hilom = down
-const NODE_ONLINE_MS = 90 * 1000;    // NodeMCU armed poll -> 90s nga hilom = down
+// v2: gi-taas ang online window para dili mo-flicker offline sa mubo nga WAN poll gaps
+// (per-device cloud-reachability hiccups / ISP↔Railway intermittency). Ang enforce mag-poll
+// kada 1-2s, mao nga 120s nga hilom = ~60-120 ka na-miss nga poll = tinuod gyud nga down.
+// Trade-off: ang tinuod nga offline mo-pakita after ~2 min imbes 1 min (OK ra sa health UI).
+const ROUTER_ONLINE_MS = 120 * 1000; // 60->120s: smooth ang per-device offline flicker
+const NODE_ONLINE_MS = 180 * 1000;   // 90->180s: NodeMCU (mas hinay nga poll) — mas dako nga window
 
 function mark(map, col, device_id) {
   if (!device_id) return;
