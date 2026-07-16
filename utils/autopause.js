@@ -36,7 +36,7 @@ const { getDeviceSsidMap } = require('../controllers/enforcement.controller');
 
 const ENABLED      = process.env.AUTOPAUSE_ENABLED !== '0';
 const SWEEP_MS     = parseInt(process.env.AUTOPAUSE_SWEEP_MS || '1500', 10);
-const GRACE_MS     = parseInt(process.env.AUTOPAUSE_GRACE_MS || '2500', 10);
+const GRACE_MS     = parseInt(process.env.AUTOPAUSE_GRACE_MS || '8000', 10);  // v2: 2500->8000 - ang mugbo nga band-hop/power-save blips sa phone dili na mo-flap og pause/resume; tinuod nga paglakaw ma-detect gihapon sulod 8s
 const FRESH_MS     = 8000;        // device report presko kung sulod sa 8s
 const BOOT_HOLD_MS = 60 * 1000;   // walay pause sulod sa unang 60s human sa boot
 const BOOT_AT      = Date.now();
