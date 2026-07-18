@@ -59,6 +59,8 @@ const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFrac
 const fmtDate = (s) => s ? new Date(s).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 function hms(sec) {
   sec = Math.max(0, Math.floor(sec));
-  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-  return [h, m, s].map((x) => String(x).padStart(2, '0')).join(':');
+  // v2: >24h = day display (match portal v25 / hmsAdm)
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const t = [h, m, s].map((x) => String(x).padStart(2, '0')).join(':');
+  return d > 0 ? d + (d > 1 ? ' days ' : ' day ') + t : t;
 }
