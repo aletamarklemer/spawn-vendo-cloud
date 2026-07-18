@@ -663,7 +663,7 @@ async function loadClientsList(devId) {
     labelTableCells();
   } catch (e) { /* transient — sunod refresh */ }
 }
-function hmsAdm(s) { s = Math.max(0, Math.floor(s)); const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), x = s%60; return [h,m,x].map(v => String(v).padStart(2,'0')).join(':'); }
+function hmsAdm(s) { s = Math.max(0, Math.floor(s)); const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), x = s%60; const t = [h,m,x].map(v => String(v).padStart(2,'0')).join(':'); return d > 0 ? d + (d > 1 ? ' days ' : ' day ') + t : t; }  // v2: >24h = day display (match portal v25)
 
 /* MOBILE: auto-add data-label sa kada <td> gikan sa header row (para sa card-style
    table sa phone). Idempotent, walay epekto sa desktop (CSS @media ra mogamit). */
