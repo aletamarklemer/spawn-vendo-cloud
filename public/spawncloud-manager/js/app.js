@@ -64,6 +64,8 @@ function enterApp() {
   var wb = document.getElementById('btn-wizard');
   if (wb) wb.style.display = (u.role === 'admin') ? '' : 'none';
   loadDevices();
+  // Operators (collectors) land straight on the Collections dashboard.
+  if (u.role === 'operator') openCollect();
 }
 
 /* ---------------- devices ---------------- */
@@ -549,4 +551,147 @@ function wizFinish() {
   toast('Vendo ready to ship! \uD83D\uDE80', 'ok');
   loadDevices();
   showDevices();
+}
+
+/* ---------------- COLLECTIONS (operator / collector) ---------------- */
+let COLLECT = [];
+
+function peso(n) { return '\u20B1' + Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 }); }
+
+function openCollect() {
+  const back = document.getElementById('collect-back');
+  if (back) back.style.display = ((Auth.user || {}).role === 'operator') ? 'none' : '';
+  collectTab('vendos');
+  show('screen-collect');
+  loadCollectSummary();
+}
+
+function refreshCollect() {
+  const onHistory = document.getElementById('collect-history-view').style.display !== 'none';
+  if (onHistory) loadCollectHistory(); else loadCollectSummary();
+}
+
+function collectTab(which) {
+  const vView = document.getElementById('collect-vendos-view');
+  const hView = document.getElementById('collect-history-view');
+  const vBtn = document.getElementById('ctab-vendos');
+  const hBtn = document.getElementById('ctab-history');
+  const on = 'btn btn-sm', off = 'btn btn-ghost btn-sm';
+  if (which === 'history') {
+    vView.style.display = 'none'; hView.style.display = '';
+    vBtn.className = off; hBtn.className = on;
+    loadCollectHistory();
+  } else {
+    vView.style.display = ''; hView.style.display = 'none';
+    vBtn.className = on; hBtn.className = off;
+  }
+}
+
+async function loadCollectSummary() {
+  const list = document.getElementById('collect-list');
+  list.innerHTML = '<div class="skeleton" style="height:64px"></div><div class="skeleton" style="height:64px"></div>';
+  try {
+    const { vendos, totals } = await API.get('/collections/summary');
+    COLLECT = vendos || [];
+    document.getElementById('collect-grand').textContent = peso(totals ? totals.uncollected : 0);
+    document.getElementById('collect-grand-sub').textContent =
+      (totals ? totals.count : 0) + ' coin drops \u00B7 ' + (totals ? totals.vendos : 0) + ' vendos';
+    renderCollect(COLLECT);
+  } catch (e) {
+    list.innerHTML = emptyState('Could not load collections', e.message);
+  }
+}
+
+function filterCollect() {
+  const q = document.getElementById('collect-search').value.trim().toLowerCase();
+  if (!q) return renderCollect(COLLECT);
+  renderCollect(COLLECT.filter((v) =>
+    [v.device_name, v.location, v.area].filter(Boolean).some((s) => String(s).toLowerCase().includes(q))));
+}
+
+function renderCollect(items) {
+  const list = document.getElementById('collect-list');
+  if (!items.length) { list.innerHTML = emptyState('No vendos', 'Nothing to collect yet.'); return; }
+  list.innerHTML = items.map((v) => {
+    const st = v.router_online ? 'online' : (v.status === 'offline' ? 'offline' : 'unknown');
+    const loc = [v.location, v.area].filter(Boolean).join(' \u00B7 ') || 'No location';
+    const last = v.last_collected_at
+      ? 'Last: ' + peso(v.last_collected_amount) + ' \u00B7 ' + timeAgo(v.last_collected_at)
+      : 'Never collected';
+    const has = v.uncollected > 0;
+    return (
+      '<div class="device" style="align-items:center">' +
+        '<span class="device-status ' + st + '"></span>' +
+        '<div class="device-body">' +
+          '<div class="device-name">' + esc(v.device_name || 'Unnamed') + '</div>' +
+          '<div class="device-meta">' + esc(loc) + '</div>' +
+          '<div class="device-meta" style="opacity:.7">' + esc(last) + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">' +
+          '<div class="mono" style="font-size:18px;font-weight:800;' + (has ? '' : 'opacity:.45') + '">' + peso(v.uncollected) + '</div>' +
+          '<button class="btn btn-sm" ' + (has ? '' : 'disabled ') +
+            'onclick="markCollected(\'' + v.device_id + '\')">Collect</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+async function markCollected(deviceId) {
+  const v = COLLECT.find((x) => x.device_id === deviceId);
+  if (!v) return;
+  if (!(v.uncollected > 0)) { toast('Nothing to collect', 'err'); return; }
+  if (!confirm('Collect ' + peso(v.uncollected) + ' from "' + (v.device_name || 'this vendo') +
+    '"?\n\nThis records the cash under your name and resets this vendo\u2019s counter to \u20B10. The coins inside the box should match this amount.')) return;
+  try {
+    const { collection } = await API.post('/collections', { device_id: deviceId });
+    toast('Collected ' + peso(collection ? collection.amount : v.uncollected) + ' from ' + (v.device_name || 'vendo'), 'ok');
+    loadCollectSummary();
+  } catch (e) {
+    toast(e.message || 'Could not record collection', 'err');
+  }
+}
+
+async function loadCollectHistory() {
+  const box = document.getElementById('collect-history-list');
+  box.innerHTML = '<div class="skeleton" style="height:56px"></div><div class="skeleton" style="height:56px"></div>';
+  try {
+    const { collections } = await API.get('/collections/history');
+    if (!collections || !collections.length) {
+      box.innerHTML = emptyState('No collections yet', 'Recorded collections will appear here.');
+      return;
+    }
+    box.innerHTML = collections.map((c) => {
+      const name = (c.vendo_devices && c.vendo_devices.device_name) || 'Unknown vendo';
+      const who = (c.profiles && (c.profiles.full_name || c.profiles.email)) || 'Unknown';
+      return (
+        '<div class="device" style="align-items:center">' +
+          '<div class="device-body">' +
+            '<div class="device-name">' + esc(name) + '</div>' +
+            '<div class="device-meta">' + esc(who) + ' \u00B7 ' + esc(fmtDateTime(c.collected_at)) + '</div>' +
+            '<div class="device-meta" style="opacity:.7">' + (c.txn_count || 0) + ' coin drops</div>' +
+          '</div>' +
+          '<div class="mono" style="font-size:18px;font-weight:800">' + peso(c.amount) + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  } catch (e) {
+    box.innerHTML = emptyState('Could not load history', e.message);
+  }
+}
+
+/* small date helpers (client-side) */
+function timeAgo(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  const m = s / 60; if (m < 60) return Math.floor(m) + 'm ago';
+  const h = m / 60; if (h < 24) return Math.floor(h) + 'h ago';
+  const d = h / 24; if (d < 7) return Math.floor(d) + 'd ago';
+  return fmtDate(iso);
+}
+function fmtDate(iso) {
+  try { return new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }); } catch (e) { return ''; }
+}
+function fmtDateTime(iso) {
+  try { return new Date(iso).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
 }

@@ -12,6 +12,7 @@ const admin = require('../controllers/admin.controller');
 const enforcement = require('../controllers/enforcement.controller');
 const portal = require('../controllers/portal.controller');
 const script = require('../controllers/script.controller');
+const collection = require('../controllers/collection.controller');
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 
@@ -73,7 +74,6 @@ router.post('/coin/session/resume-client', coinLimiter, coin.resumeSession);
 
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
-router.post('/enforcement/resume', deviceAuth, enforcement.resumeClient); // v33 instant auto-connect
 router.post('/enforcement/wifi-done', deviceAuth, enforcement.wifiDone);
 router.post('/enforcement/wifi-ack', deviceAuth, enforcement.wifiAck);
 
@@ -98,6 +98,11 @@ router.delete('/devices/:id', authenticate, authorize('admin'), device.remove);
 router.post('/devices/heartbeat', deviceAuth, device.heartbeat);
 router.get('/devices/speed', deviceAuth, device.getSpeed);
 router.get('/devices/armed', deviceAuth, device.armed);
+
+// collections (operator/collector cash tracking) — view + collect + history, TANAN vendo
+router.get('/collections/summary', authenticate, authorize('admin', 'technician', 'operator'), collection.summary);
+router.get('/collections/history', authenticate, authorize('admin', 'technician', 'operator'), collection.history);
+router.post('/collections',        authenticate, authorize('admin', 'technician', 'operator'), collection.create);
 
 // maintenance
 router.get('/maintenance', authenticate, authorize('admin', 'technician'), device.listMaintenance);

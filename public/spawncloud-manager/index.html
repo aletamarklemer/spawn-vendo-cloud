@@ -58,7 +58,8 @@
       <div class="section-head">
         <h2>Vendos</h2>
         <span class="eyebrow" id="device-count"></span>
-        <button class="btn btn-ghost btn-sm" onclick="loadDevices()" title="Refresh" style="margin-left:auto">&#10227; Refresh</button>
+        <button class="btn btn-sm" id="btn-collect" onclick="openCollect()" style="margin-left:auto">&#128176; Collections</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadDevices()" title="Refresh">&#10227; Refresh</button>
         <button class="btn btn-sm" id="btn-wizard" onclick="openWizard()" style="display:none">+ New Vendo</button>
       </div>
       <div class="search">
@@ -129,6 +130,44 @@
       <div class="action-bar">
         <button class="btn btn-primary btn-block" id="btn-save-rates" onclick="saveRates()">Save rates</button>
         <button class="btn btn-ghost btn-block btn-sm" style="margin-top:8px" onclick="resetToGlobal()">Reset to global default</button>
+      </div>
+    </section>
+
+    <!-- COLLECTIONS (operator / collector) -->
+    <section id="screen-collect" class="screen">
+      <button class="back-link" id="collect-back" onclick="showDevices()" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        All vendos
+      </button>
+      <div class="detail-head">
+        <h1>Collections</h1>
+        <div class="detail-sub">Cash to collect per vendo &middot; mark collected &middot; history</div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div class="eyebrow">UNCOLLECTED &mdash; ALL VENDOS</div>
+          <div class="mono" id="collect-grand" style="font-size:28px;font-weight:800;margin-top:2px">&#8369;0</div>
+          <div class="detail-sub" id="collect-grand-sub"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="refreshCollect()" title="Refresh">&#10227;</button>
+      </div>
+
+      <div style="display:flex;gap:8px;margin:12px 0">
+        <button class="btn btn-sm" id="ctab-vendos" style="flex:1" onclick="collectTab('vendos')">To collect</button>
+        <button class="btn btn-ghost btn-sm" id="ctab-history" style="flex:1" onclick="collectTab('history')">History</button>
+      </div>
+
+      <div id="collect-vendos-view">
+        <div class="search">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="collect-search" placeholder="Search vendo, location&hellip;" oninput="filterCollect()">
+        </div>
+        <div id="collect-list"></div>
+      </div>
+
+      <div id="collect-history-view" style="display:none">
+        <div id="collect-history-list"></div>
       </div>
     </section>
 
