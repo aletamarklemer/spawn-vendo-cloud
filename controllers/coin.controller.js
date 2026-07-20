@@ -2,6 +2,10 @@
 /** controllers/coin.controller.js — coin insert, session status, expiry */
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler } = require('../utils/helpers');
+// 800-SCALE cache busts: para instant gihapon ang epekto sa customer bisan
+// naka-cache ang router-poll (allowed) ug node-poll (armed) responses.
+const { bustAllowedCache } = require('./enforcement.controller');
+const { bustArmedCache } = require('./device.controller');
 
 // Fetch pause validity in milliseconds from settings (default 3 days)
 // CACHED para dili mag-DB-query kada tawag (portal nag-poll matag 1.5-3s).
@@ -106,6 +110,8 @@ const insertCoin = asyncHandler(async (req, res) => {
   }
   // Successful coin insert = dili abuse. Reset ang counter.
   if (client_mac) await resetAbuseCounter(client_mac);
+  bustAllowedCache();               // bag-ong session/oras → ipakita dayon sa router
+  if (device_id) bustArmedCache(device_id);  // arm state nausab (consumed)
   return ok(res, { session: data });
 });
 
@@ -167,6 +173,7 @@ const armDevice = asyncHandler(async (req, res) => {
     p_device_info: device_info || null,
   });
   if (error) return fail(res, error.message, 400);
+  bustArmedCache(device_id);  // instant: ang node makakita sa arm sa sunod poll
   return ok(res, { arm: data });
 });
 
@@ -182,6 +189,7 @@ const disarmDevice = asyncHandler(async (req, res) => {
     p_client_mac: client_mac || null,
   });
   if (error) return fail(res, error.message, 400);
+  bustArmedCache(device_id);  // instant disarm sa node
   return ok(res, { disarmed: true });
 });
 
@@ -305,6 +313,7 @@ const pauseSession = asyncHandler(async (req, res) => {
       .from('internet_sessions').update(conv)
       .eq('id', pdata.id).eq('status', 'paused');
     if (cerr) return fail(res, cerr.message, 400);
+    bustAllowedCache();  // manual-pause conversion → i-cut dayon sa router
     return ok(res, { paused: true, converted: true, message: 'Auto-pause converted to manual pause' });
   }
 
@@ -344,6 +353,7 @@ const pauseSession = asyncHandler(async (req, res) => {
     .eq('id', data.id);
 
   if (updateErr) return fail(res, updateErr.message, 400);
+  bustAllowedCache();  // pause → i-cut dayon sa router (bulletproof cut path)
   return ok(res, { paused: true, remaining_seconds: remaining });
 });
 
@@ -386,6 +396,7 @@ const resumeSession = asyncHandler(async (req, res) => {
     .eq('id', data.id);
 
   if (updateErr) return fail(res, updateErr.message, 400);
+  bustAllowedCache();  // resume → i-online dayon sa router
   return ok(res, { resumed: true, remaining_seconds: remaining });
 });
 
@@ -433,6 +444,7 @@ const portalInsert = asyncHandler(async (req, res) => {
   if (data && data.end_time) {
     remaining = Math.max(0, Math.floor((new Date(data.end_time) - Date.now()) / 1000));
   }
+  bustAllowedCache();  // bag-ong credits → ipakita dayon sa router
   return ok(res, { session: data, remaining_seconds: remaining });
 });
 
@@ -458,6 +470,7 @@ const requestConnect = asyncHandler(async (req, res) => {
     p_client_mac: client_mac,
   });
   if (error) return fail(res, error.message, 400);
+  bustAllowedCache();  // Connect Now → i-authorize dayon sa router
   return ok(res, { session: data, connect_requested: true });
 });
 

@@ -126,15 +126,26 @@ const getSpeed = asyncHandler(async (req, res) => {
  *  armed, non-expired client sa device. Kung true → i-enable ang coin
  *  slot. Kung false → i-reject/iluwa ang coin (walay client naghulat).
  */
+/* 800-SCALE CACHE: ang NodeMCU nag-poll ug armed kada ~1-2s; sa 800 ka node
+   = gatosan ka RPC/s. Per-device 2s cache + bust sa arm/disarm/coin = ang
+   pag-tap sa "Insert Coin" instant gihapon (bust = fresh dayon), pero ang
+   steady-state nga polling halos libre na. Bounded ang Map sa fleet size. */
+const _armedCache = new Map();  // device_id -> { at, val }
+function bustArmedCache(device_id) { if (device_id) _armedCache.delete(device_id); }
+
 const armed = asyncHandler(async (req, res) => {
   const { device_id } = req.query || {};
   if (!device_id) return fail(res, 'device_id required', 400);
-  liveness.markNode(device_id);  // node health pulse (in-memory, scale-safe)
+  liveness.markNode(device_id);  // node health pulse (in-memory, scale-safe) — KADA tawag gihapon
+  const hit = _armedCache.get(device_id);
+  if (hit && (Date.now() - hit.at) < 2000) return ok(res, { armed: hit.val });
   const { data, error } = await supabaseAdmin.rpc('is_device_armed', {
     p_device_id: device_id,
   });
   if (error) return fail(res, error.message, 400);
-  return ok(res, { armed: data === true });
+  const val = data === true;
+  _armedCache.set(device_id, { at: Date.now(), val });
+  return ok(res, { armed: val });
 });
 
 /** GET /api/devices/:id/clients (admin/tech/oper) — KINSA ANG NAKA-ONLINE karon
@@ -283,7 +294,7 @@ const clients = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  getSpeed, armed,
+  getSpeed, armed, bustArmedCache,
   list, create, update, heartbeat, remove,
   listMaintenance, createMaintenance, resolveMaintenance, clients, wireless, wifiCommand, wifiCommands, postWifiCommand,
 };

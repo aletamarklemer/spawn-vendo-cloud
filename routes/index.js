@@ -74,6 +74,7 @@ router.post('/coin/session/resume-client', coinLimiter, coin.resumeSession);
 
 // enforcement
 router.get('/enforcement/allowed', deviceAuth, enforcement.allowedClients);
+router.post('/enforcement/resume', deviceAuth, enforcement.resumeClient); // v33 instant auto-connect
 router.post('/enforcement/wifi-done', deviceAuth, enforcement.wifiDone);
 router.post('/enforcement/wifi-ack', deviceAuth, enforcement.wifiAck);
 

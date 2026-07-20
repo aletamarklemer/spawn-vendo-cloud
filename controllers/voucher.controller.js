@@ -3,6 +3,7 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler, genVoucherCode } = require('../utils/helpers');
 const audit = require('../services/audit.service');
+const { bustAllowedCache } = require('./enforcement.controller');  // instant propagation sa redeem
 
 /** POST /api/vouchers/generate */
 const generate = asyncHandler(async (req, res) => {
@@ -43,6 +44,7 @@ const redeem = asyncHandler(async (req, res) => {
     const [m, s] = map[error.message] || [error.message, 400];
     return fail(res, m, s);
   }
+  bustAllowedCache();  // bag-ong voucher session → i-online dayon sa router
   return ok(res, { session: data });
 });
 

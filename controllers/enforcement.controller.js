@@ -178,16 +178,38 @@ const wifiDone = asyncHandler(async (req, res) => {
 });
 function ok2(res) { return res.json({ success: true }); }
 
+/* 800-SCALE CACHE: ang list_allowed_clients RPC kay GLOBAL man ang resulta
+   (gi-filter per-device dinhi sa Node), so USA ra ka execution kada 2s ang
+   kinahanglan para sa TIBUOK fleet — dili kada poll sa kada router. Sa 800 ka
+   vendo nga nag-poll kada ~3s: gikan ~270 RPC execution/s → 0.5/s (~500x gaan).
+   Ang RPC pod ang nag-expire sa sessions (UPDATE) — mo-dagan gihapon kada 2s.
+   INSTANT PROPAGATION: coin/pause/resume/connect/redeem mo-tawag ug
+   bustAllowedCache() para fresh dayon ang sunod nga poll — walay dugang
+   latency ang customer. (Samang 2s-global pattern sa rp cache sa taas.) */
+let _allowed = { at: 0, rows: null };
+async function getAllowedRows() {
+  const now = Date.now();
+  if (_allowed.rows !== null && (now - _allowed.at) < 2000) return _allowed.rows;
+  const { data, error } = await supabaseAdmin.rpc('list_allowed_clients');
+  if (error) {
+    // DB hiccup fail-safe: gamita ang luma nga cache (hangtod 15s) para dili
+    // ma-cut ang mga customer tungod sa usa ka lapsed query.
+    if (_allowed.rows !== null && (now - _allowed.at) < 15000) return _allowed.rows;
+    throw new Error(error.message);
+  }
+  _allowed = { at: now, rows: data || [] };
+  return _allowed.rows;
+}
+function bustAllowedCache() { _allowed.at = 0; _rpCache.at = 0; }
+
 const allowedClients = asyncHandler(async (req, res) => {
   const { device_id, c, a, m, o, w, ev } = req.query || {};
   liveness.markRouter(device_id, ev);  // router health pulse + v36 enforce_version (in-memory, scale-safe)
   liveness.markClients(device_id, c, a, m, o);  // client counts gikan sa enforce v17 (optional params)
   if (w) liveness.markWireless(device_id, w);   // v26: wireless iface list (hex, read-only visibility)
 
-  const { data, error } = await supabaseAdmin.rpc('list_allowed_clients');
-  if (error) return fail(res, error.message, 400);
-
-  let rows = data || [];
+  let rows;
+  try { rows = await getAllowedRows(); } catch (e) { return fail(res, e.message, 400); }
   let targetSsid = '';  // v25: ang device's DB ssid = target broadcast (SSID sync)
   if (device_id) {
     const ssidMap = await getDeviceSsidMap();
@@ -321,7 +343,8 @@ const resumeClient = asyncHandler(async (req, res) => {
     .eq('id', data.id).eq('status', 'paused');   // race guard (sweep/manual/topup)
   if (uErr) return fail(res, uErr.message, 400);
   console.log(`[auto-connect] ${stored} (${remaining}s restored, router-triggered)`);
+  bustAllowedCache();  // 800-scale cache: active na siya — ipakita dayon sa sunod poll
   return ok(res, { resumed: true, remaining_seconds: remaining });
 });
 
-module.exports = { wifiDone, allowedClients, wifiAck, resumeClient, getDeviceSsidMap };
+module.exports = { wifiDone, allowedClients, wifiAck, resumeClient, getDeviceSsidMap, bustAllowedCache };
