@@ -68,10 +68,10 @@ const revenueSeries = asyncHandler(async (req, res) => {
   if (error) return fail(res, error.message, 400);
 
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  // Para sa weekly: i-group base sa Monday sa maong semana, dayon human-readable label
+  // Para sa weekly: i-group base sa SUNDAY sa maong semana (Sun = first day of week), Sun-Sat label
   const mondayOf = (dt) => {
     const x = new Date(dt.getTime());
-    const day = (x.getUTCDay() + 6) % 7; // Monday=0 (Manila-shifted frame)
+    const day = x.getUTCDay(); // Sunday=0 (WEEK FIX: Sun = first day sa semana)
     x.setUTCDate(x.getUTCDate() - day);
     x.setUTCHours(0, 0, 0, 0);
     return x;
@@ -86,7 +86,7 @@ const revenueSeries = asyncHandler(async (req, res) => {
       sortKey = key;
     } else if (range === 'weekly') {
       const mon = mondayOf(d);
-      const sun = new Date(mon); sun.setDate(sun.getUTCDate() + 6);
+      const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);  // +6 = Saturday (last day)
       key = mon.toISOString().slice(0, 10);
       // "Jun 16–22" o kung lahi ang bulan: "Jun 30 – Jul 6"
       label = (mon.getUTCMonth() === sun.getUTCMonth())
