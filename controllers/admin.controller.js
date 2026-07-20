@@ -3,6 +3,7 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { ok, fail, asyncHandler, encryptSecret, decryptSecret } = require('../utils/helpers');
 const audit = require('../services/audit.service');
+const liveness = require('../utils/liveness');
 
 function sinceISO(days) {
   return new Date(Date.now() - days * 86400000).toISOString();
@@ -46,10 +47,11 @@ const stats = asyncHandler(async (req, res) => {
   const inDay  = txs.filter((r) => r.created_at >= isoToday);
   const inWeek = txs.filter((r) => r.created_at >= manilaWeekStartISO());  // Sun-Sat calendar week (MNL)
 
-  const now = Date.now();
-  const online = (devices.data || []).filter(
-    (d) => d.last_online && (now - new Date(d.last_online).getTime()) <= 5 * 60 * 1000
-  ).length;
+  // ONLINE FIX (Jul 20): gamita ang SAMA nga basehan sa Devices tab — router
+  // liveness (in-memory, poll kada 1-3s). Kaniadto last_online (NodeMCU
+  // heartbeat, 5-min window) ang gigamit: ang extender (walay node) dili gyud
+  // ma-ihap ug ang node heartbeat lag = "1/4" bisan 3 ka vendo ang buhi.
+  const online = (devices.data || []).filter((d) => liveness.routerOnline(d.id)).length;
 
   return ok(res, {
     revenue: { today: sum(inDay), week: sum(inWeek), month: sum(txs) },
