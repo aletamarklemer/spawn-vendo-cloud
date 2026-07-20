@@ -417,7 +417,7 @@ const getPublicPricing = asyncHandler(async (req, res) => {
 /** GET /api/admin/audit */
 const auditLogs = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('audit_logs')
-    .select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(200);
+    .select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(500);
   if (error) return fail(res, error.message, 400);
   return ok(res, { logs: data });
 });

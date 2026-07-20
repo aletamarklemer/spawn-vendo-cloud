@@ -594,13 +594,30 @@ async function saveTiers() {
 }
 
 /* ---------- Audit ---------- */
+let ALL_AUDIT = [];
 async function loadAudit() {
   const { logs } = await API.get('/admin/audit');
+  ALL_AUDIT = logs || [];
+  const s = document.getElementById('aud-search');
+  renderAudit((s && s.value.trim()) ? filteredAudit(s.value) : ALL_AUDIT);
+}
+function renderAudit(logs) {
   document.getElementById('audTable').innerHTML = logs.map(l => `
     <tr><td>${fmtDate(l.created_at)}</td><td><b>${l.action}</b></td>
     <td>${l.profiles?.full_name || l.profiles?.email || '—'}</td>
     <td><small style="color:var(--muted)">${l.details ? JSON.stringify(l.details) : ''}</small></td></tr>`).join('')
     || '<tr><td colspan="4" style="color:var(--muted)">No logs.</td></tr>';
+}
+function filteredAudit(q) {
+  const s = String(q || '').trim().toLowerCase();
+  if (!s) return ALL_AUDIT;
+  return ALL_AUDIT.filter(l => [
+    l.action, l.profiles?.full_name, l.profiles?.email,
+    l.details ? JSON.stringify(l.details) : ''
+  ].filter(Boolean).join(' ').toLowerCase().includes(s));
+}
+function filterAudit() {
+  renderAudit(filteredAudit(document.getElementById('aud-search').value));
 }
 async function deleteAllAudit() {
   if (!confirm('Delete ALL audit logs? This cannot be undone!')) return;

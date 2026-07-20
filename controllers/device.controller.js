@@ -56,6 +56,9 @@ const update = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('vendo_devices')
     .update(patch).eq('id', id).select().single();
   if (error) return fail(res, error.message, 400);
+  // Audit EVERY device change (SSID rename, roam group, mode, speed, status…)
+  // para ma-track sa admin kinsa nag-usab, unsa, ug asa nga vendo.
+  await audit.log('device.update', req.user.sub, { device_id: id, device_name: data?.device_name, changes: patch });
   return ok(res, { device: data });
 });
 
@@ -224,6 +227,8 @@ const wifiCommand = asyncHandler(async (req, res) => {
     .insert({ device_id: id, action, params: p, created_by: req.user.sub || null })
     .select().single();
   if (error) return fail(res, error.message, 400);
+  // Audit WiFi network changes (add/hide/show/delete) done from the Manager app.
+  await audit.log('device.wifi_command', req.user.sub, { device_id: id, action, params: p });
   return ok(res, { command: data });
 });
 
