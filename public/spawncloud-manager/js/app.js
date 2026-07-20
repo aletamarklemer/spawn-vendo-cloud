@@ -462,7 +462,10 @@ function wizBuildCmds() {
     '#   DEVICE_ID : ' + WIZ.device.id + '\n' +
     '#   LAN IP    : ' + lan + '\n' +
     '#   SSID      : ' + ssid + '\n' +
-    'reboot';
+    'reboot\n\n' +
+    '# ===== 4. MTU 1492 (kung luyo sa PPPoE router) - ssh root@10.0.0.1 =====\n' +
+    'uci set network.@device[4].mtu=\'1492\'; uci commit network; ip link set dev wan mtu 1492\n' +
+    'ip link show wan | grep -o "mtu [0-9]*"     # dapat: mtu 1492';
   document.getElementById('wiz-cmds').textContent = c;
 }
 
