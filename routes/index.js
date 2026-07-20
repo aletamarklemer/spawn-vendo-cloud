@@ -136,6 +136,7 @@ router.put('/admin/pricing-tiers', authenticate, authorize('admin', 'technician'
 // users
 router.get('/admin/users', authenticate, authorize('admin'), admin.listUsers);
 router.patch('/admin/users/:id/active', authenticate, authorize('admin'), admin.setUserActive);
+router.patch('/admin/users/:id/role', authenticate, authorize('admin'), admin.setUserRole);
 router.patch('/admin/users/:id/password', authenticate, authorize('admin'), admin.updateUserPassword);
 router.get('/admin/users/:id/password', authenticate, authorize('admin'), admin.getUserPassword);
 router.delete('/admin/users/:id', authenticate, authorize('admin'), admin.deleteUser);

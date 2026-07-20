@@ -320,6 +320,45 @@ const setUserActive = asyncHandler(async (req, res) => {
   return ok(res, { user: data });
 });
 
+/** PATCH /api/admin/users/:id/role — change a user's role (admin only).
+ *  SAFETY GUARDS (para dili ta ma-lockout):
+ *   - dili nimo mabag-o ang IMONG kaugalingong admin role (anti self-lockout)
+ *   - dili ma-demote ang KATAPUSANG active admin (mag-una nga naay lain admin) */
+const setUserRole = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const role = String(req.body?.role || '').toLowerCase();
+  const ALLOWED = ['admin', 'technician', 'operator'];
+  if (!ALLOWED.includes(role)) return fail(res, 'Invalid role (admin, technician, or operator)', 400);
+
+  if (id === req.user.sub && role !== 'admin')
+    return fail(res, 'You cannot change your own admin role', 400);
+
+  const { data: target, error: tErr } = await supabaseAdmin.from('profiles')
+    .select('id, role').eq('id', id).maybeSingle();
+  if (tErr) return fail(res, tErr.message, 400);
+  if (!target) return fail(res, 'User not found', 404);
+
+  if (target.role === role) {
+    // no-op: return current row (dili na mag-audit)
+    const { data } = await supabaseAdmin.from('profiles')
+      .select('id, full_name, email, role, is_active').eq('id', id).single();
+    return ok(res, { user: data });
+  }
+
+  // Ayaw i-demote ang katapusang active admin
+  if (target.role === 'admin' && role !== 'admin') {
+    const { count } = await supabaseAdmin.from('profiles')
+      .select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('is_active', true);
+    if ((count || 0) <= 1) return fail(res, 'Cannot demote the last active admin', 400);
+  }
+
+  const { data, error } = await supabaseAdmin.from('profiles')
+    .update({ role }).eq('id', id).select('id, full_name, email, role, is_active').single();
+  if (error) return fail(res, error.message, 400);
+  await audit.log('user.role_change', req.user.sub, { target_id: id, from: target.role, to: role });
+  return ok(res, { user: data });
+});
+
 /** DELETE /api/admin/users/:id */
 const deleteUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -397,6 +436,6 @@ module.exports = {
   listSessions, deleteSession, deleteExpiredSessions,
   getSettings, updateSettings, getPublicPricing,
   getPricingTiers, savePricingTiers,
-  listUsers, setUserActive, deleteUser, updateUserPassword, getUserPassword,
+  listUsers, setUserActive, setUserRole, deleteUser, updateUserPassword, getUserPassword,
   auditLogs, deleteAllAudit,
 };

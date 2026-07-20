@@ -421,7 +421,13 @@ async function loadUsers() {
   ALL_USERS = users;
   document.getElementById('usrTable').innerHTML = users.map(u => `
     <tr><td><b>${u.full_name || '—'}</b><br><small style="color:var(--muted)">${u.email}</small></td>
-    <td><span class="badge active">${u.role}</span></td>
+    <td>
+      <select onchange="changeUserRole('${u.id}', this.value, '${u.role}')" style="padding:6px 8px;border-radius:8px;background:var(--bg-2);font-size:12px">
+        <option value="admin"${u.role === 'admin' ? ' selected' : ''}>admin</option>
+        <option value="technician"${u.role === 'technician' ? ' selected' : ''}>technician (lineman)</option>
+        <option value="operator"${u.role === 'operator' ? ' selected' : ''}>operator (collector)</option>
+      </select>
+    </td>
     <td>
       <div style="display:flex;align-items:center;gap:8px">
         <input type="password" id="pw_show_${u.id}" value="••••••••" readonly style="width:120px;padding:6px 10px;font-size:12px;background:var(--bg-2)">
@@ -444,6 +450,12 @@ async function addUser() {
 }
 async function toggleUser(id, active) {
   try { await API.patch(`/admin/users/${id}/active`, { is_active: active }); loadUsers(); } catch (e) { toast(e.message, 'err'); }
+}
+async function changeUserRole(id, role, oldRole) {
+  if (role === oldRole) return;
+  if (!confirm('Change this user\'s role to "' + role + '"?\n\nThe change takes effect the next time they sign in.')) { loadUsers(); return; }
+  try { await API.patch('/admin/users/' + id + '/role', { role }); toast('Role updated to ' + role); loadUsers(); }
+  catch (e) { toast(e.message, 'err'); loadUsers(); }
 }
 async function delUser(id) {
   if (!confirm('Delete this user? This cannot be undone!')) return;
