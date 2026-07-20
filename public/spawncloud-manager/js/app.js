@@ -449,16 +449,19 @@ function wizBuildCmds() {
   if (!WIZ.device) return;
   var ssid = document.getElementById('wiz-ssid').value.trim() || 'SpawnCloud';
   var lan = document.getElementById('wiz-lan').value.trim() || '10.0.0.1';
-  var c = '# CMD (PC) - fresh flash LAN = 192.168.1.1\n' +
-    'scp -O spawn-golden-v27.tar.gz root@192.168.1.1:/tmp/spawn-golden.tar.gz\n' +
-    'scp -O deploy-vendo-v5.4.sh root@192.168.1.1:/tmp/deploy-vendo.sh\n' +
-    'ssh root@192.168.1.1\n\n' +
-    '# SSH (router)\n' +
-    'sh /tmp/deploy-vendo.sh\n\n' +
-    '# Deploy answers:\n' +
+  var c = '# ===== 1. WAN SETUP (SSH router, fresh LAN = 192.168.1.1) =====\n' +
+    '# Router-mode: WAN/LAN3 port -> LAN port sa PPPoE router (internet feed)\n' +
+    'uci set network.wan.proto=dhcp; uci commit network; /etc/init.d/network restart\n' +
+    'sleep 12; ping -c 3 8.8.8.8            # dapat 0% loss\n' +
+    'ping -c 5 -s 1464 8.8.8.8              # kung naay loss: MTU 1492 fix (tan-awa guide)\n\n' +
+    '# ===== 2. DEPLOY (CMD/PC) =====\n' +
+    'scp -O spawn-golden-v30.tar.gz root@192.168.1.1:/tmp/spawn-golden.tar.gz\n' +
+    'scp -O deploy-vendo-v5.4.sh root@192.168.1.1:/tmp/deploy-vendo.sh\n\n' +
+    '# ===== 3. RUN DEPLOY (SSH router) =====\n' +
+    'sh /tmp/deploy-vendo.sh\n' +
     '#   DEVICE_ID : ' + WIZ.device.id + '\n' +
     '#   LAN IP    : ' + lan + '\n' +
-    '#   SSID      : ' + ssid + '\n\n' +
+    '#   SSID      : ' + ssid + '\n' +
     'reboot';
   document.getElementById('wiz-cmds').textContent = c;
 }
@@ -510,7 +513,7 @@ async function wizSetMode(hasNode) {
     document.getElementById('wiz-mode-vendo').className = 'btn btn-sm' + (hasNode ? '' : ' btn-ghost');
     document.getElementById('wiz-mode-ext').className = 'btn btn-sm' + (hasNode ? ' btn-ghost' : '');
     document.getElementById('wiz-mode-note').textContent = hasNode
-      ? 'Vendo = flash NodeMCU fw v4 (this DEVICE_ID + shared key) via USB.'
+      ? 'Vendo = flash NodeMCU fw v5 (this DEVICE_ID + shared key) via USB.'
       : 'Extender = no NodeMCU, coverage only. Customers coin at another vendo in the group and roam here.';
     toast(hasNode ? 'Mode: Vendo' : 'Mode: Extender', 'ok');
   } catch (e) { toast(e.message || 'Save failed', 'err'); }
