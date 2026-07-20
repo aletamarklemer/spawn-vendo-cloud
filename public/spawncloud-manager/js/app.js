@@ -455,8 +455,8 @@ function wizBuildCmds() {
     'sleep 12; ping -c 3 8.8.8.8            # dapat 0% loss\n' +
     'ping -c 5 -s 1464 8.8.8.8              # kung naay loss: MTU 1492 fix (tan-awa guide)\n\n' +
     '# ===== 2. DEPLOY (CMD/PC) =====\n' +
-    'scp -O spawn-golden-v30.tar.gz root@192.168.1.1:/tmp/spawn-golden.tar.gz\n' +
-    'scp -O deploy-vendo-v5.4.sh root@192.168.1.1:/tmp/deploy-vendo.sh\n\n' +
+    'scp -O "C:\\Users\\acer\\Desktop\\Automate Multi Vendo Update\\spawn-golden-v30.tar.gz" root@192.168.1.1:/tmp/spawn-golden.tar.gz\n' +
+    'scp -O "C:\\Users\\acer\\Desktop\\Automate Multi Vendo Update\\deploy-vendo-v5.4.sh" root@192.168.1.1:/tmp/deploy-vendo.sh\n\n' +
     '# ===== 3. RUN DEPLOY (SSH router) =====\n' +
     'sh /tmp/deploy-vendo.sh\n' +
     '#   DEVICE_ID : ' + WIZ.device.id + '\n' +
