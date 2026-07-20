@@ -9,8 +9,9 @@ const OFFLINE_AFTER_MS = 5 * 60 * 1000; // 5 min without heartbeat => offline
 
 /** GET /api/devices  (admin, technician, operator-own) */
 const list = asyncHandler(async (req, res) => {
+  // admin, technician (lineman) ug operator (collector) makakita sa TANAN vendo
+  // (para ma-manage ang SSID/WiFi/rates bisan asa nga unit sa fleet).
   let q = supabaseAdmin.from('vendo_devices').select('*').order('device_name');
-  if (req.user.role === 'operator') q = q.eq('operator_id', req.user.sub);
   const { data, error } = await q;
   if (error) return fail(res, error.message, 400);
 
@@ -44,9 +45,10 @@ const update = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const body = req.body || {};
   let patch = {};
-  if (req.user.role === 'technician') {
+  if (req.user.role === 'technician' || req.user.role === 'operator') {
     if (body.status) patch.status = body.status;
-    // lineman/technician nag-setup sa WiFi sa field - allow SSID rename (non-empty string ra)
+    // lineman/technician + operator/collector nag-setup sa WiFi sa field -
+    // allow SSID rename (non-empty string ra); dili full-object patch (safe subset).
     if (typeof body.ssid === 'string' && body.ssid.trim()) patch.ssid = body.ssid.trim();
   } else {
     patch = body;

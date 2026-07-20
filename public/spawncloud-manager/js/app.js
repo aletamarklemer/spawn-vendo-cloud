@@ -560,7 +560,9 @@ function peso(n) { return '\u20B1' + Number(n || 0).toLocaleString('en-PH', { ma
 
 function openCollect() {
   const back = document.getElementById('collect-back');
-  if (back) back.style.display = ((Auth.user || {}).role === 'operator') ? 'none' : '';
+  // Show the back-to-Vendos link for everyone (operators/collectors now also
+  // manage SSID/WiFi/rates like the lineman, so they need the Vendos list).
+  if (back) back.style.display = '';
   collectTab('vendos');
   show('screen-collect');
   loadCollectSummary();
