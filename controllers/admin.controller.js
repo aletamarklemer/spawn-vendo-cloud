@@ -19,6 +19,17 @@ function manilaTodayStartISO() {
   return new Date(t.getTime() - MNL_OFF).toISOString();
 }
 function mnl(dt) { return new Date(new Date(dt).getTime() + MNL_OFF); }  // shifted: gamita ang getUTC* accessors
+// WEEK FIX (Jul 20): ang kwenta sa semana kay CALENDAR week — SUNDAY 00:00 Manila
+// hangtod Saturday (Sunday = first day, Saturday = last day). Kaniadto rolling 7-day
+// (sinceISO(7)) = mag-apil sa laing semana (e.g. Sunday buntag, mo-561 gikan sa niaging
+// Lunes-Sabado). Karon: gikan sa Sunday midnight (MNL) sa kasamtangang semana ra.
+function manilaWeekStartISO() {
+  const t = new Date(Date.now() + MNL_OFF);   // shift to Manila
+  const dow = t.getUTCDay();                  // 0=Sun ... 6=Sat (Manila day-of-week)
+  t.setUTCHours(0, 0, 0, 0);                  // Manila midnight today
+  t.setUTCDate(t.getUTCDate() - dow);         // balik sa Sunday sa maong semana
+  return new Date(t.getTime() - MNL_OFF).toISOString();  // balik sa UTC
+}
 
 /** GET /api/admin/stats */
 const stats = asyncHandler(async (req, res) => {
@@ -33,7 +44,7 @@ const stats = asyncHandler(async (req, res) => {
   const txs = tx.data || [];
   const sum = (arr) => arr.reduce((a, r) => a + Number(r.amount || 0), 0);
   const inDay  = txs.filter((r) => r.created_at >= isoToday);
-  const inWeek = txs.filter((r) => r.created_at >= sinceISO(7));
+  const inWeek = txs.filter((r) => r.created_at >= manilaWeekStartISO());  // Sun-Sat calendar week (MNL)
 
   const now = Date.now();
   const online = (devices.data || []).filter(
@@ -114,7 +125,7 @@ const vendoIncome = asyncHandler(async (req, res) => {
   const now = Date.now();
   const DAY = 86400000;
   const startToday = new Date(manilaTodayStartISO());  // Manila midnight (timezone fix)
-  const weekAgo = now - 7 * DAY;
+  const weekAgo = new Date(manilaWeekStartISO()).getTime();  // Sun-Sat calendar week (MNL)
   const monthAgo = now - 30 * DAY;
 
   // Group per vendo (device_id)
