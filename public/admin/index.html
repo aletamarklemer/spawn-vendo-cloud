@@ -97,7 +97,7 @@
       </div>
       <div class="card">
         <div class="tbl-actions">
-          <input class="search-bar" autocomplete="off" id="dev-search" placeholder="Search name, location, SSID, status…" oninput="filterDevices()" style="max-width:280px;margin-right:8px">
+          <input class="search-bar" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" id="dev-search" placeholder="Search name, location, SSID, status…" oninput="filterDevices()" style="max-width:280px;margin-right:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteAllDevices()">🗑 Delete All</button>
         </div>
         <table><thead><tr><th>Device</th><th>Location</th><th>Speed</th><th>Status</th><th>Last online</th><th></th></tr></thead><tbody id="devTable"></tbody></table>
@@ -124,7 +124,7 @@
       <div class="card">
         <h3 style="margin:0 0 12px">📋 Transaction History</h3>
         <div class="tbl-actions">
-          <input class="search-bar" autocomplete="off" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:240px;margin-right:8px">
+          <input class="search-bar" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:240px;margin-right:8px">
           <select id="tx-device-filter" onchange="filterTx()" style="max-width:180px"><option value="">All Vendo</option></select>
           <button class="btn btn-danger btn-sm" onclick="deleteDeviceTx()">🗑 Delete by Device</button>
           <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
@@ -137,7 +137,7 @@
     <section data-section="sessions" class="hidden">
       <div class="card">
         <div class="tbl-actions">
-          <input class="search-bar" autocomplete="off" id="sess-search" placeholder="Search MAC, phone, device…" oninput="filterSessions()" style="max-width:240px;margin-right:8px">
+          <input class="search-bar" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" id="sess-search" placeholder="Search MAC, phone, device…" oninput="filterSessions()" style="max-width:240px;margin-right:8px">
           <select id="sess-device-filter" onchange="filterSessions()" style="max-width:180px;margin-right:8px"><option value="">All Vendo</option></select>
           <button class="btn btn-danger btn-sm" onclick="deleteAllSessions()">🗑 Delete All Expired</button>
         </div>
@@ -249,7 +249,7 @@
     <section data-section="audit" class="hidden">
       <div class="card">
         <div class="tbl-actions">
-          <input class="search-bar" autocomplete="off" id="aud-search" placeholder="Search user, action, or details…" oninput="filterAudit()" style="max-width:300px;margin-right:8px">
+          <input class="search-bar" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" id="aud-search" placeholder="Search user, action, or details…" oninput="filterAudit()" style="max-width:300px;margin-right:8px">
           <button class="btn btn-danger btn-sm" onclick="deleteAllAudit()">🗑 Delete All Logs</button>
         </div>
         <table><thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead><tbody id="audTable"></tbody></table>
