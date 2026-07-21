@@ -619,11 +619,13 @@ function tierUnitOpts(sel) {
   return TIER_UNITS.map(([v, label]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${label}</option>`).join('');
 }
 function tierRowHtml(t) {
-  t = t || { amount: '', duration_value: '', duration_unit: 'minute' };
+  t = t || { amount: '', duration_value: '', duration_unit: 'minute', validity_days: '' };
+  const vd = (t.validity_days != null && t.validity_days !== '') ? t.validity_days : '';
   return `<tr>
     <td><input type="number" step="0.01" min="0" class="t-amt" value="${t.amount}" placeholder="₱" style="width:90px"></td>
     <td><input type="number" min="1" class="t-val" value="${t.duration_value}" placeholder="0" style="width:80px"></td>
     <td><select class="t-unit">${tierUnitOpts(t.duration_unit)}</select></td>
+    <td><input type="number" min="1" class="t-validity" value="${vd}" placeholder="global" title="Blank = use the global default validity" style="width:90px"></td>
     <td><button class="btn btn-danger btn-sm" type="button" onclick="this.closest('tr').remove();updateTierNote()">✕</button></td>
   </tr>`;
 }
@@ -671,6 +673,7 @@ async function saveTiers() {
     amount: tr.querySelector('.t-amt').value,
     duration_value: tr.querySelector('.t-val').value,
     duration_unit: tr.querySelector('.t-unit').value,
+    validity_days: tr.querySelector('.t-validity').value,   // blank = global default
   }));
   try {
     await API.put('/admin/pricing-tiers', { tiers: rows, device_id: devId });

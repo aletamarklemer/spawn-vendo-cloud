@@ -213,8 +213,8 @@
 
     <!-- SETTINGS -->
     <section data-section="settings" class="hidden">
-      <div class="card" style="max-width:560px"><h3 style="margin-top:0">Pricing Tiers</h3>
-        <p style="color:var(--muted);font-size:13px">Set a specific price → duration. Matching is <b>exact</b>: the inserted amount must equal a tier amount, or the coin is rejected.</p>
+      <div class="card" style="max-width:680px"><h3 style="margin-top:0">Pricing Tiers</h3>
+        <p style="color:var(--muted);font-size:13px">Set a specific price → duration. Matching is <b>exact</b>: the inserted amount must equal a tier amount, or the coin is rejected. <b>Validity</b> = how many days a <b>paused</b> session survives before expiring — blank = use the global default below.</p>
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">Rates for:</label>
         <select id="tierDevice" onchange="loadTiers()" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px">
           <option value="">🌐 Global Default (all vendos)</option>
@@ -225,6 +225,7 @@
             <th style="text-align:left">Price (₱)</th>
             <th style="text-align:left">Duration</th>
             <th style="text-align:left">Unit</th>
+            <th style="text-align:left">Validity (days)</th>
             <th></th>
           </tr></thead>
           <tbody id="tierRows"></tbody>

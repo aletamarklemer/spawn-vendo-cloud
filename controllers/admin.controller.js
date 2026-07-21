@@ -306,6 +306,15 @@ const savePricingTiers = asyncHandler(async (req, res) => {
   if (!incoming) return fail(res, 'tiers array required', 400);
   const device_id = req.body?.device_id || null;
 
+  // PRESERVE existing per-price validity kung ang client WALA nag-send sa
+  // validity_days (pananglitan ang Manager app rates editor) — para dili ma-
+  // clobber ang admin-set nga validity. Ang admin dashboard mo-send sa field.
+  let exQ = supabaseAdmin.from('pricing_tiers').select('amount, validity_days').eq('is_active', true);
+  exQ = device_id ? exQ.eq('device_id', device_id) : exQ.is('device_id', null);
+  const { data: existingTiers } = await exQ;
+  const prevValidity = {};
+  (existingTiers || []).forEach((t) => { prevValidity[Number(t.amount)] = t.validity_days; });
+
   const rows = [];
   const seenAmounts = new Set();
   for (let i = 0; i < incoming.length; i++) {
@@ -318,6 +327,15 @@ const savePricingTiers = asyncHandler(async (req, res) => {
     if (!UNIT_SECONDS[duration_unit]) return fail(res, `Row ${i + 1}: unit must be minute, hour, or day`, 400);
     if (seenAmounts.has(amount)) return fail(res, `Duplicate amount ₱${amount} — each amount must be unique`, 400);
     seenAmounts.add(amount);
+    // Per-price validity: kung gi-send sa client, gamita (blank/0 = NULL = global);
+    // kung WALA gi-send ang field, i-preserve ang existing (anti-clobber).
+    let validity_days;
+    if (Object.prototype.hasOwnProperty.call(t, 'validity_days')) {
+      validity_days = parseInt(t.validity_days, 10);
+      if (!validity_days || validity_days < 1) validity_days = null;
+    } else {
+      validity_days = (prevValidity[amount] != null) ? prevValidity[amount] : null;
+    }
     rows.push({
       amount,
       duration_value,
@@ -326,6 +344,7 @@ const savePricingTiers = asyncHandler(async (req, res) => {
       is_active: true,
       sort_order: i,
       device_id,
+      validity_days,
     });
   }
 
