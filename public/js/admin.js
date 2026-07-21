@@ -53,18 +53,33 @@ function nav(section) {
 /* ---------- Dashboard ---------- */
 async function loadDashboard() {
   try {
-    const s = await API.get('/admin/stats');
-    document.getElementById('rev-today').textContent = peso(s.revenue.today);
-    document.getElementById('rev-week').textContent = peso(s.revenue.week);
-    document.getElementById('rev-month').textContent = peso(s.revenue.month);
-    document.getElementById('active-sessions').textContent = s.active_sessions;
-    document.getElementById('dev-online').textContent = `${s.devices.online}/${s.devices.total}`;
-    document.getElementById('tx-today').textContent = s.transactions.today;
+    await refreshStatTiles();
     populateRevDevices();  // fill ang per-vendo dropdown kausa ra (guarded)
     // Draw revenue chart if not yet drawn (fresh load, nav back, or app reopen).
     // Guarded by !CHART so the 5s auto-refresh doesn't redraw/flicker every tick.
     if (!CHART && !CHART_DRAWING) drawRevenue(REV_RANGE);
   } catch(e) {}
+}
+
+// Stat tiles (Revenue today/week/month, Active Sessions, Transactions Today) =
+// per-selected-vendo kung naay gi-pili nga usa ka vendo; else TOTAL sa tanan.
+// Ang "Devices Online" GLOBAL gihapon (fleet metric).
+async function refreshStatTiles() {
+  const q = (REV_DEVICE && REV_DEVICE !== 'compare') ? '?device_id=' + encodeURIComponent(REV_DEVICE) : '';
+  const s = await API.get('/admin/stats' + q);
+  document.getElementById('rev-today').textContent = peso(s.revenue.today);
+  document.getElementById('rev-week').textContent = peso(s.revenue.week);
+  document.getElementById('rev-month').textContent = peso(s.revenue.month);
+  document.getElementById('active-sessions').textContent = s.active_sessions;
+  document.getElementById('dev-online').textContent = `${s.devices.online}/${s.devices.total}`;
+  document.getElementById('tx-today').textContent = s.transactions.today;
+  // Scope label — klaro kinsa nga vendo ang gipakita sa mga numbers sa taas
+  const sel = document.getElementById('rev-device');
+  let scope = 'All vendos';
+  if (sel && REV_DEVICE && REV_DEVICE !== 'compare' && sel.selectedIndex >= 0) scope = sel.options[sel.selectedIndex].text;
+  const scopeEl = document.getElementById('stat-scope');
+  if (scopeEl) scopeEl.textContent = scope;
+  return s;
 }
 
 // Fill ang per-vendo dropdown kausa ra (All / Compare / matag vendo).
@@ -87,6 +102,7 @@ async function populateRevDevices() {
 function onRevDeviceChange() {
   const sel = document.getElementById('rev-device');
   REV_DEVICE = sel ? sel.value : '';
+  refreshStatTiles().catch(() => {});   // i-update ang mga numbers sa taas para match sa gi-pili
   if (CHART) { CHART.destroy(); CHART = null; }
   drawRevenue(REV_RANGE);
 }

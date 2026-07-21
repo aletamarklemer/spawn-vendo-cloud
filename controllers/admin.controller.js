@@ -32,14 +32,24 @@ function manilaWeekStartISO() {
   return new Date(t.getTime() - MNL_OFF).toISOString();  // balik sa UTC
 }
 
-/** GET /api/admin/stats */
+/** GET /api/admin/stats?device_id=<uuid>
+ *  - walay device_id (o 'compare') = TOTAL sa tanang vendo (OLD BEHAVIOR)
+ *  - device_id=<uuid> = ang revenue/transactions/active-sessions kay anang vendo RA
+ *    (ang "Devices Online" GLOBAL gihapon — fleet metric man na, dili per-vendo). */
 const stats = asyncHandler(async (req, res) => {
   const isoToday = manilaTodayStartISO();  // Manila midnight (timezone fix)
+  const deviceId = req.query.device_id || '';
+  const oneVendo = deviceId && deviceId !== 'compare';  // filter sa usa ka vendo
+
+  let txQ = supabaseAdmin.from('coin_transactions').select('amount, created_at').gte('created_at', sinceISO(31));
+  if (oneVendo) txQ = txQ.eq('device_id', deviceId);
+  let sessQ = supabaseAdmin.from('internet_sessions').select('id, status').eq('status', 'active');
+  if (oneVendo) sessQ = sessQ.eq('device_id', deviceId);
 
   const [tx, devices, sessions] = await Promise.all([
-    supabaseAdmin.from('coin_transactions').select('amount, created_at').gte('created_at', sinceISO(31)),
-    supabaseAdmin.from('vendo_devices').select('id, status, last_online'),
-    supabaseAdmin.from('internet_sessions').select('id, status').eq('status', 'active'),
+    txQ,
+    supabaseAdmin.from('vendo_devices').select('id, status, last_online'),  // GLOBAL gihapon (fleet)
+    sessQ,
   ]);
 
   const txs = tx.data || [];
