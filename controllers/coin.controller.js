@@ -57,18 +57,25 @@ async function tierValiditySeconds(device_id, amount) {
   return null;
 }
 
-// I-snapshot ang validity (SECONDS) ngadto sa session human sa coin. Semantics:
-// "fresh coin = fresh validity", pero DILI paubson ang validity nga naa na sa
-// customer (GREATEST). Mag-store og NULL kung parehas ra sa global. Non-fatal.
+// I-snapshot ang validity (SECONDS) ngadto sa session human sa coin.
+// - newSec = validity sa gi-hulog nga tier (NULL = walay custom = global).
+// - Protektahan RA ang EXPLICIT nga existing validity (dili ang implicit global) —
+//   mao nga ang mubo nga tier validity (e.g. ₱1 = 20 min) mo-apply gyud bisan mas
+//   mubo pa sa global 3 days. Sa top-up, ang GREATEST (dili paubson ang existing).
+// - NULL nga tier = ibilin ang existing (o NULL = global). Non-fatal.
+// BUGFIX 2026-07-21: kaniadto gi-default ang curSec ngadto sa global, mao nga ang
+// tanang validity nga mas mubo sa global (₱1/₱5/₱10) na-overwrite balik sa 3 days.
 async function snapshotSessionValidity(session, device_id, amount) {
   try {
     if (!session || !session.id) return;
-    const gSec = Math.max(60, Math.round((await getValidityMs()) / 1000));  // global sa seconds
-    const newSec = (await tierValiditySeconds(device_id, amount)) || gSec;
-    const curSec = session.validity_seconds || (session.validity_days ? session.validity_days * 86400 : gSec);
-    const eff = Math.max(newSec, curSec);
-    const store = eff > gSec ? eff : null;   // null = mo-track sa global default
-    if (store !== (session.validity_seconds == null ? null : session.validity_seconds)) {
+    const newSec = await tierValiditySeconds(device_id, amount);  // null = walay custom
+    const curSec = (session.validity_seconds != null) ? Number(session.validity_seconds)
+                 : (session.validity_days != null ? Number(session.validity_days) * 86400 : null);  // EXPLICIT ra
+    let store;
+    if (newSec == null) store = curSec;             // tier walay custom → ibilin existing (o global)
+    else if (curSec == null) store = newSec;        // fresh → gamita ang tier validity (bisan mubo)
+    else store = Math.max(newSec, curSec);          // top-up → ayaw paubson ang existing
+    if (store !== (session.validity_seconds == null ? null : Number(session.validity_seconds))) {
       await supabaseAdmin.from('internet_sessions').update({ validity_seconds: store }).eq('id', session.id);
     }
     session.validity_seconds = store;
