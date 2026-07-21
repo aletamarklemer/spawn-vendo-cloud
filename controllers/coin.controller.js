@@ -152,7 +152,12 @@ const insertCoin = asyncHandler(async (req, res) => {
   }
   // Successful coin insert = dili abuse. Reset ang counter.
   if (client_mac) await resetAbuseCounter(client_mac);
-  if (client_mac) await snapshotSessionValidity(data, device_id, amount);  // per-price validity
+  // Per-price validity snapshot para sa BEGGING paths: portal (client_mac) UG
+  // NodeMCU coin slot (walay client_mac — ang returned `data` mao ang armed
+  // client nga session, naay id + validity_seconds). BUGFIX 2026-07-21: kaniadto
+  // gi-guard sa `if (client_mac)` mao nga ang tinuod nga coin gikan sa coin slot
+  // wala ma-set ang validity = 3-day default gihapon.
+  if (data && data.id) await snapshotSessionValidity(data, device_id, amount);
   bustAllowedCache();               // bag-ong session/oras → ipakita dayon sa router
   if (device_id) bustArmedCache(device_id);  // arm state nausab (consumed)
   return ok(res, { session: data });
