@@ -138,9 +138,14 @@ async function handleSession(s, ssidMap, now) {
 
   // status === 'paused'
   absentSince.delete(s.id);
-  const VMS = await getValidityMs();
-  const manualDead = s.manual_paused_at && (now - new Date(s.manual_paused_at).getTime() > VMS);
-  const autoDead   = s.auto_paused_at   && (now - new Date(s.auto_paused_at).getTime()   > VMS);
+  // PER-SESSION validity (parehas sa list_allowed_clients RPC ug coin.controller):
+  //   validity_seconds (canonical) -> validity_days (legacy) -> global fallback.
+  // Basis = least(manual, auto): apil na ang AUTO-paused (disconnect) sa expiry.
+  const sessVMS = (s.validity_seconds != null)
+    ? Number(s.validity_seconds) * 1000
+    : (s.validity_days != null ? Number(s.validity_days) * 86400000 : await getValidityMs());
+  const manualDead = s.manual_paused_at && (now - new Date(s.manual_paused_at).getTime() > sessVMS);
+  const autoDead   = s.auto_paused_at   && (now - new Date(s.auto_paused_at).getTime()   > sessVMS);
   if (manualDead || autoDead) {
     await supabaseAdmin.from('internet_sessions')
       .update({ status: 'expired' }).eq('id', s.id).eq('status', 'paused');
@@ -160,7 +165,7 @@ async function sweep() {
     const ssidMap = await getDeviceSsidMap();
     const { data, error } = await supabaseAdmin
       .from('internet_sessions')
-      .select('id, client_mac, device_id, status, end_time, remaining_seconds, first_paused_at, manual_paused_at, auto_paused_at')
+      .select('id, client_mac, device_id, status, end_time, remaining_seconds, first_paused_at, manual_paused_at, auto_paused_at, validity_seconds, validity_days')
       .in('status', ['active', 'paused']);
     if (error || !data || !data.length) return;
     for (const s of data) {
