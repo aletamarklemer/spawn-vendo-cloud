@@ -126,6 +126,19 @@ async function handleSession(s, ssidMap, now) {
   if (!members.length) return;
   const { anyFresh, present } = presence(mac, members, now);
 
+  // VALIDITY expiry (Wendell): active O paused, basis = validity_from (paghulog/last coin).
+  // Pag-abot sa validity window -> expired diritso BISAN active pa (kinahanglan mag-hulog balik).
+  // validity_seconds (purchase-based) -> validity_days (legacy) -> global fallback.
+  const sessVMS = (s.validity_seconds != null)
+    ? Number(s.validity_seconds) * 1000
+    : (s.validity_days != null ? Number(s.validity_days) * 86400000 : await getValidityMs());
+  if (s.validity_from && (now - new Date(s.validity_from).getTime() > sessVMS)) {
+    await supabaseAdmin.from('internet_sessions')
+      .update({ status: 'expired' }).eq('id', s.id).in('status', ['active', 'paused']);
+    absentSince.delete(s.id);
+    return;
+  }
+
   if (s.status === 'active') {
     if (!anyFresh || present) { absentSince.delete(s.id); return; }  // unknown != absent
     if (!absentSince.has(s.id)) absentSince.set(s.id, now);
@@ -138,19 +151,6 @@ async function handleSession(s, ssidMap, now) {
 
   // status === 'paused'
   absentSince.delete(s.id);
-  // PER-SESSION validity (parehas sa list_allowed_clients RPC ug coin.controller):
-  //   validity_seconds (canonical) -> validity_days (legacy) -> global fallback.
-  // Basis = least(manual, auto): apil na ang AUTO-paused (disconnect) sa expiry.
-  const sessVMS = (s.validity_seconds != null)
-    ? Number(s.validity_seconds) * 1000
-    : (s.validity_days != null ? Number(s.validity_days) * 86400000 : await getValidityMs());
-  const manualDead = s.manual_paused_at && (now - new Date(s.manual_paused_at).getTime() > sessVMS);
-  const autoDead   = s.auto_paused_at   && (now - new Date(s.auto_paused_at).getTime()   > sessVMS);
-  if (manualDead || autoDead) {
-    await supabaseAdmin.from('internet_sessions')
-      .update({ status: 'expired' }).eq('id', s.id).eq('status', 'paused');
-    return;
-  }
   // AUTO-RESUME: kung ang kasamtangang pause kay AUTO ug presente na balik ang MAC
   if (s.auto_paused_at && present) await autoResume(s, now);
 }
@@ -165,7 +165,7 @@ async function sweep() {
     const ssidMap = await getDeviceSsidMap();
     const { data, error } = await supabaseAdmin
       .from('internet_sessions')
-      .select('id, client_mac, device_id, status, end_time, remaining_seconds, first_paused_at, manual_paused_at, auto_paused_at, validity_seconds, validity_days')
+      .select('id, client_mac, device_id, status, end_time, remaining_seconds, first_paused_at, manual_paused_at, auto_paused_at, validity_seconds, validity_days, validity_from')
       .in('status', ['active', 'paused']);
     if (error || !data || !data.length) return;
     for (const s of data) {
