@@ -2,6 +2,13 @@
 let CHART = null;
 let CHART_DRAWING = false;  // guard batok concurrent/stacked draws (flaky WAN)
 let REV_RANGE = 'daily';  // remember last-selected revenue range para auto-redraw
+let REV_DEVICE = '';      // '' = All (total), 'compare' = multi-line, o device uuid
+let REV_DEVICES_LOADED = false;
+// Validated categorical palette (dataviz skill, dark surface #14141c — all checks PASS).
+// Fixed order = CVD-safe; NEVER cycled — ang ika-9+ nga vendo mo-fold sa "Other".
+const REV_COLORS = ['#3987e5','#008300','#d55181','#c98500','#199e70','#d95926','#9085e9','#e66767'];
+const REV_OTHER = '#898781';
+function revEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 let ALL_TX = [];
 let ALL_SESS = [];
 let ALL_USERS = [];
@@ -53,10 +60,35 @@ async function loadDashboard() {
     document.getElementById('active-sessions').textContent = s.active_sessions;
     document.getElementById('dev-online').textContent = `${s.devices.online}/${s.devices.total}`;
     document.getElementById('tx-today').textContent = s.transactions.today;
+    populateRevDevices();  // fill ang per-vendo dropdown kausa ra (guarded)
     // Draw revenue chart if not yet drawn (fresh load, nav back, or app reopen).
     // Guarded by !CHART so the 5s auto-refresh doesn't redraw/flicker every tick.
     if (!CHART && !CHART_DRAWING) drawRevenue(REV_RANGE);
   } catch(e) {}
+}
+
+// Fill ang per-vendo dropdown kausa ra (All / Compare / matag vendo).
+async function populateRevDevices() {
+  const sel = document.getElementById('rev-device');
+  if (!sel || REV_DEVICES_LOADED) return;
+  try {
+    const { devices } = await API.get('/devices');
+    const opts = ['<option value="">All vendos (total)</option>',
+                  '<option value="compare">Compare all (lines)</option>'];
+    (devices || []).slice()
+      .sort((a, b) => String(a.device_name || '').localeCompare(String(b.device_name || '')))
+      .forEach(d => opts.push(`<option value="${d.id}">${revEsc(d.device_name || 'Unnamed')}</option>`));
+    sel.innerHTML = opts.join('');
+    sel.value = REV_DEVICE;
+    REV_DEVICES_LOADED = true;
+  } catch (e) { /* keep the 2 default options; mo-retry sa sunod dashboard load */ }
+}
+
+function onRevDeviceChange() {
+  const sel = document.getElementById('rev-device');
+  REV_DEVICE = sel ? sel.value : '';
+  if (CHART) { CHART.destroy(); CHART = null; }
+  drawRevenue(REV_RANGE);
 }
 
 async function drawRevenue(range) {
@@ -66,24 +98,62 @@ async function drawRevenue(range) {
   document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.range === range));
   document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('btn-ghost', b.dataset.range !== range));
   try {
-    const d = await API.get('/admin/revenue?range=' + range);
+    const qs = '/admin/revenue?range=' + range + (REV_DEVICE ? '&device_id=' + encodeURIComponent(REV_DEVICE) : '');
+    const d = await API.get(qs);
     const ctx = document.getElementById('revChart');
     if (!ctx) return;   // section wala pa sa DOM
     if (CHART) { CHART.destroy(); CHART = null; }
-    CHART = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: d.series.map(x => x.label), datasets: [{
-        label: 'Revenue (₱)', data: d.series.map(x => x.value),
-        backgroundColor: 'rgba(10,132,255,.6)', borderRadius: 6,
-      }]},
-      options: { responsive: true, maintainAspectRatio: false,
-        animation: { duration: 600, easing: 'easeOutQuart' },  // smooth pero paspas
-        animations: { y: { from: 0 } },  // bars mo-grow gikan sa 0 = nindot nga entrance
-        transitions: { active: { animation: { duration: 200 } } },
-        plugins: { legend: { display: false } },
-        scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
-                  y: { ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },
-    });
+
+    if (d.mode === 'compare') {
+      // COMPARE: multi-line, usa ka linya kada vendo. Top-8 (palette) + ang uban
+      // mo-fold sa "Other" (walay color cycling — CVD-safe nga fixed order).
+      const labels = d.labels || [];
+      const all = d.series || [];
+      const top = all.slice(0, REV_COLORS.length);
+      const rest = all.slice(REV_COLORS.length);
+      const datasets = top.map((s, i) => ({
+        label: s.device_name,
+        data: s.points,
+        borderColor: REV_COLORS[i], backgroundColor: REV_COLORS[i],
+        borderWidth: 2, tension: .3, pointRadius: 2, pointHoverRadius: 5,
+      }));
+      if (rest.length) {
+        const other = labels.map((_, idx) => rest.reduce((sum, s) => sum + (s.points[idx] || 0), 0));
+        datasets.push({ label: 'Other (' + rest.length + ')', data: other,
+          borderColor: REV_OTHER, backgroundColor: REV_OTHER, borderDash: [4, 3],
+          borderWidth: 2, tension: .3, pointRadius: 2, pointHoverRadius: 5 });
+      }
+      CHART = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: { responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          animation: { duration: 500 },
+          plugins: {
+            legend: { display: true, position: 'bottom',
+              labels: { color: '#c3c2b7', boxWidth: 12, usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: (c) => c.dataset.label + ': ₱' + Number(c.parsed.y || 0).toLocaleString() } },
+          },
+          scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },
+      });
+    } else {
+      // SINGLE series (All total O usa ka vendo) — PAREHAS ra sa daan (bar chart)
+      CHART = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: d.series.map(x => x.label), datasets: [{
+          label: 'Revenue (₱)', data: d.series.map(x => x.value),
+          backgroundColor: 'rgba(10,132,255,.6)', borderRadius: 6,
+        }]},
+        options: { responsive: true, maintainAspectRatio: false,
+          animation: { duration: 600, easing: 'easeOutQuart' },  // smooth pero paspas
+          animations: { y: { from: 0 } },  // bars mo-grow gikan sa 0 = nindot nga entrance
+          transitions: { active: { animation: { duration: 200 } } },
+          plugins: { legend: { display: false } },
+          scales: { x: { ticks: { color: '#9aa0b4' }, grid: { display: false } },
+                    y: { ticks: { color: '#9aa0b4' }, grid: { color: '#272735' } } } },
+      });
+    }
   } catch (e) {
     // WAN fail — ayaw i-leave nga stuck; mo-retry ra sa sunod nga dashboard load
   } finally {

@@ -61,47 +61,77 @@ const stats = asyncHandler(async (req, res) => {
   });
 });
 
-/** GET /api/admin/revenue?range=daily|weekly|monthly */
+// ---- revenue chart bucketing (shared) ----
+const REV_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Weekly: i-group base sa SUNDAY sa maong semana (Sun = first day of week), Sun-Sat label
+function revSundayOf(dt) {
+  const x = new Date(dt.getTime());
+  x.setUTCDate(x.getUTCDate() - x.getUTCDay());  // Sunday=0 (WEEK FIX)
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+function revBucket(range, createdAt) {
+  const d = mnl(createdAt);  // Manila-shifted (timezone fix)
+  if (range === 'monthly') {
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    return { key, sortKey: key, label: `${REV_MON[d.getUTCMonth()]} ${d.getUTCFullYear()}` };  // "Jun 2026"
+  }
+  if (range === 'weekly') {
+    const mon = revSundayOf(d);
+    const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);  // +6 = Saturday (last day)
+    const key = mon.toISOString().slice(0, 10);
+    const label = (mon.getUTCMonth() === sun.getUTCMonth())
+      ? `${REV_MON[mon.getUTCMonth()]} ${mon.getUTCDate()}–${sun.getUTCDate()}`
+      : `${REV_MON[mon.getUTCMonth()]} ${mon.getUTCDate()} – ${REV_MON[sun.getUTCMonth()]} ${sun.getUTCDate()}`;
+    return { key, sortKey: key, label };
+  }
+  const key = d.toISOString().slice(0, 10);
+  return { key, sortKey: key, label: `${REV_MON[d.getUTCMonth()]} ${d.getUTCDate()}` };  // "Jun 22"
+}
+
+/** GET /api/admin/revenue?range=daily|weekly|monthly&device_id=<uuid|compare>
+ *  - walay device_id (o '') = TOTAL sa tanang vendo (single series) — OLD BEHAVIOR (backward compatible)
+ *  - device_id=<uuid>       = kana RA nga vendo (single series)
+ *  - device_id=compare      = multi-series: usa ka linya kada vendo, aligned labels */
 const revenueSeries = asyncHandler(async (req, res) => {
   const range = req.query.range || 'daily';
+  const deviceId = req.query.device_id || '';
+  const compare = deviceId === 'compare';
   const days = range === 'monthly' ? 180 : range === 'weekly' ? 84 : 30;
-  const { data, error } = await supabaseAdmin.from('coin_transactions')
-    .select('amount, created_at').gte('created_at', sinceISO(days));
+
+  let q = supabaseAdmin.from('coin_transactions')
+    .select(compare ? 'amount, created_at, device_id, vendo_devices(device_name)' : 'amount, created_at')
+    .gte('created_at', sinceISO(days));
+  if (deviceId && !compare) q = q.eq('device_id', deviceId);  // usa ka vendo ra
+  const { data, error } = await q;
   if (error) return fail(res, error.message, 400);
 
-  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  // Para sa weekly: i-group base sa SUNDAY sa maong semana (Sun = first day of week), Sun-Sat label
-  const mondayOf = (dt) => {
-    const x = new Date(dt.getTime());
-    const day = x.getUTCDay(); // Sunday=0 (WEEK FIX: Sun = first day sa semana)
-    x.setUTCDate(x.getUTCDate() - day);
-    x.setUTCHours(0, 0, 0, 0);
-    return x;
-  };
+  if (compare) {
+    // Multi-series: aligned labels (union sa tanang buckets), usa ka dataset kada vendo.
+    const labelByKey = {};   // key -> { label, sortKey }
+    const per = {};          // device_id -> { device_name, buckets: {key:value} }
+    for (const r of data) {
+      const b = revBucket(range, r.created_at);
+      labelByKey[b.key] = { label: b.label, sortKey: b.sortKey };
+      const id = r.device_id || 'unknown';
+      if (!per[id]) per[id] = { device_id: id, device_name: r.vendo_devices?.device_name || 'Unknown Vendo', buckets: {} };
+      per[id].buckets[b.key] = (per[id].buckets[b.key] || 0) + Number(r.amount || 0);
+    }
+    const keys = Object.keys(labelByKey).sort((a, b) => labelByKey[a].sortKey.localeCompare(labelByKey[b].sortKey));
+    const labels = keys.map((k) => labelByKey[k].label);
+    const series = Object.values(per).map((dv) => {
+      const points = keys.map((k) => dv.buckets[k] || 0);
+      return { device_id: dv.device_id, device_name: dv.device_name, points, total: points.reduce((s, v) => s + v, 0) };
+    }).sort((a, b) => b.total - a.total);
+    return ok(res, { range, mode: 'compare', labels, series });
+  }
+
+  // Single series (TOTAL o usa ka device) — PAREHAS nga shape sa daan
   const bucket = {};      // key -> { value, sortKey, label }
   for (const r of data) {
-    const d = mnl(r.created_at);  // Manila-shifted (timezone fix)
-    let key, label, sortKey;
-    if (range === 'monthly') {
-      key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-      label = `${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`;       // "Jun 2026"
-      sortKey = key;
-    } else if (range === 'weekly') {
-      const mon = mondayOf(d);
-      const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);  // +6 = Saturday (last day)
-      key = mon.toISOString().slice(0, 10);
-      // "Jun 16–22" o kung lahi ang bulan: "Jun 30 – Jul 6"
-      label = (mon.getUTCMonth() === sun.getUTCMonth())
-        ? `${MON[mon.getUTCMonth()]} ${mon.getUTCDate()}–${sun.getUTCDate()}`
-        : `${MON[mon.getUTCMonth()]} ${mon.getUTCDate()} – ${MON[sun.getUTCMonth()]} ${sun.getUTCDate()}`;
-      sortKey = key;
-    } else {
-      key = d.toISOString().slice(0, 10);
-      label = `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`;            // "Jun 22"
-      sortKey = key;
-    }
-    if (!bucket[key]) bucket[key] = { value: 0, sortKey, label };
-    bucket[key].value += Number(r.amount || 0);
+    const b = revBucket(range, r.created_at);
+    if (!bucket[b.key]) bucket[b.key] = { value: 0, sortKey: b.sortKey, label: b.label };
+    bucket[b.key].value += Number(r.amount || 0);
   }
   const series = Object.values(bucket)
     .sort((a, b) => a.sortKey.localeCompare(b.sortKey))

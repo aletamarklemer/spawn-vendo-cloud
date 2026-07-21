@@ -63,8 +63,12 @@
         <div class="card stat"><div class="label">Transactions Today</div><div class="value" id="tx-today">0</div></div>
       </div>
       <div class="card" style="margin-top:18px">
-        <div class="row" style="margin-bottom:14px"><h3 style="margin:0">Revenue</h3>
-          <div class="right row">
+        <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:8px"><h3 style="margin:0">Revenue</h3>
+          <div class="right row" style="gap:8px;flex-wrap:wrap">
+            <select id="rev-device" onchange="onRevDeviceChange()" style="padding:6px 10px;border-radius:8px;background:var(--bg-2);font-size:13px;max-width:200px">
+              <option value="">All vendos (total)</option>
+              <option value="compare">Compare all (lines)</option>
+            </select>
             <button class="btn btn-sm range-btn btn-primary" data-range="daily" onclick="drawRevenue('daily')">Daily</button>
             <button class="btn btn-sm range-btn btn-ghost" data-range="weekly" onclick="drawRevenue('weekly')">Weekly</button>
             <button class="btn btn-sm range-btn btn-ghost" data-range="monthly" onclick="drawRevenue('monthly')">Monthly</button>
