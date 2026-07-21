@@ -33,11 +33,12 @@ async function getValidityMs() {
   }
 }
 
-// ---- PER-PRICE PAUSE VALIDITY (2026-07-21) ----
-// Kuhaa ang validity_days sa tier nga mo-match sa gi-hulog nga amount (device
+// ---- PER-PRICE PAUSE VALIDITY (2026-07-21, SECONDS-based; minute/hour/day) ----
+// Kuhaa ang validity_seconds sa tier nga mo-match sa gi-hulog nga amount (device
 // tier una kung ang device naay kaugalingong tiers, else global). NULL = walay
 // custom = mo-gamit sa global settings.pause_validity_days (backward compatible).
-async function tierValidityDays(device_id, amount) {
+// Legacy fallback: kung wala pa na-migrate ang seconds pero naay validity_days.
+async function tierValiditySeconds(device_id, amount) {
   const amt = Number(amount);
   if (!amt) return null;
   let scope = null;  // null = global tiers; else device_id
@@ -46,29 +47,31 @@ async function tierValidityDays(device_id, amount) {
       .select('id').eq('is_active', true).eq('device_id', device_id).limit(1);
     if (devAny && devAny.length) scope = device_id;  // full-override: device naay kaugalingong set
   }
-  let q = supabaseAdmin.from('pricing_tiers').select('validity_days')
+  let q = supabaseAdmin.from('pricing_tiers').select('validity_seconds, validity_days')
     .eq('is_active', true).eq('amount', amt);
   q = scope ? q.eq('device_id', scope) : q.is('device_id', null);
   const { data } = await q.maybeSingle();
-  return data && data.validity_days ? Number(data.validity_days) : null;
+  if (!data) return null;
+  if (data.validity_seconds) return Number(data.validity_seconds);
+  if (data.validity_days) return Number(data.validity_days) * 86400;  // legacy
+  return null;
 }
 
-// I-snapshot ang validity ngadto sa session human sa coin. Semantics: "fresh coin
-// = fresh validity", pero DILI paubson ang validity nga naa na sa customer
-// (GREATEST). Mag-store og NULL kung parehas ra sa global (para mo-track sa global
-// kung mausab kini). Non-fatal: dili maka-guba sa coin flow kung mafail.
+// I-snapshot ang validity (SECONDS) ngadto sa session human sa coin. Semantics:
+// "fresh coin = fresh validity", pero DILI paubson ang validity nga naa na sa
+// customer (GREATEST). Mag-store og NULL kung parehas ra sa global. Non-fatal.
 async function snapshotSessionValidity(session, device_id, amount) {
   try {
     if (!session || !session.id) return;
-    const gDays = Math.max(1, Math.round((await getValidityMs()) / 86400000));
-    const newDays = (await tierValidityDays(device_id, amount)) || gDays;
-    const curDays = session.validity_days || gDays;
-    const eff = Math.max(newDays, curDays);
-    const store = eff > gDays ? eff : null;   // null = mo-track sa global default
-    if (store !== (session.validity_days == null ? null : session.validity_days)) {
-      await supabaseAdmin.from('internet_sessions').update({ validity_days: store }).eq('id', session.id);
+    const gSec = Math.max(60, Math.round((await getValidityMs()) / 1000));  // global sa seconds
+    const newSec = (await tierValiditySeconds(device_id, amount)) || gSec;
+    const curSec = session.validity_seconds || (session.validity_days ? session.validity_days * 86400 : gSec);
+    const eff = Math.max(newSec, curSec);
+    const store = eff > gSec ? eff : null;   // null = mo-track sa global default
+    if (store !== (session.validity_seconds == null ? null : session.validity_seconds)) {
+      await supabaseAdmin.from('internet_sessions').update({ validity_seconds: store }).eq('id', session.id);
     }
-    session.validity_days = store;
+    session.validity_seconds = store;
   } catch (e) { /* non-fatal — validity snapshot dili delikado sa coin credit */ }
 }
 
@@ -276,7 +279,7 @@ const getSession = asyncHandler(async (req, res) => {
   if (data.status === 'active' && data.end_time) {
     // Validity deadline: GIKAN SA MANUAL PAUSE LANG (manual_paused_at).
     // Kung walay manual pause, normal session ra (base sa end_time).
-    const VALIDITY_MS = data.validity_days ? data.validity_days * 86400000 : await getValidityMs();  // per-price validity, global fallback
+    const VALIDITY_MS = data.validity_seconds ? data.validity_seconds * 1000 : (data.validity_days ? data.validity_days * 86400000 : await getValidityMs());  // per-price validity, global fallback
     if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
@@ -290,7 +293,7 @@ const getSession = asyncHandler(async (req, res) => {
     }
   } else if (data.status === 'paused') {
     // Validity check: manual pause lang
-    const VALIDITY_MS = data.validity_days ? data.validity_days * 86400000 : await getValidityMs();  // per-price validity, global fallback
+    const VALIDITY_MS = data.validity_seconds ? data.validity_seconds * 1000 : (data.validity_days ? data.validity_days * 86400000 : await getValidityMs());  // per-price validity, global fallback
     if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
       await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
       data.status = 'expired';
@@ -302,7 +305,7 @@ const getSession = asyncHandler(async (req, res) => {
 
   // Pause-validity info para sa portal display: kanus-a ra taman ang time
   // human sa MANUAL pause (clock = manual_paused_at + pause_validity_days).
-  const VMS = data.validity_days ? data.validity_days * 86400000 : await getValidityMs();  // per-price validity
+  const VMS = data.validity_seconds ? data.validity_seconds * 1000 : (data.validity_days ? data.validity_days * 86400000 : await getValidityMs());  // per-price validity
   const validity_days = Math.round(VMS / 86400000);
   let pause_valid_until = null;
   // Basis = ang PINAKA-UNA sa manual_paused_at / auto_paused_at (ang sweep mo-expire
@@ -367,7 +370,7 @@ const pauseSession = asyncHandler(async (req, res) => {
   }
 
   // Check validity from MANUAL pause lang (kung wala pa na-manual-pause, dili mag-expire)
-  const VALIDITY_MS = data.validity_days ? data.validity_days * 86400000 : await getValidityMs();  // per-price validity, global fallback
+  const VALIDITY_MS = data.validity_seconds ? data.validity_seconds * 1000 : (data.validity_days ? data.validity_days * 86400000 : await getValidityMs());  // per-price validity, global fallback
   if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
     return ok(res, { paused: false, message: 'Session expired (validity reached)' });
@@ -422,7 +425,7 @@ const resumeSession = asyncHandler(async (req, res) => {
   }
 
   // Check validity from MANUAL pause lang
-  const VALIDITY_MS = data.validity_days ? data.validity_days * 86400000 : await getValidityMs();  // per-price validity, global fallback
+  const VALIDITY_MS = data.validity_seconds ? data.validity_seconds * 1000 : (data.validity_days ? data.validity_days * 86400000 : await getValidityMs());  // per-price validity, global fallback
   if (data.manual_paused_at && (Date.now() - new Date(data.manual_paused_at).getTime() > VALIDITY_MS)) {
     await supabaseAdmin.from('internet_sessions').update({ status: 'expired' }).eq('id', data.id);
     return ok(res, { resumed: false, message: 'Session expired (validity reached)' });

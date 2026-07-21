@@ -618,13 +618,16 @@ function tierUnitOpts(sel) {
   return TIER_UNITS.map(([v, label]) => `<option value="${v}"${v === sel ? ' selected' : ''}>${label}</option>`).join('');
 }
 function tierRowHtml(t) {
-  t = t || { amount: '', duration_value: '', duration_unit: 'minute', validity_days: '' };
-  const vd = (t.validity_days != null && t.validity_days !== '') ? t.validity_days : '';
+  t = t || { amount: '', duration_value: '', duration_unit: 'minute', validity_value: '', validity_unit: 'day' };
+  const vv = (t.validity_value != null && t.validity_value !== '') ? t.validity_value : '';
   return `<tr>
     <td><input type="number" step="0.01" min="0" class="t-amt" value="${t.amount}" placeholder="₱" style="width:90px"></td>
     <td><input type="number" min="1" class="t-val" value="${t.duration_value}" placeholder="0" style="width:80px"></td>
     <td><select class="t-unit">${tierUnitOpts(t.duration_unit)}</select></td>
-    <td><input type="number" min="1" class="t-validity" value="${vd}" placeholder="3" title="Days a paused session survives (blank = 3)" style="width:90px"></td>
+    <td style="white-space:nowrap">
+      <input type="number" min="1" class="t-vval" value="${vv}" placeholder="3" title="Blank = 3 days" style="width:60px">
+      <select class="t-vunit">${tierUnitOpts(t.validity_unit || 'day')}</select>
+    </td>
     <td><button class="btn btn-danger btn-sm" type="button" onclick="this.closest('tr').remove();updateTierNote()">✕</button></td>
   </tr>`;
 }
@@ -672,7 +675,8 @@ async function saveTiers() {
     amount: tr.querySelector('.t-amt').value,
     duration_value: tr.querySelector('.t-val').value,
     duration_unit: tr.querySelector('.t-unit').value,
-    validity_days: tr.querySelector('.t-validity').value,   // blank = global default
+    validity_value: tr.querySelector('.t-vval').value,      // blank = fallback 3 days
+    validity_unit: tr.querySelector('.t-vunit').value,
   }));
   try {
     await API.put('/admin/pricing-tiers', { tiers: rows, device_id: devId });
