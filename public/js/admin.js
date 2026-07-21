@@ -593,9 +593,9 @@ async function savePw() {
 /* ---------- Settings ---------- */
 async function loadSettings() {
   const { settings } = await API.get('/admin/settings');
-  if (settings && document.getElementById('s_validity')) {
-    document.getElementById('s_validity').value = settings.pause_validity_days || 3;
-  }
+  // NOTE: ang pause/resume validity kay per-price na (Pricing Tiers → Validity column).
+  // Walay na global field diri; ang blangko nga price mo-fallback sa luwas nga 3 days
+  // (internal, dili configurable) — para dili malibog.
   if (settings && document.getElementById('s_abuse_threshold')) {
     document.getElementById('s_abuse_threshold').value = settings.coin_abuse_threshold || 5;
   }
@@ -606,7 +606,6 @@ async function loadSettings() {
 }
 async function saveSettings() {
   try { await API.put('/admin/settings', {
-      pause_validity_days: parseInt(val('s_validity'), 10) || 3,
       coin_abuse_threshold: parseInt(val('s_abuse_threshold'), 10) || 5,
       coin_ban_seconds: parseInt(val('s_ban_seconds'), 10) || 60,
     });
@@ -625,7 +624,7 @@ function tierRowHtml(t) {
     <td><input type="number" step="0.01" min="0" class="t-amt" value="${t.amount}" placeholder="₱" style="width:90px"></td>
     <td><input type="number" min="1" class="t-val" value="${t.duration_value}" placeholder="0" style="width:80px"></td>
     <td><select class="t-unit">${tierUnitOpts(t.duration_unit)}</select></td>
-    <td><input type="number" min="1" class="t-validity" value="${vd}" placeholder="global" title="Blank = use the global default validity" style="width:90px"></td>
+    <td><input type="number" min="1" class="t-validity" value="${vd}" placeholder="3" title="Days a paused session survives (blank = 3)" style="width:90px"></td>
     <td><button class="btn btn-danger btn-sm" type="button" onclick="this.closest('tr').remove();updateTierNote()">✕</button></td>
   </tr>`;
 }

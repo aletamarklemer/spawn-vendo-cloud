@@ -214,7 +214,7 @@
     <!-- SETTINGS -->
     <section data-section="settings" class="hidden">
       <div class="card" style="max-width:680px"><h3 style="margin-top:0">Pricing Tiers</h3>
-        <p style="color:var(--muted);font-size:13px">Set a specific price → duration. Matching is <b>exact</b>: the inserted amount must equal a tier amount, or the coin is rejected. <b>Validity</b> = how many days a <b>paused</b> session survives before expiring — blank = use the global default below.</p>
+        <p style="color:var(--muted);font-size:13px">Set a specific price → duration. Matching is <b>exact</b>: the inserted amount must equal a tier amount, or the coin is rejected. <b>Validity</b> = how many days a <b>paused</b> session survives before expiring — set it per price (blank falls back to 3 days).</p>
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">Rates for:</label>
         <select id="tierDevice" onchange="loadTiers()" style="width:100%;margin-bottom:6px;padding:8px;border-radius:8px">
           <option value="">🌐 Global Default (all vendos)</option>
@@ -236,8 +236,7 @@
       </div>
 
       <div class="card" style="max-width:420px;margin-top:16px"><h3 style="margin-top:0">Session Settings</h3>
-        <div class="field"><label>Pause/Resume validity (days)</label><input id="s_validity" type="number" min="1" value="3" placeholder="3"></div>
-        <p style="color:var(--muted);font-size:13px;margin-top:-4px">Paused sessions expire after this many days from first pause.</p>
+        <p style="color:var(--muted);font-size:13px;margin-top:0">Pause/Resume validity is now set <b>per price</b> in the Pricing Tiers above (Validity column).</p>
         <div class="field" style="margin-top:14px"><label>Insert-Coin abuse: max taps before ban</label><input id="s_abuse_threshold" type="number" min="1" value="5" placeholder="5"></div>
         <p style="color:var(--muted);font-size:13px;margin-top:-4px">Number of "Insert Coin" taps (without inserting a coin) before the button is temporarily disabled.</p>
         <div class="field" style="margin-top:14px"><label>Insert-Coin ban duration (seconds)</label><input id="s_ban_seconds" type="number" min="1" value="60" placeholder="60"></div>
