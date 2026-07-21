@@ -408,7 +408,12 @@ function renderSessions(list) {
     let vb = s.manual_paused_at || null;
     if (s.auto_paused_at && (!vb || new Date(s.auto_paused_at) < new Date(vb))) vb = s.auto_paused_at;
     if (vb && (s.status === 'active' || s.status === 'paused')) {
-      const exp = new Date(new Date(vb).getTime() + validityDays * 86400000);
+      // PER-SESSION validity (validity_seconds) → legacy validity_days → global
+      // fallback. SAMA sa backend RPC coalesce, para tukma ang display (dili na
+      // fixed 3 days para sa tanan).
+      const sessSec = (s.validity_seconds != null) ? Number(s.validity_seconds)
+                    : (s.validity_days != null ? Number(s.validity_days) * 86400 : validityDays * 86400);
+      const exp = new Date(new Date(vb).getTime() + sessSec * 1000);
       const expired = Date.now() > exp.getTime();
       validityTxt = `<span style="color:${expired ? 'var(--bad)' : 'var(--ok)'}">${fmtDate(exp.toISOString())}${expired ? ' (expired)' : ''}</span>`;
     }
