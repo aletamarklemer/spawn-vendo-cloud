@@ -164,13 +164,14 @@ async function loadWireless(id) {
         '<span class="chip">' + esc(n.band) + '</span>' +
         (n.hidden ? '<span class="chip chip-warn">\uD83D\uDD0C NODE LINK</span>' : '') +
         (n.disabled ? '<span class="chip chip-warn">OFF</span>' : '');
-      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD12 Node / coin-slot link \u2014 protected, cannot be edited</div>' : '';
-      const btns = n.hidden ? '' :
-        '<button class="btn-mini" onclick="event.stopPropagation();netHide(' + i + ')">Hide</button>' +
-        '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>';
+      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C Node / coin-slot link \u2014 deleting takes the coin slot OFFLINE</div>' : '';
+      const btns = n.hidden
+        ? '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>'
+        : '<button class="btn-mini" onclick="event.stopPropagation();netHide(' + i + ')">Hide</button>' +
+          '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>';
       return '<div class="net-row" data-i="' + i + '" onclick="netSelect(' + i + ')"><div><div class="net-ssid">' + esc(n.ssid || '(blank)') + '</div>' + hint +
         '<div class="net-hint" style="opacity:.6">' + esc(n.section) + '</div></div>' +
-        '<div><div class="net-chips">' + chips + '</div><div class="net-acts">' + btns + '</div>' + (n.hidden ? '' : '<div class="net-tap">Tap to manage</div>') + '</div></div>';
+        '<div><div class="net-chips">' + chips + '</div><div class="net-acts">' + btns + '</div><div class="net-tap">Tap to manage</div></div></div>';
     }).join('');
   } catch (e) {
     fr.textContent = '';
