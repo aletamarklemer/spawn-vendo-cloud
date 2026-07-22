@@ -232,7 +232,7 @@ async function loadDevices() {
 async function editRoam(id) {
   const dev = (ALL_DEVICES || []).find(d => d.id === id);
   if (!dev) { toast('Device not found', 'err'); return; }
-  const v = prompt('Roam group / SSID\n(devices with the SAME value share sessions = roaming)\nLeave blank = no roaming:', dev.ssid || '');
+  const v = prompt('Roam group = CUSTOMER WiFi name (renames the default broadcast).\nDevices with the SAME value roam / share sessions.\n\nWARNING: keep your NodeMCU / coin-slot on a SEPARATE hidden network (not this SSID), or the coin slot disconnects.\n\nLeave blank = no roaming:', dev.ssid || '');
   if (v === null) return;
   const val = v.trim() || null;
   try {
