@@ -165,10 +165,9 @@ async function loadWireless(id) {
         (n.hidden ? '<span class="chip chip-warn">HIDDEN</span>' : '') +
         (n.disabled ? '<span class="chip chip-warn">OFF</span>' : '');
       const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C Hidden \u2014 if this is the node / coin-slot link, deleting takes it OFFLINE</div>' : '';
-      const btns = n.hidden
-        ? '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>'
-        : '<button class="btn-mini" onclick="event.stopPropagation();netHide(' + i + ')">Hide</button>' +
-          '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>';
+      const btns =
+        '<button class="btn-mini" onclick="event.stopPropagation();netHide(' + i + ')">' + (n.hidden ? 'Show' : 'Hide') + '</button>' +
+        '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>';
       return '<div class="net-row" data-i="' + i + '" onclick="netSelect(' + i + ')"><div><div class="net-ssid">' + esc(n.ssid || '(blank)') + '</div>' + hint +
         '<div class="net-hint" style="opacity:.6">' + esc(n.section) + '</div></div>' +
         '<div><div class="net-chips">' + chips + '</div><div class="net-acts">' + btns + '</div><div class="net-tap">Tap to manage</div></div></div>';
