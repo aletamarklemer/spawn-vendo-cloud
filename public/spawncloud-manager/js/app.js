@@ -167,7 +167,7 @@ async function loadWireless(id) {
       const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C likely node link \u2014 changes may disconnect the coin slot</div>' : '';
       const btns =
         '<button class="btn-mini" onclick="event.stopPropagation();netHide(' + i + ')">' + (n.hidden ? 'Show' : 'Hide') + '</button>' +
-        '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>';
+        (n.hidden ? '' : '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>');
       return '<div class="net-row" data-i="' + i + '" onclick="netSelect(' + i + ')"><div><div class="net-ssid">' + esc(n.ssid || '(blank)') + '</div>' + hint +
         '<div class="net-hint" style="opacity:.6">' + esc(n.section) + '</div></div>' +
         '<div><div class="net-chips">' + chips + '</div><div class="net-acts">' + btns + '</div><div class="net-tap">Tap to manage</div></div></div>';
@@ -760,3 +760,19 @@ function fmtDate(iso) {
 function fmtDateTime(iso) {
   try { return new Date(iso).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
 }
+/* ---------------- Light / Dark theme ---------------- */
+function applyThemeIcon() {
+  var t = document.documentElement.getAttribute('data-theme') || 'light';
+  var el = document.getElementById('theme-icon');
+  if (el) el.textContent = (t === 'dark') ? '\u2600\uFE0F' : '\uD83C\uDF19';
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t === 'dark' ? '#0d1117' : '#f4f7fb');
+}
+function toggleTheme() {
+  var cur = document.documentElement.getAttribute('data-theme') || 'light';
+  var next = (cur === 'dark') ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('sc-theme', next); } catch (e) {}
+  applyThemeIcon();
+}
+document.addEventListener('DOMContentLoaded', applyThemeIcon);

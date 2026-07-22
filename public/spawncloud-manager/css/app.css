@@ -298,12 +298,12 @@ input::placeholder { color: var(--txt-faint); }
 /* ---- WiFi networks visibility (Phase 2.5A) ---- */
 .net-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line, rgba(255,255,255,.06))}
 .net-row:last-child{border-bottom:none}
-.net-ssid{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text,#e6edf3)}
-.net-hint{font-size:11px;color:var(--muted,#8b949e);margin-top:2px}
+.net-ssid{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--txt)}
+.net-hint{font-size:11px;color:var(--txt-faint);margin-top:2px}
 .net-chips{display:flex;gap:6px;flex-shrink:0}
 .chip{font-size:10px;letter-spacing:.4px;padding:3px 8px;border-radius:999px;background:rgba(31,111,235,.10);color:var(--signal);border:1px solid rgba(31,111,235,.25)}
 .chip-warn{background:rgba(251,191,36,.10);color:#fbbf24;border-color:rgba(251,191,36,.3)}
-.empty-note{font-size:12.5px;color:var(--muted,#8b949e);padding:8px 2px}
+.empty-note{font-size:12.5px;color:var(--txt-faint);padding:8px 2px}
 
 .net-acts{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
 .btn-mini{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(31,111,235,.10);color:var(--signal);border:1px solid rgba(31,111,235,.25);cursor:pointer}
@@ -312,17 +312,17 @@ input::placeholder { color: var(--txt-faint); }
 /* ---------------- Installer Wizard (Phase 3) ---------------- */
 .wiz-progress{display:flex;align-items:center;gap:6px;margin:14px 0 18px}
 .wdot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:700;background:var(--card,#161b22);border:1px solid var(--line,#30363d);color:var(--muted,#8b949e)}
-.wdot.active{background:var(--accent,#2f81f7);border-color:var(--accent,#2f81f7);color:#fff}
-.wline{flex:1;height:2px;background:var(--line,#30363d)}
+  font-size:12px;font-weight:700;background:var(--surface);border:1px solid var(--line);color:var(--txt-faint)}
+.wdot.active{background:var(--signal);border-color:var(--signal);color:#fff}
+.wline{flex:1;height:2px;background:var(--line)}
 .wiz-did{font-size:15px;font-weight:700;word-break:break-all;padding:10px 0;letter-spacing:.02em}
 .wiz-cmd{white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.55;margin:0 0 10px;
-  background:rgba(0,0,0,.25);border:1px solid var(--line,#30363d);border-radius:8px;padding:12px}
+  background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:12px}
 .wiz-watch{display:flex;align-items:center;gap:10px;font-size:14px}
-.spin{width:14px;height:14px;border:2px solid var(--line,#30363d);border-top-color:var(--accent,#2f81f7);
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--signal);
   border-radius:50%;animation:wspin .8s linear infinite;flex:none}
 @keyframes wspin{to{transform:rotate(360deg)}}
-.wiz-check{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;padding:7px 0;color:var(--fg,#e6edf3)}
+.wiz-check{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;padding:7px 0;color:var(--txt)}
 .wiz-check input{margin-top:2px;flex:none}
 /* ---------------- Phase 4: small-phone polish ---------------- */
 .rate-input-group input { min-width: 0; flex: 1; }
@@ -350,5 +350,18 @@ input::placeholder { color: var(--txt-faint); }
 .net-row.selected{background:rgba(31,111,235,.10);box-shadow:inset 0 0 0 1px rgba(31,111,235,.35);border-radius:10px}
 .net-acts{display:none}
 .net-row.selected .net-acts{display:flex}
-.net-tap{font-size:10px;color:var(--muted,#8b949e);text-align:right;margin-top:6px;opacity:.7}
+.net-tap{font-size:10px;color:var(--txt-faint);text-align:right;margin-top:6px;opacity:.7}
 .net-row.selected .net-tap{display:none}
+
+/* ================= Light / Dark theme ================= */
+:root{ color-scheme: light; }
+[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0d1117; --surface:#161b22; --surface-2:#1c2430; --raised:#1c2430;
+  --line:#2b3542; --line-soft:#232c38;
+  --txt:#e9eef5; --txt-dim:#b3c0d1; --txt-faint:#8695aa;
+  --signal:#4b93ff; --signal-dim:#3b82f6; --signal-glow:rgba(75,147,255,.18);
+  --ok:#3fb950; --warn:#d6a02a; --down:#f85149; --info:#4b93ff;
+  --shadow:0 8px 30px rgba(0,0,0,.45); --shadow-sm:0 2px 10px rgba(0,0,0,.35);
+}
+.theme-toggle{padding:6px 10px;font-size:15px;line-height:1}

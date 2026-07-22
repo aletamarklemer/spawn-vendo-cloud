@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f4f7fb">
+<script>try{var _t=localStorage.getItem("sc-theme");if(_t==="dark"||_t==="light")document.documentElement.setAttribute("data-theme",_t);}catch(e){}</script>
 <title>SpawnCloud Manager</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -48,6 +49,7 @@
     </div>
     <div class="topbar-spacer"></div>
     <span class="chip"><span class="dot"></span><span id="role-chip">lineman</span></span>
+    <button class="btn btn-ghost btn-sm theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light or dark mode" title="Light / Dark"><span id="theme-icon">🌙</span></button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="margin-left:8px">Exit</button>
   </header>
 
