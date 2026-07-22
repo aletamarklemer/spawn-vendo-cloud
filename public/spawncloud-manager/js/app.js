@@ -162,9 +162,9 @@ async function loadWireless(id) {
     box.innerHTML = d.networks.map(function (n, i) {
       const chips =
         '<span class="chip">' + esc(n.band) + '</span>' +
-        (n.hidden ? '<span class="chip chip-warn">\uD83D\uDD0C NODE LINK</span>' : '') +
+        (n.hidden ? '<span class="chip chip-warn">HIDDEN</span>' : '') +
         (n.disabled ? '<span class="chip chip-warn">OFF</span>' : '');
-      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C Node / coin-slot link \u2014 deleting takes the coin slot OFFLINE</div>' : '';
+      const hint = n.hidden ? '<div class="net-hint">\uD83D\uDD0C Hidden \u2014 if this is the node / coin-slot link, deleting takes it OFFLINE</div>' : '';
       const btns = n.hidden
         ? '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation();netDel(' + i + ')">Delete</button>'
         : '<button class="btn-mini" onclick="event.stopPropagation();netHide(' + i + ')">Hide</button>' +
