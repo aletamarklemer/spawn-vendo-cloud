@@ -137,6 +137,7 @@ async function openDevice(id) {
   document.getElementById('ssid-roam').textContent = CURRENT.ssid ? 'ROAM GROUP KEY' : 'NOT SET';
   document.getElementById('ssid-warn').style.display = 'none';
   document.getElementById('btn-save-ssid').disabled = true;
+  renderSsidPicker();
 
   show('screen-detail');
   loadRates(id);
@@ -182,16 +183,29 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function
 /* ---------------- WiFi write controls (Phase 2.5B) ---------------- */
 let WNETS = [];
 
-async function postWifiCmd(action, params, confirmMsg) {
+async function postWifiCmd(action, params, confirmMsg, rowIdx) {
   if (!CURRENT) return;
   if (confirmMsg && !confirm(confirmMsg)) return;
+  // Optimistic feedback: mark the affected row so it's clear WHICH network is changing.
+  if (rowIdx != null) {
+    const row = document.querySelectorAll('#wifi-networks .net-row')[rowIdx];
+    if (row) {
+      row.classList.add('deleting');
+      row.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+      const s = document.createElement('div');
+      s.className = 'net-hint'; s.style.color = 'var(--signal)';
+      s.textContent = '\u23F3 Applying on router\u2026 (~10s)';
+      const left = row.querySelector('div'); if (left) left.appendChild(s);
+    }
+  }
   try {
     await API.post('/devices/' + CURRENT.id + '/wifi-command', { action: action, params: params });
-    toast('Command sent \u2014 the router applies it in ~10-15s', 'ok');
-    setTimeout(function () { loadWireless(CURRENT.id); }, 12000);
-    setTimeout(function () { loadWireless(CURRENT.id); }, 20000);
+    toast('Sent \u2014 the router applies it in ~10s', 'ok');
+    setTimeout(function () { loadWireless(CURRENT.id); }, 5000);
+    setTimeout(function () { loadWireless(CURRENT.id); }, 11000);
   } catch (e) {
     toast(e.message || 'Command failed', 'err');
+    loadWireless(CURRENT.id);
   }
 }
 
@@ -200,14 +214,14 @@ function netHide(i) {
   const toHidden = !n.hidden;
   let msg = (toHidden ? 'Hide' : 'Show') + ' "' + n.ssid + '" (' + n.band + ')?\n\nWiFi will briefly reload (~5-10s blip for users).';
   if (n.hidden && !toHidden) msg = 'Show the hidden network "' + n.ssid + '"?\n\nIf this is the node link, exposing it is usually harmless but unnecessary.';
-  postWifiCmd('set_hidden', { section: n.section, hidden: toHidden }, msg);
+  postWifiCmd('set_hidden', { section: n.section, hidden: toHidden }, msg, i);
 }
 
 function netDel(i) {
   const n = WNETS[i]; if (!n) return;
   let msg = 'DELETE network "' + n.ssid + '" (' + n.band + ', ' + n.section + ')?\n\nThis removes it from the router. WiFi will reload.';
   if (n.hidden) msg = '\u26A0\uFE0F WARNING: "' + n.ssid + '" is HIDDEN \u2014 likely the NODE (coin slot) link!\n\nDeleting it will take the coin slot OFFLINE until reconfigured.\n\nDelete anyway?';
-  postWifiCmd('del_iface', { section: n.section }, msg);
+  postWifiCmd('del_iface', { section: n.section }, msg, i);
 }
 
 function toggleAddNet(show) {
@@ -262,6 +276,50 @@ async function saveSsid() {
     btn.disabled = false;
   } finally {
     btn.textContent = 'Save WiFi name';
+  }
+}
+
+/* ---------------- SSID roam picker + clear (tap-select) ---------------- */
+function renderSsidPicker() {
+  const box = document.getElementById('ssid-picker');
+  if (!box) return;
+  const si = document.getElementById('ssid-input');
+  const cur = (si.value || '').trim();
+  const names = Array.from(new Set(DEVICES.map((d) => d.ssid).filter(Boolean))).sort();
+  if (!names.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="pick-lbl">Tap an existing WiFi name:</div>' +
+    names.map((n) => '<button type="button" class="ssid-chip' + (n === cur ? ' active' : '') +
+      '" data-n="' + esc(n) + '" onclick="pickSsid(this.dataset.n)">' + esc(n) + '</button>').join('');
+}
+
+function pickSsid(name) {
+  const si = document.getElementById('ssid-input');
+  si.value = name;
+  ssidChanged();
+  renderSsidPicker();
+}
+
+async function clearSsid() {
+  if (!CURRENT) return;
+  if (!CURRENT.ssid) { toast('This vendo is not in a roam group', 'ok'); return; }
+  if (!confirm('Remove this vendo from its roam group?\n\nIt will stop roaming with vendos sharing "' + CURRENT.ssid + '".')) return;
+  const btn = document.getElementById('btn-clear-ssid');
+  btn.disabled = true; btn.textContent = 'Removing\u2026';
+  try {
+    await API.patch('/devices/' + CURRENT.id, { ssid: null });
+    CURRENT.ssid = null;
+    const si = document.getElementById('ssid-input');
+    si.value = ''; si.dataset.orig = '';
+    document.getElementById('ssid-roam').textContent = 'NOT SET';
+    document.getElementById('btn-save-ssid').disabled = true;
+    const d = DEVICES.find((x) => x.id === CURRENT.id);
+    if (d) d.ssid = null;
+    renderSsidPicker();
+    toast('Removed from roam group', 'ok');
+  } catch (e) {
+    toast(e.message || 'Could not remove', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Remove from roam group';
   }
 }
 

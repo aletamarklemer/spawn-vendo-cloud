@@ -338,3 +338,9 @@ input::placeholder { color: var(--txt-faint); }
   .stat-pill { font-size: 12px; }
   .wiz-did { font-size: 13px; }
 }
+/* SSID roam tap-select picker */
+.ssid-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.ssid-picker .pick-lbl{width:100%;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-faint);margin-bottom:2px}
+.ssid-chip{font-size:12px;padding:6px 12px;border-radius:999px;background:rgba(31,111,235,.10);color:var(--signal);border:1px solid rgba(31,111,235,.25);cursor:pointer}
+.ssid-chip.active{background:var(--signal);color:#fff;border-color:var(--signal)}
+.net-row.deleting{opacity:.55}

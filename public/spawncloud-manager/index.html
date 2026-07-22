@@ -87,11 +87,13 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
           <span>Changing the WiFi name will briefly disconnect users, and phones will reconnect as new devices. Customers with running time may need assistance. Vendos in the same roam group must share the same name.</span>
         </div>
+        <div id="ssid-picker" class="ssid-picker"></div>
         <div class="field" style="margin-bottom:10px">
           <label for="ssid-input">Broadcast name</label>
           <input type="text" id="ssid-input" class="input-mono" maxlength="32" placeholder="e.g. Spawn Hotspot" oninput="ssidChanged()">
         </div>
         <button class="btn btn-ghost btn-block btn-sm" id="btn-save-ssid" onclick="saveSsid()" disabled>Save WiFi name</button>
+        <button class="btn btn-ghost btn-block btn-sm" id="btn-clear-ssid" onclick="clearSsid()" style="margin-top:8px">Remove from roam group</button>
       </div>
 
       <div class="section-head"><h2>WiFi Networks on Router</h2><span class="eyebrow" id="wifi-fresh"></span></div>
