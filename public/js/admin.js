@@ -402,11 +402,10 @@ function renderSessions(list) {
   const validityDays = SESS_VALIDITY_DAYS;
   document.getElementById('sessTable').innerHTML = list.map(s => {
     let validityTxt = '—';
-    // SAME as portal/backend: validity clock = manual_paused_at + pause_validity_days,
-    // shown only while active/paused. (first_paused_at = legacy, NOT the real clock;
-    // add_credits resets manual_paused_at on payment = fresh validity, portal-matched.)
-    let vb = s.manual_paused_at || null;
-    if (s.auto_paused_at && (!vb || new Date(s.auto_paused_at) < new Date(vb))) vb = s.auto_paused_at;
+    // Validity clock = validity_from (last coin/purchase) + per-session validity.
+    // SAME basis as list_allowed_clients RPC + autopause sweep: applies to active AND
+    // paused. Session expires (active man o paused) once this passes.
+    const vb = s.validity_from || null;
     if (vb && (s.status === 'active' || s.status === 'paused')) {
       // PER-SESSION validity (validity_seconds) → legacy validity_days → global
       // fallback. SAMA sa backend RPC coalesce, para tukma ang display (dili na
