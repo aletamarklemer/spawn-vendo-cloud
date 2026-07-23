@@ -108,26 +108,27 @@
     <section data-section="transactions" class="hidden">
       <!-- Income summary cards -->
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px">
-        <div class="card stat"><div class="label">Total Income (All-Time)</div><div class="value" id="inc-total">₱0</div></div>
+        <div class="card stat"><div class="label">Uncollected Total</div><div class="value" id="inc-total">₱0</div></div>
         <div class="card stat"><div class="label">Today</div><div class="value" id="inc-today">₱0</div></div>
         <div class="card stat"><div class="label">This Week</div><div class="value" id="inc-week">₱0</div></div>
         <div class="card stat"><div class="label">This Month</div><div class="value" id="inc-month">₱0</div></div>
-        <div class="card stat"><div class="label">Total Coins</div><div class="value" id="inc-count">0</div></div>
+        <div class="card stat"><div class="label">Uncollected Coins</div><div class="value" id="inc-count">0</div></div>
       </div>
 
       <!-- Per-vendo income breakdown -->
       <div class="card" style="margin-bottom:16px">
-        <h3 style="margin:0 0 12px">💰 Income per Vendo</h3>
+        <h3 style="margin:0 0 12px">💰 Uncollected Income per Vendo <small style="font-weight:400;color:var(--muted)">(resets after collection)</small></h3>
         <table><thead><tr><th>Vendo</th><th>Total</th><th>Today</th><th>This Week</th><th>This Month</th><th>Coins</th></tr></thead><tbody id="vendoIncomeTable"></tbody></table>
       </div>
 
       <div class="card">
-        <h3 style="margin:0 0 12px">📋 Transaction History</h3>
+        <h3 style="margin:0 0 12px">📋 Transactions <small style="font-weight:400;color:var(--muted)">(uncollected)</small></h3>
         <div class="tbl-actions">
           <input class="search-bar" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" id="tx-search" placeholder="Search MAC or device…" oninput="filterTx()" style="max-width:240px;margin-right:8px">
           <select id="tx-device-filter" onchange="filterTx()" style="max-width:180px"><option value="">All Vendo</option></select>
           <button class="btn btn-danger btn-sm" onclick="deleteDeviceTx()">🗑 Delete by Device</button>
           <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
+          <label style="margin-left:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="tx-show-all" onchange="loadTransactions()"> Show collected (history)</label>
         </div>
         <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th><th></th></tr></thead><tbody id="txTable"></tbody></table>
       </div>

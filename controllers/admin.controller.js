@@ -151,8 +151,11 @@ const revenueSeries = asyncHandler(async (req, res) => {
 
 /** GET /api/admin/transactions */
 const transactions = asyncHandler(async (req, res) => {
-  const { data, error } = await supabaseAdmin.from('coin_transactions')
+  // Default: UNCOLLECTED only (resets to 0 after a collection). ?scope=all = full history.
+  let q = supabaseAdmin.from('coin_transactions')
     .select('*, vendo_devices(device_name)').order('created_at', { ascending: false }).limit(500);
+  if ((req.query.scope || 'uncollected') !== 'all') q = q.is('collected_at', null);
+  const { data, error } = await q;
   if (error) return fail(res, error.message, 400);
   return ok(res, { transactions: data });
 });
@@ -160,8 +163,10 @@ const transactions = asyncHandler(async (req, res) => {
 /** GET /api/admin/vendo-income — per-vendo total amount + income breakdown */
 const vendoIncome = asyncHandler(async (req, res) => {
   // Kuhaa tanan transactions + device names
+  // Uncollected only (resets to 0 after a collection). Reports/charts keep full history elsewhere.
   const { data, error } = await supabaseAdmin.from('coin_transactions')
-    .select('amount, device_id, created_at, vendo_devices(device_name)');
+    .select('amount, device_id, created_at, vendo_devices(device_name)')
+    .is('collected_at', null);
   if (error) return fail(res, error.message, 400);
 
   const now = Date.now();

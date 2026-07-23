@@ -319,7 +319,8 @@ async function deleteAllDevices() {
 /* ---------- Transactions ---------- */
 async function loadTransactions() {
   try {
-    const { transactions } = await API.get('/admin/transactions');
+    const showAll = document.getElementById('tx-show-all') && document.getElementById('tx-show-all').checked;
+    const { transactions } = await API.get('/admin/transactions' + (showAll ? '?scope=all' : ''));
     ALL_TX = transactions;
     populateDeviceFilter('tx-device-filter', transactions);
     filterTx();
@@ -344,7 +345,7 @@ function renderTx(list) {
   document.getElementById('txTable').innerHTML = list.map(t => `
     <tr><td>${fmtDate(t.created_at)}</td><td>${t.vendo_devices?.device_name || '—'}</td>
     <td>${peso(t.amount)}</td><td>${t.credits} min</td>
-    <td><small style="color:var(--muted)">${t.client_mac || '—'}</small></td>
+    <td><small style="color:var(--muted)">${t.client_mac || '—'}${t.collected_at ? ' · <span style="color:#0a84ff">collected</span>' : ''}</small></td>
     <td><button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">Delete</button></td></tr>`).join('')
     || '<tr><td colspan="6" style="color:var(--muted)">No transactions.</td></tr>';
 }
