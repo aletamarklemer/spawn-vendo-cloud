@@ -200,6 +200,7 @@ const vendoIncome = asyncHandler(async (req, res) => {
 const deleteTransaction = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('coin_transactions').delete().eq('id', req.params.id);
   if (error) return fail(res, error.message, 400);
+  await audit.log('transactions.delete_one', req.user.sub, { id: req.params.id }, req);
   return ok(res, { deleted: true });
 });
 
@@ -213,7 +214,7 @@ const deleteDeviceTransactions = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('coin_transactions')
     .delete().eq('device_id', deviceId);
   if (error) return fail(res, error.message, 400);
-  await audit.log('transactions.delete_device', req.user.sub, { device_id: deviceId, deleted_count: count || 0 });
+  await audit.log('transactions.delete_device', req.user.sub, { device_id: deviceId, deleted_count: count || 0 }, req);
   return ok(res, { deleted: true, count: count || 0 });
 });
 
@@ -221,7 +222,7 @@ const deleteDeviceTransactions = asyncHandler(async (req, res) => {
 const deleteAllTransactions = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('coin_transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (error) return fail(res, error.message, 400);
-  await audit.log('transactions.delete_all', req.user.sub, {});
+  await audit.log('transactions.delete_all', req.user.sub, {}, req);
   return ok(res, { deleted: true });
 });
 
@@ -237,6 +238,7 @@ const listSessions = asyncHandler(async (req, res) => {
 const deleteSession = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('internet_sessions').delete().eq('id', req.params.id);
   if (error) return fail(res, error.message, 400);
+  await audit.log('session.delete', req.user.sub, { id: req.params.id }, req);
   return ok(res, { deleted: true });
 });
 
@@ -244,6 +246,7 @@ const deleteSession = asyncHandler(async (req, res) => {
 const deleteExpiredSessions = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('internet_sessions').delete().eq('status', 'expired');
   if (error) return fail(res, error.message, 400);
+  await audit.log('session.delete_expired', req.user.sub, {}, req);
   return ok(res, { deleted: true });
 });
 
@@ -278,7 +281,7 @@ const updateSettings = asyncHandler(async (req, res) => {
     .insert({ peso_rate, minutes_rate, pause_validity_days,
               coin_abuse_threshold, coin_ban_seconds, is_active: true }).select().single();
   if (error) return fail(res, error.message, 400);
-  await audit.log('settings.update', req.user.sub, { pause_validity_days, coin_abuse_threshold, coin_ban_seconds });
+  await audit.log('settings.update', req.user.sub, { pause_validity_days, coin_abuse_threshold, coin_ban_seconds }, req);
   return ok(res, { settings: data });
 });
 
@@ -370,7 +373,7 @@ const savePricingTiers = asyncHandler(async (req, res) => {
     if (error) return fail(res, error.message, 400);
     inserted = data;
   }
-  await audit.log('pricing_tiers.update', req.user.sub, { count: rows.length, device_id });
+  await audit.log('pricing_tiers.update', req.user.sub, { count: rows.length, device_id }, req);
   return ok(res, { tiers: inserted });
 });
 
@@ -388,6 +391,7 @@ const setUserActive = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles')
     .update({ is_active: !!is_active }).eq('id', id).select().single();
   if (error) return fail(res, error.message, 400);
+  await audit.log('user.set_active', req.user.sub, { target_id: id, is_active: !!is_active }, req);
   return ok(res, { user: data });
 });
 
@@ -426,7 +430,7 @@ const setUserRole = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles')
     .update({ role }).eq('id', id).select('id, full_name, email, role, is_active').single();
   if (error) return fail(res, error.message, 400);
-  await audit.log('user.role_change', req.user.sub, { target_id: id, from: target.role, to: role });
+  await audit.log('user.role_change', req.user.sub, { target_id: id, from: target.role, to: role }, req);
   return ok(res, { user: data });
 });
 
@@ -436,7 +440,7 @@ const deleteUser = asyncHandler(async (req, res) => {
   // Delete from auth + profiles
   const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(id);
   if (authErr) return fail(res, authErr.message, 400);
-  await audit.log('user.delete', req.user.sub, { deleted_id: id });
+  await audit.log('user.delete', req.user.sub, { deleted_id: id }, req);
   return ok(res, { deleted: true });
 });
 
@@ -450,7 +454,7 @@ const updateUserPassword = asyncHandler(async (req, res) => {
   // Store ENCRYPTED password (AES-256-GCM, reversible) for view feature — NOT plaintext
   const encrypted = encryptSecret(password);
   await supabaseAdmin.from('profiles').update({ password_hint: encrypted }).eq('id', id);
-  await audit.log('user.password_change', req.user.sub, { target_id: id });
+  await audit.log('user.password_change', req.user.sub, { target_id: id }, req);
   return ok(res, { updated: true });
 });
 
@@ -460,6 +464,7 @@ const getUserPassword = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles')
     .select('password_hint').eq('id', id).maybeSingle();
   if (error) return fail(res, error.message, 400);
+  await audit.log('user.password_view', req.user.sub, { target_id: id }, req);
   if (!data?.password_hint) return ok(res, { password: '(not stored)' });
   // Decrypt; kung dili ma-decrypt (luma nga plaintext o changed key), ingna nga re-set
   const plain = decryptSecret(data.password_hint);
@@ -498,6 +503,7 @@ const deleteAllAudit = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('audit_logs')
     .delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (error) return fail(res, error.message, 400);
+  await audit.log('audit.cleared', req.user.sub, { note: 'all audit logs deleted' }, req);
   return ok(res, { deleted: true });
 });
 

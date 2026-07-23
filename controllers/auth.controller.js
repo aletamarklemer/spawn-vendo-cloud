@@ -16,7 +16,10 @@ const login = asyncHandler(async (req, res) => {
   if (!email || !password) return fail(res, 'Email and password required', 400);
 
   const { data, error } = await supabaseAnon.auth.signInWithPassword({ email, password });
-  if (error || !data.user) return fail(res, 'Invalid credentials', 401);
+  if (error || !data.user) {
+    await audit.log('staff.login_failed', null, { email: email ? String(email).slice(0, 120) : null }, req);
+    return fail(res, 'Invalid credentials', 401);
+  }
 
   let { data: profile } = await supabaseAdmin
     .from('profiles').select('id, full_name, email, role, is_active')
@@ -43,7 +46,7 @@ const login = asyncHandler(async (req, res) => {
   if (!profile.is_active) return fail(res, 'Account disabled', 403);
 
   const token = signToken({ sub: profile.id, role: profile.role, email: profile.email });
-  await audit.log('staff.login', profile.id, { role: profile.role });
+  await audit.log('staff.login', profile.id, { role: profile.role }, req);
   return ok(res, { token, profile });
 });
 
@@ -71,7 +74,7 @@ const register = asyncHandler(async (req, res) => {
     .upsert({ id: data.user.id, email, full_name, role }, { onConflict: 'id' });
   if (pErr) return fail(res, pErr.message, 400);
 
-  await audit.log('staff.register', req.user?.sub || null, { email, role });
+  await audit.log('staff.register', req.user?.sub || null, { email, role }, req);
   return ok(res, { id: data.user.id, email, role }, 201);
 });
 
@@ -104,7 +107,7 @@ const updateProfile = asyncHandler(async (req, res) => {
     if (aErr) return fail(res, aErr.message, 400);
   }
 
-  await audit.log('staff.profile_update', req.user.sub, updates);
+  await audit.log('staff.profile_update', req.user.sub, updates, req);
 
   // Fetch and return updated profile
   const { data: profile } = await supabaseAdmin

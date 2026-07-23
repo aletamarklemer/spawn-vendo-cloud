@@ -122,7 +122,7 @@ async function doPublish(res, name, content, restartCmd, notes, userId) {
     }, { onConflict: 'name' });
   if (error) return fail(res, error.message, 400);
 
-  await audit.log('script.publish', userId || null, { name, version: newVersion, checksum });
+  await audit.log('script.publish', userId || null, { name, version: newVersion, checksum }, req);
   return ok(res, { name, version: newVersion, checksum, message: `Script ${name} published as v${newVersion}` });
 }
 

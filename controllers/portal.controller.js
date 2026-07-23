@@ -119,7 +119,7 @@ async function doPublish(res, html, notes, userId) {
     }, { onConflict: 'id' });
   if (error) return fail(res, error.message, 400);
 
-  await audit.log('portal.publish', userId || null, { version: newVersion, checksum });
+  await audit.log('portal.publish', userId || null, { version: newVersion, checksum }, req);
   return ok(res, { version: newVersion, checksum, message: `Portal published as v${newVersion}` });
 }
 

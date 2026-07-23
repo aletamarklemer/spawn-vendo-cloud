@@ -77,7 +77,7 @@ const create = asyncHandler(async (req, res) => {
     device_name: dev.device_name,
     amount: row ? Number(row.amount) : null,
     txn_count: row ? row.txn_count : null,
-  });
+  }, req);
   return ok(res, { collection: row }, 201);
 });
 

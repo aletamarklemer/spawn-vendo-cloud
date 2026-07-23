@@ -15,7 +15,7 @@ const generate = asyncHandler(async (req, res) => {
   const rows = Array.from({ length: count }, () => ({ code: genVoucherCode(), minutes, download_mbps, upload_mbps }));
   const { data, error } = await supabaseAdmin.from('vouchers').insert(rows).select();
   if (error) return fail(res, error.message, 400);
-  await audit.log('voucher.generate', req.user.sub, { minutes, count, download_mbps, upload_mbps });
+  await audit.log('voucher.generate', req.user.sub, { minutes, count, download_mbps, upload_mbps }, req);
   return ok(res, { vouchers: data }, 201);
 });
 
@@ -55,6 +55,7 @@ const voidVoucher = asyncHandler(async (req, res) => {
     .update({ status: 'void' }).eq('id', id).eq('status', 'unused').select().maybeSingle();
   if (error) return fail(res, error.message, 400);
   if (!data) return fail(res, 'Voucher not voidable', 409);
+  await audit.log('voucher.void', req.user.sub, { id, code: data.code || null }, req);
   return ok(res, { voucher: data });
 });
 
@@ -62,6 +63,7 @@ const voidVoucher = asyncHandler(async (req, res) => {
 const deleteVoucher = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('vouchers').delete().eq('id', req.params.id);
   if (error) return fail(res, error.message, 400);
+  await audit.log('voucher.delete', req.user.sub, { id: req.params.id }, req);
   return ok(res, { deleted: true });
 });
 
@@ -70,6 +72,7 @@ const deleteVoidedVouchers = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('vouchers')
     .delete().in('status', ['void', 'used']);
   if (error) return fail(res, error.message, 400);
+  await audit.log('voucher.delete_voided', req.user.sub, {}, req);
   return ok(res, { deleted: true });
 });
 
@@ -78,6 +81,7 @@ const deleteAllVouchers = asyncHandler(async (req, res) => {
   const { error } = await supabaseAdmin.from('vouchers')
     .delete().neq('id', '00000000-0000-0000-0000-000000000000');
   if (error) return fail(res, error.message, 400);
+  await audit.log('voucher.delete_all', req.user.sub, {}, req);
   return ok(res, { deleted: true });
 });
 

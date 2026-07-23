@@ -36,7 +36,7 @@ const create = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('vendo_devices')
     .insert({ device_name, location, mac_address, area, operator_id, download_mbps: download_mbps || 0, upload_mbps: upload_mbps || 0 }).select().single();
   if (error) return fail(res, error.message, 400);
-  await audit.log('device.create', req.user.sub, { device_name, mac_address });
+  await audit.log('device.create', req.user.sub, { device_name, mac_address }, req);
   return ok(res, { device: data }, 201);
 });
 
@@ -58,7 +58,7 @@ const update = asyncHandler(async (req, res) => {
   if (error) return fail(res, error.message, 400);
   // Audit EVERY device change (SSID rename, roam group, mode, speed, status…)
   // para ma-track sa admin kinsa nag-usab, unsa, ug asa nga vendo.
-  await audit.log('device.update', req.user.sub, { device_id: id, device_name: data?.device_name, changes: patch });
+  await audit.log('device.update', req.user.sub, { device_id: id, device_name: data?.device_name, changes: patch }, req);
   return ok(res, { device: data });
 });
 
@@ -75,8 +75,11 @@ const heartbeat = asyncHandler(async (req, res) => {
 
 /** DELETE /api/devices/:id (admin) */
 const remove = asyncHandler(async (req, res) => {
+  const { data: dev } = await supabaseAdmin.from('vendo_devices')
+    .select('device_name').eq('id', req.params.id).maybeSingle();
   const { error } = await supabaseAdmin.from('vendo_devices').delete().eq('id', req.params.id);
   if (error) return fail(res, error.message, 400);
+  await audit.log('device.delete', req.user.sub, { device_id: req.params.id, device_name: dev?.device_name || null }, req);
   return ok(res, { deleted: true });
 });
 
@@ -95,6 +98,7 @@ const createMaintenance = asyncHandler(async (req, res) => {
   const { data, error } = await supabaseAdmin.from('maintenance_requests')
     .insert({ device_id, issue, technician_id: req.user.sub }).select().single();
   if (error) return fail(res, error.message, 400);
+  await audit.log('maintenance.create', req.user.sub, { device_id, issue }, req);
   return ok(res, { request: data }, 201);
 });
 
@@ -105,6 +109,7 @@ const resolveMaintenance = asyncHandler(async (req, res) => {
     .update({ resolution, status, resolved_at: status === 'resolved' ? new Date().toISOString() : null })
     .eq('id', id).select().single();
   if (error) return fail(res, error.message, 400);
+  await audit.log('maintenance.resolve', req.user.sub, { id, status, resolution: resolution || null }, req);
   return ok(res, { request: data });
 });
 
@@ -239,7 +244,7 @@ const wifiCommand = asyncHandler(async (req, res) => {
     .select().single();
   if (error) return fail(res, error.message, 400);
   // Audit WiFi network changes (add/hide/show/delete) done from the Manager app.
-  await audit.log('device.wifi_command', req.user.sub, { device_id: id, action, params: p });
+  await audit.log('device.wifi_command', req.user.sub, { device_id: id, action, params: p }, req);
   return ok(res, { command: data });
 });
 

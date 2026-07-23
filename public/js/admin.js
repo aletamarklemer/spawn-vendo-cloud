@@ -701,14 +701,21 @@ function renderAudit(logs) {
   document.getElementById('audTable').innerHTML = logs.map(l => `
     <tr><td>${fmtDate(l.created_at)}</td><td><b>${l.action}</b></td>
     <td>${l.profiles?.full_name || l.profiles?.email || '—'}</td>
+    <td><small style="color:var(--muted)">${l.ip || '—'}${l.user_agent ? '<br>' + shortUA(l.user_agent) : ''}</small></td>
     <td><small style="color:var(--muted)">${l.details ? JSON.stringify(l.details) : ''}</small></td></tr>`).join('')
-    || '<tr><td colspan="4" style="color:var(--muted)">No logs.</td></tr>';
+    || '<tr><td colspan="5" style="color:var(--muted)">No logs.</td></tr>';
+}
+function shortUA(ua) {
+  if (!ua) return '';
+  ua = String(ua);
+  const m = ua.match(/(Android|iPhone|iPad|iPod|Windows|Macintosh|Mac OS|Linux|CrOS)[^;)]*/i);
+  return (m ? m[0] : ua).slice(0, 46);
 }
 function filteredAudit(q) {
   const s = String(q || '').trim().toLowerCase();
   if (!s) return ALL_AUDIT;
   return ALL_AUDIT.filter(l => [
-    l.action, l.profiles?.full_name, l.profiles?.email,
+    l.action, l.profiles?.full_name, l.profiles?.email, l.ip, l.user_agent,
     l.details ? JSON.stringify(l.details) : ''
   ].filter(Boolean).join(' ').toLowerCase().includes(s));
 }
