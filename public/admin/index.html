@@ -38,6 +38,7 @@
     <div class="navlink active" data-sec="dashboard" onclick="nav('dashboard')"><span class="dot"></span>Dashboard</div>
     <div class="navlink" data-sec="devices" onclick="nav('devices')"><span class="dot"></span>Devices</div>
     <div class="navlink" data-sec="transactions" onclick="nav('transactions')"><span class="dot"></span>Transactions</div>
+    <div class="navlink" data-sec="collections" onclick="nav('collections')"><span class="dot"></span>Collections</div>
     <div class="navlink" data-sec="sessions" onclick="nav('sessions')"><span class="dot"></span>Sessions</div>
     <div class="navlink" data-sec="vouchers" onclick="nav('vouchers')"><span class="dot"></span>Vouchers</div>
     <div class="navlink" data-sec="users" onclick="nav('users')"><span class="dot"></span>Users</div>
@@ -130,6 +131,14 @@
           <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
         </div>
         <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th><th></th></tr></thead><tbody id="txTable"></tbody></table>
+      </div>
+    </section>
+
+    <section data-section="collections" class="hidden">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px">
+        <div class="card stat"><div class="label">Total Collected</div><div class="value" id="col-total-amt">₱0</div></div>
+        <div class="card stat"><div class="label">Coins Collected</div><div class="value" id="col-total-coins">0</div></div>
+        <div class="card stat"><div class="label">No. of Collections</div><div class="value" id="col-count">0</div></div>
       </div>
 
       <div class="card">

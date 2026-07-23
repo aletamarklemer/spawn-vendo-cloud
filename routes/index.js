@@ -104,6 +104,7 @@ router.get('/devices/armed', deviceAuth, device.armed);
 router.get('/collections/summary', authenticate, authorize('admin', 'technician', 'operator'), collection.summary);
 router.get('/collections/history', authenticate, authorize('admin', 'technician', 'operator'), collection.history);
 router.post('/collections',        authenticate, authorize('admin', 'technician', 'operator'), collection.create);
+router.get('/collections/totals',   authenticate, authorize('admin', 'technician', 'operator'), collection.totals);
 
 // maintenance
 router.get('/maintenance', authenticate, authorize('admin', 'technician'), device.listMaintenance);

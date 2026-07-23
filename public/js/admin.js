@@ -33,6 +33,7 @@ function nav(section) {
 
   const loaders = {
     dashboard: loadDashboard, devices: loadDevices, transactions: loadTransactions,
+    collections: loadCollections,
     sessions: loadSessions, vouchers: loadVouchers, users: loadUsers,
     settings: loadSettings, audit: loadAudit,
   };
@@ -324,7 +325,6 @@ async function loadTransactions() {
     populateDeviceFilter('tx-device-filter', transactions);
     filterTx();
   } catch(e) {}
-  loadCollectedTx();
   // Per-vendo income summary
   try {
     const { vendos, totals } = await API.get('/admin/vendo-income');
@@ -356,6 +356,16 @@ function filterTx() {
     ((t.client_mac||'').toLowerCase().includes(q) || (t.vendo_devices?.device_name||'').toLowerCase().includes(q)) &&
     (!dev || t.device_id === dev)
   ));
+}
+/* ---------- Collections (history + totals) ---------- */
+async function loadCollections() {
+  try {
+    const { totals } = await API.get('/collections/totals');
+    document.getElementById('col-total-amt').textContent = peso((totals && totals.total_amount) || 0);
+    document.getElementById('col-total-coins').textContent = (totals && totals.total_coins) || 0;
+    document.getElementById('col-count').textContent = (totals && totals.collections_count) || 0;
+  } catch (e) {}
+  loadCollectedTx();
 }
 /* ---------- Collected Transactions (history) ---------- */
 let ALL_CTX = [];

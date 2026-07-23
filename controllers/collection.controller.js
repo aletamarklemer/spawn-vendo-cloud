@@ -92,4 +92,12 @@ const history = asyncHandler(async (req, res) => {
   return ok(res, { collections: data || [] });
 });
 
-module.exports = { summary, create, history };
+/** GET /api/collections/totals — all-time collected amount + coins + #collections */
+const totals = asyncHandler(async (req, res) => {
+  const { data, error } = await supabaseAdmin.rpc('get_collected_totals');
+  if (error) return fail(res, error.message, 400);
+  const r = Array.isArray(data) ? data[0] : data;
+  return ok(res, { totals: r || { total_amount: 0, total_coins: 0, collections_count: 0 } });
+});
+
+module.exports = { summary, create, history, totals };
