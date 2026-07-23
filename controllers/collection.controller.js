@@ -85,7 +85,7 @@ const create = asyncHandler(async (req, res) => {
 const history = asyncHandler(async (req, res) => {
   let q = supabaseAdmin.from('collections')
     .select('*, vendo_devices(device_name, location), profiles(full_name, email)')
-    .order('collected_at', { ascending: false }).limit(200);
+    .order('collected_at', { ascending: false }).limit(2000);
   if (req.query.device_id) q = q.eq('device_id', req.query.device_id);
   const { data, error } = await q;
   if (error) return fail(res, error.message, 400);

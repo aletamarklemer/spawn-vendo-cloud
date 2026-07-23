@@ -358,6 +358,8 @@ function filterTx() {
   ));
 }
 /* ---------- Collections (history + totals) ---------- */
+let ALL_COLLECTIONS = [];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 async function loadCollections() {
   try {
     const { totals } = await API.get('/collections/totals');
@@ -365,7 +367,47 @@ async function loadCollections() {
     document.getElementById('col-total-coins').textContent = (totals && totals.total_coins) || 0;
     document.getElementById('col-count').textContent = (totals && totals.collections_count) || 0;
   } catch (e) {}
+  try {
+    const { collections } = await API.get('/collections/history');
+    ALL_COLLECTIONS = collections || [];
+    populateMonthFilter();
+    filterCollections();
+  } catch (e) {}
   loadCollectedTx();
+}
+function colMonthKey(iso) {
+  const d = new Date(iso);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function colMonthLabel(key) {
+  const p = String(key).split('-');
+  return (MONTH_NAMES[Number(p[1]) - 1] || key) + ' ' + p[0];
+}
+function populateMonthFilter() {
+  const sel = document.getElementById('col-month-filter');
+  if (!sel) return;
+  const cur = sel.value;
+  const months = [...new Set(ALL_COLLECTIONS.map(c => colMonthKey(c.collected_at)))].sort().reverse();
+  sel.innerHTML = '<option value="">All months</option>' + months.map(m => `<option value="${m}">${colMonthLabel(m)}</option>`).join('');
+  if (cur && months.indexOf(cur) !== -1) sel.value = cur;
+}
+function filterCollections() {
+  const m = (document.getElementById('col-month-filter') || {}).value || '';
+  const list = m ? ALL_COLLECTIONS.filter(c => colMonthKey(c.collected_at) === m) : ALL_COLLECTIONS;
+  const total = list.reduce((s, c) => s + Number(c.amount || 0), 0);
+  const coins = list.reduce((s, c) => s + Number(c.txn_count || 0), 0);
+  const tEl = document.getElementById('col-month-total'); if (tEl) tEl.textContent = peso(total);
+  const cEl = document.getElementById('col-month-coins'); if (cEl) cEl.textContent = coins;
+  renderCollections(list);
+}
+function renderCollections(list) {
+  document.getElementById('collectionHistoryTable').innerHTML = list.map(c => `
+    <tr><td>${fmtDate(c.collected_at)}</td>
+    <td>${c.vendo_devices?.device_name || '—'}</td>
+    <td>${c.profiles?.full_name || c.profiles?.email || '—'}</td>
+    <td><b>${peso(c.amount)}</b></td>
+    <td>${c.txn_count || 0}</td></tr>`).join('')
+    || '<tr><td colspan="5" style="color:var(--muted)">No collections yet.</td></tr>';
 }
 /* ---------- Collected Transactions (history) ---------- */
 let ALL_CTX = [];

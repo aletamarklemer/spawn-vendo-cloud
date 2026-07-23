@@ -141,6 +141,16 @@
         <div class="card stat"><div class="label">No. of Collections</div><div class="value" id="col-count">0</div></div>
       </div>
 
+      <div class="card" style="margin-bottom:16px">
+        <h3 style="margin:0 0 12px">🧾 Collection History</h3>
+        <div class="tbl-actions" style="align-items:center">
+          <select id="col-month-filter" onchange="filterCollections()" style="max-width:200px;margin-right:12px"><option value="">All months</option></select>
+          <span style="font-weight:700;margin-right:16px">Income: <span id="col-month-total" style="color:#0a84ff">₱0</span></span>
+          <span style="font-weight:700">Coins: <span id="col-month-coins" style="color:#0a84ff">0</span></span>
+        </div>
+        <table><thead><tr><th>Date Collected</th><th>Vendo</th><th>Collector</th><th>Amount</th><th>Coins</th></tr></thead><tbody id="collectionHistoryTable"></tbody></table>
+      </div>
+
       <div class="card">
         <h3 style="margin:0 0 12px">📦 Collected Transactions (History)</h3>
         <div class="tbl-actions">
