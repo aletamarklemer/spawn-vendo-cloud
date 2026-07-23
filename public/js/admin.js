@@ -697,12 +697,95 @@ async function loadAudit() {
   const s = document.getElementById('aud-search');
   renderAudit((s && s.value.trim()) ? filteredAudit(s.value) : ALL_AUDIT);
 }
+const AUDIT_LABELS = {
+  'staff.login': 'Signed in',
+  'staff.login_failed': 'Failed sign-in attempt',
+  'staff.register': 'Created a staff account',
+  'staff.profile_update': 'Updated own profile',
+  'collection.create': 'Collected cash from a vendo',
+  'device.create': 'Added a new vendo',
+  'device.delete': 'Deleted a vendo',
+  'maintenance.create': 'Reported a maintenance issue',
+  'maintenance.resolve': 'Resolved a maintenance issue',
+  'voucher.generate': 'Generated vouchers',
+  'voucher.void': 'Voided a voucher',
+  'voucher.delete': 'Deleted a voucher',
+  'voucher.delete_voided': 'Deleted used/void vouchers',
+  'voucher.delete_all': 'Deleted ALL vouchers',
+  'transactions.delete_one': 'Deleted a transaction',
+  'transactions.delete_device': "Deleted a vendo's transactions",
+  'transactions.delete_all': 'Deleted ALL transactions',
+  'session.delete': 'Deleted a session',
+  'session.delete_expired': 'Deleted expired sessions',
+  'settings.update': 'Updated system settings',
+  'pricing_tiers.update': 'Updated pricing / rates',
+  'user.role_change': 'Changed a staff role',
+  'user.delete': 'Deleted a staff account',
+  'user.password_change': 'Changed a staff password',
+  'user.password_view': 'Viewed a staff password',
+  'portal.publish': 'Published the captive portal',
+  'script.publish': 'Published a router script',
+  'audit.cleared': 'Cleared ALL audit logs',
+};
+function escHtml(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function auditLabel(l) {
+  const a = l.action, d = l.details || {};
+  if (a === 'device.update') {
+    const c = d.changes || {};
+    if ('ssid' in c) return 'Renamed WiFi SSID';
+    if ('roam_group' in c || 'roam' in c) return 'Changed roam group';
+    if ('download_mbps' in c || 'upload_mbps' in c) return 'Changed speed limit';
+    if ('device_name' in c) return 'Renamed a vendo';
+    if ('status' in c) return 'Changed vendo status';
+    const k = Object.keys(c);
+    return k.length ? 'Updated vendo (' + k.join(', ') + ')' : 'Updated vendo settings';
+  }
+  if (a === 'device.wifi_command') {
+    const act = d.action || (d.params && d.params.action);
+    const hid = d.params && d.params.hidden;
+    if (act === 'set_hidden') return hid ? 'Hid a WiFi network' : 'Showed a WiFi network';
+    if (act === 'add_iface') return 'Added a WiFi network';
+    if (act === 'del_iface') return 'Deleted a WiFi network';
+    return 'Sent a WiFi command';
+  }
+  if (a === 'user.set_active') return d.is_active ? 'Activated a staff account' : 'Deactivated a staff account';
+  return AUDIT_LABELS[a] || a;
+}
+function auditDetails(l) {
+  const d = l.details || {};
+  const p = [];
+  if (d.device_name) p.push('Vendo: ' + d.device_name);
+  if (d.amount != null) p.push('₱' + d.amount);
+  if (d.txn_count != null) p.push(d.txn_count + ' txns');
+  if (d.minutes != null) p.push(d.minutes + ' min' + (d.count ? ' × ' + d.count : ''));
+  if (d.role) p.push('Role: ' + d.role);
+  if (d.from && d.to) p.push(d.from + ' → ' + d.to);
+  if (d.email) p.push(d.email);
+  if (d.code) p.push('Code: ' + d.code);
+  if (d.name) p.push(d.name);
+  if (d.version != null) p.push('v' + d.version);
+  if (d.issue) p.push('Issue: ' + d.issue);
+  if (d.resolution) p.push('Fix: ' + d.resolution);
+  if (d.status && !d.from) p.push('Status: ' + d.status);
+  if (d.note) p.push(d.note);
+  if (d.changes && typeof d.changes === 'object') {
+    for (const k of Object.keys(d.changes)) {
+      const v = d.changes[k];
+      p.push(k + ': ' + (v && typeof v === 'object' ? JSON.stringify(v) : v));
+    }
+  }
+  return p.map(escHtml).join(' · ');
+}
 function renderAudit(logs) {
   document.getElementById('audTable').innerHTML = logs.map(l => `
-    <tr><td>${fmtDate(l.created_at)}</td><td><b>${l.action}</b></td>
-    <td>${l.profiles?.full_name || l.profiles?.email || '—'}</td>
-    <td><small style="color:var(--muted)">${l.ip || '—'}${l.user_agent ? '<br>' + shortUA(l.user_agent) : ''}</small></td>
-    <td><small style="color:var(--muted)">${l.details ? JSON.stringify(l.details) : ''}</small></td></tr>`).join('')
+    <tr><td>${fmtDate(l.created_at)}</td><td><b>${escHtml(auditLabel(l))}</b></td>
+    <td>${escHtml(l.profiles?.full_name || l.profiles?.email || '—')}</td>
+    <td><small style="color:var(--muted)">${escHtml(l.ip || '—')}${l.user_agent ? '<br>' + escHtml(shortUA(l.user_agent)) : ''}</small></td>
+    <td><small style="color:var(--muted)">${auditDetails(l)}</small></td></tr>`).join('')
     || '<tr><td colspan="5" style="color:var(--muted)">No logs.</td></tr>';
 }
 function shortUA(ua) {
@@ -715,7 +798,7 @@ function filteredAudit(q) {
   const s = String(q || '').trim().toLowerCase();
   if (!s) return ALL_AUDIT;
   return ALL_AUDIT.filter(l => [
-    l.action, l.profiles?.full_name, l.profiles?.email, l.ip, l.user_agent,
+    auditLabel(l), l.action, l.profiles?.full_name, l.profiles?.email, l.ip, l.user_agent,
     l.details ? JSON.stringify(l.details) : ''
   ].filter(Boolean).join(' ').toLowerCase().includes(s));
 }
