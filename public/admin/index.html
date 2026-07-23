@@ -128,9 +128,17 @@
           <select id="tx-device-filter" onchange="filterTx()" style="max-width:180px"><option value="">All Vendo</option></select>
           <button class="btn btn-danger btn-sm" onclick="deleteDeviceTx()">🗑 Delete by Device</button>
           <button class="btn btn-danger btn-sm" onclick="deleteAllTx()">🗑 Delete All</button>
-          <label style="margin-left:8px;font-size:13px;color:var(--muted)"><input type="checkbox" id="tx-show-all" onchange="loadTransactions()"> Show collected (history)</label>
         </div>
         <table><thead><tr><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th><th></th></tr></thead><tbody id="txTable"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 12px">📦 Collected Transactions (History)</h3>
+        <div class="tbl-actions">
+          <input class="search-bar" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" id="ctx-search" placeholder="Search MAC or device…" oninput="filterCtx()" style="max-width:240px;margin-right:8px">
+          <select id="ctx-device-filter" onchange="filterCtx()" style="max-width:180px"><option value="">All Vendo</option></select>
+        </div>
+        <table><thead><tr><th>Collected</th><th>Time</th><th>Device</th><th>Amount</th><th>Credits</th><th>Client MAC</th></tr></thead><tbody id="collectedTxTable"></tbody></table>
       </div>
     </section>
 

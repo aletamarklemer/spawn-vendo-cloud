@@ -151,10 +151,12 @@ const revenueSeries = asyncHandler(async (req, res) => {
 
 /** GET /api/admin/transactions */
 const transactions = asyncHandler(async (req, res) => {
-  // Default: UNCOLLECTED only (resets to 0 after a collection). ?scope=all = full history.
+  // scope: 'uncollected' (default, resets after a collection) | 'collected' (history) | 'all'
+  const scope = req.query.scope || 'uncollected';
   let q = supabaseAdmin.from('coin_transactions')
     .select('*, vendo_devices(device_name)').order('created_at', { ascending: false }).limit(500);
-  if ((req.query.scope || 'uncollected') !== 'all') q = q.is('collected_at', null);
+  if (scope === 'uncollected') q = q.is('collected_at', null);
+  else if (scope === 'collected') q = q.not('collected_at', 'is', null);
   const { data, error } = await q;
   if (error) return fail(res, error.message, 400);
   return ok(res, { transactions: data });

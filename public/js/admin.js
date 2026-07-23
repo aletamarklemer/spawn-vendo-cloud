@@ -319,12 +319,12 @@ async function deleteAllDevices() {
 /* ---------- Transactions ---------- */
 async function loadTransactions() {
   try {
-    const showAll = document.getElementById('tx-show-all') && document.getElementById('tx-show-all').checked;
-    const { transactions } = await API.get('/admin/transactions' + (showAll ? '?scope=all' : ''));
+    const { transactions } = await API.get('/admin/transactions');
     ALL_TX = transactions;
     populateDeviceFilter('tx-device-filter', transactions);
     filterTx();
   } catch(e) {}
+  loadCollectedTx();
   // Per-vendo income summary
   try {
     const { vendos, totals } = await API.get('/admin/vendo-income');
@@ -345,7 +345,7 @@ function renderTx(list) {
   document.getElementById('txTable').innerHTML = list.map(t => `
     <tr><td>${fmtDate(t.created_at)}</td><td>${t.vendo_devices?.device_name || '—'}</td>
     <td>${peso(t.amount)}</td><td>${t.credits} min</td>
-    <td><small style="color:var(--muted)">${t.client_mac || '—'}${t.collected_at ? ' · <span style="color:#0a84ff">collected</span>' : ''}</small></td>
+    <td><small style="color:var(--muted)">${t.client_mac || '—'}</small></td>
     <td><button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">Delete</button></td></tr>`).join('')
     || '<tr><td colspan="6" style="color:var(--muted)">No transactions.</td></tr>';
 }
@@ -353,6 +353,33 @@ function filterTx() {
   const q = document.getElementById('tx-search').value.toLowerCase();
   const dev = (document.getElementById('tx-device-filter')||{}).value || '';
   renderTx(ALL_TX.filter(t =>
+    ((t.client_mac||'').toLowerCase().includes(q) || (t.vendo_devices?.device_name||'').toLowerCase().includes(q)) &&
+    (!dev || t.device_id === dev)
+  ));
+}
+/* ---------- Collected Transactions (history) ---------- */
+let ALL_CTX = [];
+async function loadCollectedTx() {
+  try {
+    const { transactions } = await API.get('/admin/transactions?scope=collected');
+    ALL_CTX = transactions || [];
+    populateDeviceFilter('ctx-device-filter', ALL_CTX);
+    filterCtx();
+  } catch (e) {}
+}
+function renderCtx(list) {
+  document.getElementById('collectedTxTable').innerHTML = list.map(t => `
+    <tr><td>${fmtDate(t.collected_at)}</td><td>${fmtDate(t.created_at)}</td>
+    <td>${t.vendo_devices?.device_name || '—'}</td>
+    <td>${peso(t.amount)}</td><td>${t.credits} min</td>
+    <td><small style="color:var(--muted)">${t.client_mac || '—'}</small></td></tr>`).join('')
+    || '<tr><td colspan="6" style="color:var(--muted)">No collected transactions yet.</td></tr>';
+}
+function filterCtx() {
+  const el = document.getElementById('ctx-search');
+  const q = (el && el.value ? el.value : '').toLowerCase();
+  const dev = (document.getElementById('ctx-device-filter')||{}).value || '';
+  renderCtx(ALL_CTX.filter(t =>
     ((t.client_mac||'').toLowerCase().includes(q) || (t.vendo_devices?.device_name||'').toLowerCase().includes(q)) &&
     (!dev || t.device_id === dev)
   ));
