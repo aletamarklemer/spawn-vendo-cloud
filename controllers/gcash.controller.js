@@ -135,6 +135,27 @@ const getOutbox = asyncHandler(async (req, res) => {
   return ok(res, { outbox: data || [] });
 });
 
+/**
+ * GET /api/gcash/outbox/next  (phone bridge) — Macrodroid-friendly.
+ * Returns the oldest pending voucher SMS as PLAIN TEXT "to_number|body" (or empty),
+ * and marks it sent immediately (optimistic — portal already shows the code, SMS is a bonus).
+ * The phone just: GET this → split on "|" → Send SMS. No JSON, no ack loop.
+ */
+const nextOutbox = asyncHandler(async (req, res) => {
+  const { data } = await supabaseAdmin.from('gcash_outbox')
+    .select('id, to_number, body').eq('status', 'pending')
+    .order('created_at', { ascending: true }).limit(1).maybeSingle();
+  if (!data) return res.type('text/plain').send('');
+  await supabaseAdmin.from('gcash_outbox')
+    .update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', data.id);
+  // Headers = easy path for Macrodroid ("Save response headers in a dictionary variable").
+  const safeBody = String(data.body).replace(/[\r\n]+/g, ' ');
+  res.set('X-Sms-To', String(data.to_number));
+  res.set('X-Sms-Body', safeBody);
+  // Body = "to|body" fallback if you'd rather split the response text.
+  return res.type('text/plain').send(`${data.to_number}|${safeBody}`);
+});
+
 /** POST /api/gcash/outbox/ack  (phone bridge) — mark sent/failed */
 const ackOutbox = asyncHandler(async (req, res) => {
   const { id, status } = req.body || {};
@@ -146,4 +167,4 @@ const ackOutbox = asyncHandler(async (req, res) => {
   return ok(res, { acked: true, status: st });
 });
 
-module.exports = { gcashBridge, getStatus, createOrder, getOrder, receiveSms, getOutbox, ackOutbox };
+module.exports = { gcashBridge, getStatus, createOrder, getOrder, receiveSms, getOutbox, nextOutbox, ackOutbox };
