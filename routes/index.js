@@ -90,6 +90,7 @@ router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteV
 
 // --- GCash -> Voucher (self-hosted cashless; no 3rd-party gateway) ---
 // Public (portal): create order + poll status. Phone bridge (x-gcash-key): sms/outbox.
+router.get('/gcash/status', gcash.getStatus);
 router.post('/gcash/order', coinLimiter, gcash.createOrder);
 router.get('/gcash/order/:id', gcash.getOrder);
 router.post('/gcash/sms', coinLimiter, gcash.gcashBridge, gcash.receiveSms);

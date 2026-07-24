@@ -31,6 +31,19 @@ function gcashBridge(req, res, next) {
   next();
 }
 
+/** GET /api/gcash/status  (public — portal shows the button only when active) */
+const getStatus = asyncHandler(async (req, res) => {
+  const { data } = await supabaseAdmin.from('gcash_config')
+    .select('active, gcash_number, gcash_name').eq('id', 1).maybeSingle();
+  const active = !!(data && data.active);
+  // Only expose the GCash number/name when the feature is live (nothing leaks before launch).
+  return ok(res, {
+    active,
+    gcash_number: active ? (data.gcash_number || null) : null,
+    gcash_name: active ? (data.gcash_name || null) : null,
+  });
+});
+
 /** POST /api/gcash/order  (public — portal) */
 const createOrder = asyncHandler(async (req, res) => {
   const { device_id, client_mac, customer_phone, amount } = req.body || {};
@@ -132,4 +145,4 @@ const ackOutbox = asyncHandler(async (req, res) => {
   return ok(res, { acked: true, status: st });
 });
 
-module.exports = { gcashBridge, createOrder, getOrder, receiveSms, getOutbox, ackOutbox };
+module.exports = { gcashBridge, getStatus, createOrder, getOrder, receiveSms, getOutbox, ackOutbox };
