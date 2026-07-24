@@ -96,6 +96,8 @@ router.get('/gcash/order/:id', gcash.getOrder);
 router.post('/gcash/sms', coinLimiter, express.text({ type: 'text/*', limit: '64kb' }), gcash.gcashBridge, gcash.receiveSms);
 router.get('/gcash/outbox', gcash.gcashBridge, gcash.getOutbox);
 router.get('/gcash/outbox/next', gcash.gcashBridge, gcash.nextOutbox);
+router.get('/gcash/outbox/claim', gcash.gcashBridge, gcash.claimOutbox);
+router.get('/gcash/outbox/message', gcash.gcashBridge, gcash.messageOutbox);
 router.post('/gcash/outbox/ack', coinLimiter, gcash.gcashBridge, gcash.ackOutbox);
 
 // devices

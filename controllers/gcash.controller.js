@@ -156,6 +156,35 @@ const nextOutbox = asyncHandler(async (req, res) => {
   return res.type('text/plain').send(`${data.to_number}|${safeBody}`);
 });
 
+/**
+ * Two-call SMS-back (zero parsing on the phone):
+ *  GET /api/gcash/outbox/claim   → oldest pending → mark 'sending' → return to_number (plain text) | ''
+ *  GET /api/gcash/outbox/message → the 'sending' row → mark 'sent' → return body (plain text) | ''
+ * Macrodroid: GET claim → var num; if num not empty → GET message → var msg → Send SMS to {num} {msg}.
+ * Self-heals: a 'sending' row older than 10 min (send never completed) is offered again as pending.
+ */
+const claimOutbox = asyncHandler(async (req, res) => {
+  // re-offer stale 'sending' rows (phone died mid-send)
+  await supabaseAdmin.from('gcash_outbox').update({ status: 'pending' })
+    .eq('status', 'sending').lt('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+  const { data } = await supabaseAdmin.from('gcash_outbox')
+    .select('id, to_number').eq('status', 'pending')
+    .order('created_at', { ascending: true }).limit(1).maybeSingle();
+  if (!data) return res.type('text/plain').send('');
+  await supabaseAdmin.from('gcash_outbox').update({ status: 'sending' }).eq('id', data.id);
+  return res.type('text/plain').send(String(data.to_number));
+});
+
+const messageOutbox = asyncHandler(async (req, res) => {
+  const { data } = await supabaseAdmin.from('gcash_outbox')
+    .select('id, body').eq('status', 'sending')
+    .order('created_at', { ascending: true }).limit(1).maybeSingle();
+  if (!data) return res.type('text/plain').send('');
+  await supabaseAdmin.from('gcash_outbox')
+    .update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', data.id);
+  return res.type('text/plain').send(String(data.body).replace(/[\r\n]+/g, ' '));
+});
+
 /** POST /api/gcash/outbox/ack  (phone bridge) — mark sent/failed */
 const ackOutbox = asyncHandler(async (req, res) => {
   const { id, status } = req.body || {};
@@ -167,4 +196,4 @@ const ackOutbox = asyncHandler(async (req, res) => {
   return ok(res, { acked: true, status: st });
 });
 
-module.exports = { gcashBridge, getStatus, createOrder, getOrder, receiveSms, getOutbox, nextOutbox, ackOutbox };
+module.exports = { gcashBridge, getStatus, createOrder, getOrder, receiveSms, getOutbox, nextOutbox, claimOutbox, messageOutbox, ackOutbox };
