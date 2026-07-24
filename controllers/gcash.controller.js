@@ -111,7 +111,8 @@ function parseGcashSms(raw) {
 
 /** POST /api/gcash/sms  (phone bridge) */
 const receiveSms = asyncHandler(async (req, res) => {
-  const raw = (req.body && (req.body.raw || req.body.text || req.body.message)) || '';
+  const raw = (typeof req.body === 'string' ? req.body
+              : (req.body && (req.body.raw || req.body.text || req.body.message))) || '';
   if (!raw) return fail(res, 'raw sms required', 400);
   const p = parseGcashSms(raw);
   if (p.ignored) return ok(res, { result: { status: 'ignored' } });
