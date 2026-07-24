@@ -13,6 +13,7 @@ const enforcement = require('../controllers/enforcement.controller');
 const portal = require('../controllers/portal.controller');
 const script = require('../controllers/script.controller');
 const collection = require('../controllers/collection.controller');
+const gcash = require('../controllers/gcash.controller');
 
 const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('../config/supabase');
 
@@ -86,6 +87,14 @@ router.delete('/vouchers/voided', authenticate, authorize('admin'), voucher.dele
 router.delete('/vouchers/all', authenticate, authorize('admin'), voucher.deleteAllVouchers);
 router.get('/vouchers', authenticate, authorize('admin'), voucher.list);
 router.delete('/vouchers/:id', authenticate, authorize('admin'), voucher.deleteVoucher);
+
+// --- GCash -> Voucher (self-hosted cashless; no 3rd-party gateway) ---
+// Public (portal): create order + poll status. Phone bridge (x-gcash-key): sms/outbox.
+router.post('/gcash/order', coinLimiter, gcash.createOrder);
+router.get('/gcash/order/:id', gcash.getOrder);
+router.post('/gcash/sms', coinLimiter, gcash.gcashBridge, gcash.receiveSms);
+router.get('/gcash/outbox', gcash.gcashBridge, gcash.getOutbox);
+router.post('/gcash/outbox/ack', coinLimiter, gcash.gcashBridge, gcash.ackOutbox);
 
 // devices
 router.get('/devices', authenticate, authorize('admin', 'technician', 'operator'), device.list);
